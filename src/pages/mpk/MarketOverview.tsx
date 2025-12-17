@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, CheckCircle2, Clock, Eye, Heart, Info } from 'lucide-react';
+import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
 
 const marketData = {
   summary: {
@@ -21,11 +23,11 @@ const marketData = {
     { name: 'Kostanay Oblast', confirmed: 57, softCommitted: 64, forecast: 36 },
   ],
   upcomingBatches: [
-    { batchId: 'BTH-2847', region: 'Almaty', heads: 45, grade: 'A', status: 'confirmed' as const, date: 'Dec 28' },
-    { batchId: 'BTH-2851', region: 'Akmola', heads: 38, grade: 'A', status: 'soft-committed' as const, date: 'Dec 30' },
-    { batchId: 'BTH-2856', region: 'Karaganda', heads: 52, grade: 'B', status: 'forecast' as const, date: 'Jan 2' },
-    { batchId: 'BTH-2859', region: 'East KZ', heads: 30, grade: 'A', status: 'forecast' as const, date: 'Jan 5' },
-    { batchId: 'BTH-2863', region: 'Almaty', heads: 28, grade: 'B', status: 'forecast' as const, date: 'Jan 8' },
+    { batchId: 'BTH-2847', region: 'Almaty', heads: 45, grade: 'A', status: 'confirmed' as const, date: 'Dec 28', breed: 'Angus', gender: 'Male', ageRange: '14-16', weightRange: '320-360' },
+    { batchId: 'BTH-2851', region: 'Akmola', heads: 38, grade: 'A', status: 'soft-committed' as const, date: 'Dec 30', breed: 'Hereford', gender: 'Male', ageRange: '12-14', weightRange: '300-340' },
+    { batchId: 'BTH-2856', region: 'Karaganda', heads: 52, grade: 'B', status: 'forecast' as const, date: 'Jan 2', breed: 'Mixed/Crossbred', gender: 'Mixed', ageRange: '15-18', weightRange: '280-320' },
+    { batchId: 'BTH-2859', region: 'East KZ', heads: 30, grade: 'A', status: 'forecast' as const, date: 'Jan 5', breed: 'Kazakh Whiteheaded', gender: 'Male', ageRange: '13-15', weightRange: '310-350' },
+    { batchId: 'BTH-2863', region: 'Almaty', heads: 28, grade: 'B', status: 'forecast' as const, date: 'Jan 8', breed: 'Simmental', gender: 'Male', ageRange: '16-18', weightRange: '340-380' },
   ]
 };
 
@@ -35,7 +37,57 @@ const statusDescriptions = {
   forecast: 'Forecast batches are planned but not yet committed by farmers.',
 };
 
+// Helper to check if batch matches filter criteria
+function batchMatchesFilter(batch: typeof marketData.upcomingBatches[0], filters: CriteriaFilterState): boolean {
+  // Breed filter
+  if (filters.breeds.length > 0 && !filters.breeds.includes(batch.breed)) {
+    return false;
+  }
+  
+  // Gender filter
+  if (filters.genders.length > 0 && !filters.genders.includes(batch.gender)) {
+    return false;
+  }
+  
+  // Age filter
+  const [ageMin, ageMax] = batch.ageRange.split('-').map(Number);
+  if (filters.ageMin !== null && ageMax < filters.ageMin) {
+    return false;
+  }
+  if (filters.ageMax !== null && ageMin > filters.ageMax) {
+    return false;
+  }
+  
+  // Weight filter
+  const [weightMin, weightMax] = batch.weightRange.split('-').map(Number);
+  if (filters.weightMin !== null && weightMax < filters.weightMin) {
+    return false;
+  }
+  if (filters.weightMax !== null && weightMin > filters.weightMax) {
+    return false;
+  }
+  
+  return true;
+}
+
 export default function MarketOverview() {
+  const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
+  const isFiltered = hasActiveFilters(criteriaFilters);
+  
+  // Filter batches based on criteria
+  const filteredBatches = isFiltered
+    ? marketData.upcomingBatches.filter(batch => batchMatchesFilter(batch, criteriaFilters))
+    : marketData.upcomingBatches;
+  
+  // Calculate filtered summary (in real app, this would come from backend)
+  const filteredSummary = isFiltered
+    ? {
+        confirmed: Math.round(marketData.summary.confirmed * (filteredBatches.length / marketData.upcomingBatches.length)),
+        softCommitted: Math.round(marketData.summary.softCommitted * (filteredBatches.length / marketData.upcomingBatches.length)),
+        forecast: Math.round(marketData.summary.forecast * (filteredBatches.length / marketData.upcomingBatches.length)),
+      }
+    : marketData.summary;
+
   return (
     <MainLayout>
       <PageHeader 
@@ -63,6 +115,16 @@ export default function MarketOverview() {
         </CardContent>
       </Card>
 
+      {/* Criteria Filter */}
+      <div className="mb-6">
+        <CriteriaFilter filters={criteriaFilters} onFiltersChange={setCriteriaFilters} />
+        {isFiltered && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Showing supply matching your acceptance criteria. Individual farmer data remains anonymous.
+          </p>
+        )}
+      </div>
+
       {/* Availability by Readiness */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="border-status-confirmed/30">
@@ -70,7 +132,7 @@ export default function MarketOverview() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Confirmed Available</p>
-                <p className="text-2xl font-semibold text-foreground">{marketData.summary.confirmed}</p>
+                <p className="text-2xl font-semibold text-foreground">{filteredSummary.confirmed}</p>
                 <p className="text-xs text-status-confirmed">Ready for commitment</p>
               </div>
               <div className="w-10 h-10 bg-status-confirmed/10 rounded-lg flex items-center justify-center">
@@ -84,7 +146,7 @@ export default function MarketOverview() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Soft Committed</p>
-                <p className="text-2xl font-semibold text-foreground">{marketData.summary.softCommitted}</p>
+                <p className="text-2xl font-semibold text-foreground">{filteredSummary.softCommitted}</p>
                 <p className="text-xs text-status-soft-committed">Pending farmer confirmation</p>
               </div>
               <div className="w-10 h-10 bg-status-soft-committed/10 rounded-lg flex items-center justify-center">
@@ -98,7 +160,7 @@ export default function MarketOverview() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Forecast</p>
-                <p className="text-2xl font-semibold text-foreground">{marketData.summary.forecast}</p>
+                <p className="text-2xl font-semibold text-foreground">{filteredSummary.forecast}</p>
                 <p className="text-xs text-status-forecast">Planned availability</p>
               </div>
               <div className="w-10 h-10 bg-status-forecast/10 rounded-lg flex items-center justify-center">
@@ -163,7 +225,12 @@ export default function MarketOverview() {
         {/* Upcoming Batches */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-medium">Upcoming Batches</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-medium">Upcoming Batches</CardTitle>
+              {isFiltered && (
+                <span className="text-xs text-muted-foreground">{filteredBatches.length} matching</span>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {/* Status Legend */}
@@ -179,34 +246,47 @@ export default function MarketOverview() {
             </div>
 
             <div className="space-y-3">
-              {marketData.upcomingBatches.map((batch, idx) => (
-                <div key={idx} className="p-3 bg-secondary/50 rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-secondary rounded flex items-center justify-center">
-                        <span className="text-sm font-medium text-foreground">{batch.grade}</span>
+              {filteredBatches.length > 0 ? (
+                filteredBatches.map((batch, idx) => (
+                  <div key={idx} className="p-3 bg-secondary/50 rounded-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-secondary rounded flex items-center justify-center">
+                          <span className="text-sm font-medium text-foreground">{batch.grade}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{batch.batchId}</p>
+                          <p className="text-xs text-muted-foreground">{batch.region} • {batch.heads} heads</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{batch.batchId}</p>
-                        <p className="text-xs text-muted-foreground">{batch.region} • {batch.heads} heads</p>
+                      <div className="text-right">
+                        <StatusBadge status={batch.status} />
+                        <p className="text-xs text-muted-foreground mt-1">{batch.date}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <StatusBadge status={batch.status} />
-                      <p className="text-xs text-muted-foreground mt-1">{batch.date}</p>
+                    {/* Show criteria match info */}
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.breed}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.gender}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.ageRange} mo</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.weightRange} kg</span>
+                    </div>
+                    <div className="flex gap-2 mt-3 pt-2 border-t border-border/50">
+                      <Button variant="outline" size="sm" className="flex-1 text-xs">
+                        <Heart className="w-3 h-3 mr-1" />
+                        Add to Watchlist
+                      </Button>
+                      <Button variant="default" size="sm" className="flex-1 text-xs">
+                        Express Interest
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-3 pt-2 border-t border-border/50">
-                    <Button variant="outline" size="sm" className="flex-1 text-xs">
-                      <Heart className="w-3 h-3 mr-1" />
-                      Add to Watchlist
-                    </Button>
-                    <Button variant="default" size="sm" className="flex-1 text-xs">
-                      Express Interest
-                    </Button>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-sm text-muted-foreground">
+                  No batches match your criteria filters.
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

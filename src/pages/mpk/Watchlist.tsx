@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bookmark, Trash2, Plus, TrendingUp, TrendingDown, AlertCircle, Clock, ArrowRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
 
 interface WatchlistItem {
   id: string;
@@ -24,6 +26,13 @@ interface WatchlistItem {
   };
   isApproachingWindow: boolean;
   addedOn: string;
+  // Criteria data for filtering
+  breeds: string[];
+  genders: string[];
+  avgAgeMin: number;
+  avgAgeMax: number;
+  avgWeightMin: number;
+  avgWeightMax: number;
 }
 
 const watchlistItems: WatchlistItem[] = [
@@ -42,6 +51,12 @@ const watchlistItems: WatchlistItem[] = [
     changesSinceLastVisit: { volumeChange: 12, newSoftCommitted: 3 },
     isApproachingWindow: true,
     addedOn: 'Dec 15',
+    breeds: ['Angus', 'Hereford', 'Kazakh Whiteheaded'],
+    genders: ['Male', 'Mixed'],
+    avgAgeMin: 12,
+    avgAgeMax: 18,
+    avgWeightMin: 300,
+    avgWeightMax: 380,
   },
   {
     id: '2',
@@ -58,6 +73,12 @@ const watchlistItems: WatchlistItem[] = [
     changesSinceLastVisit: { volumeChange: -8, newSoftCommitted: 0 },
     isApproachingWindow: false,
     addedOn: 'Dec 14',
+    breeds: ['Simmental', 'Mixed/Crossbred'],
+    genders: ['Male'],
+    avgAgeMin: 14,
+    avgAgeMax: 20,
+    avgWeightMin: 320,
+    avgWeightMax: 400,
   },
   {
     id: '3',
@@ -74,6 +95,12 @@ const watchlistItems: WatchlistItem[] = [
     changesSinceLastVisit: { volumeChange: 5, newSoftCommitted: 2 },
     isApproachingWindow: true,
     addedOn: 'Dec 12',
+    breeds: ['Hereford', 'Angus'],
+    genders: ['Male'],
+    avgAgeMin: 13,
+    avgAgeMax: 17,
+    avgWeightMin: 310,
+    avgWeightMax: 370,
   },
   {
     id: '4',
@@ -90,16 +117,45 @@ const watchlistItems: WatchlistItem[] = [
     changesSinceLastVisit: { volumeChange: 0, newSoftCommitted: 0 },
     isApproachingWindow: false,
     addedOn: 'Dec 10',
+    breeds: ['Kazakh Whiteheaded', 'Auliekol'],
+    genders: ['Male', 'Female'],
+    avgAgeMin: 15,
+    avgAgeMax: 22,
+    avgWeightMin: 280,
+    avgWeightMax: 350,
   },
 ];
 
-const groupedByMonth = watchlistItems.reduce((acc, item) => {
-  if (!acc[item.targetMonth]) {
-    acc[item.targetMonth] = [];
+// Helper to check if watchlist item matches filter criteria
+function itemMatchesFilter(item: WatchlistItem, filters: CriteriaFilterState): boolean {
+  // Breed filter - at least one breed should match
+  if (filters.breeds.length > 0 && !filters.breeds.some(b => item.breeds.includes(b))) {
+    return false;
   }
-  acc[item.targetMonth].push(item);
-  return acc;
-}, {} as Record<string, WatchlistItem[]>);
+  
+  // Gender filter
+  if (filters.genders.length > 0 && !filters.genders.some(g => item.genders.includes(g))) {
+    return false;
+  }
+  
+  // Age filter - check for overlap
+  if (filters.ageMin !== null && item.avgAgeMax < filters.ageMin) {
+    return false;
+  }
+  if (filters.ageMax !== null && item.avgAgeMin > filters.ageMax) {
+    return false;
+  }
+  
+  // Weight filter - check for overlap
+  if (filters.weightMin !== null && item.avgWeightMax < filters.weightMin) {
+    return false;
+  }
+  if (filters.weightMax !== null && item.avgWeightMin > filters.weightMax) {
+    return false;
+  }
+  
+  return true;
+}
 
 function ReadinessBar({ confirmed, softCommitted, forecast, total }: { confirmed: number; softCommitted: number; forecast: number; total: number }) {
   const confirmedPct = (confirmed / total) * 100;
@@ -165,7 +221,7 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-4 mb-3">
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold text-foreground">{item.totalHeads}</span>
@@ -194,6 +250,14 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
           </div>
         </div>
 
+        {/* Criteria summary */}
+        <div className="flex flex-wrap gap-1 mb-3">
+          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.breeds.slice(0, 2).join(', ')}{item.breeds.length > 2 ? ` +${item.breeds.length - 2}` : ''}</span>
+          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.genders.join('/')}</span>
+          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.avgAgeMin}–{item.avgAgeMax} mo</span>
+          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.avgWeightMin}–{item.avgWeightMax} kg</span>
+        </div>
+
         <ReadinessBar 
           confirmed={item.confirmed}
           softCommitted={item.softCommitted}
@@ -216,10 +280,26 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
 }
 
 export default function Watchlist() {
-  const totalWatched = watchlistItems.length;
-  const totalHeads = watchlistItems.reduce((sum, item) => sum + item.totalHeads, 0);
-  const approachingWindow = watchlistItems.filter(item => item.isApproachingWindow).length;
-  const itemsWithChanges = watchlistItems.filter(
+  const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
+  const isFiltered = hasActiveFilters(criteriaFilters);
+  
+  // Filter watchlist items based on criteria
+  const filteredItems = isFiltered
+    ? watchlistItems.filter(item => itemMatchesFilter(item, criteriaFilters))
+    : watchlistItems;
+  
+  const groupedByMonth = filteredItems.reduce((acc, item) => {
+    if (!acc[item.targetMonth]) {
+      acc[item.targetMonth] = [];
+    }
+    acc[item.targetMonth].push(item);
+    return acc;
+  }, {} as Record<string, WatchlistItem[]>);
+
+  const totalWatched = filteredItems.length;
+  const totalHeads = filteredItems.reduce((sum, item) => sum + item.totalHeads, 0);
+  const approachingWindow = filteredItems.filter(item => item.isApproachingWindow).length;
+  const itemsWithChanges = filteredItems.filter(
     item => item.changesSinceLastVisit.volumeChange !== 0 || item.changesSinceLastVisit.newSoftCommitted > 0
   ).length;
 
@@ -241,6 +321,16 @@ export default function Watchlist() {
           <span className="text-xs text-muted-foreground">Review watchlist items before this date</span>
         </AlertDescription>
       </Alert>
+
+      {/* Criteria Filter */}
+      <div className="mb-6">
+        <CriteriaFilter filters={criteriaFilters} onFiltersChange={setCriteriaFilters} />
+        {isFiltered && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Showing {filteredItems.length} of {watchlistItems.length} watched items matching your criteria.
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
@@ -303,19 +393,33 @@ export default function Watchlist() {
         </div>
       ))}
 
-      {watchlistItems.length === 0 && (
+      {filteredItems.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
               <Bookmark className="w-10 h-10 text-muted-foreground/60" />
             </div>
-            <p className="font-medium text-foreground mb-1">Your watchlist is empty.</p>
-            <p className="text-sm text-muted-foreground max-w-sm mb-4">
-              Monitor supply by region and month to track availability before requesting.
-            </p>
-            <Button>
-              Add Regions to Watch
-            </Button>
+            {isFiltered ? (
+              <>
+                <p className="font-medium text-foreground mb-1">No items match your criteria.</p>
+                <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                  Try adjusting your filter criteria to see more watchlist items.
+                </p>
+                <Button variant="outline" onClick={() => setCriteriaFilters(defaultCriteriaFilters)}>
+                  Clear Filters
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-foreground mb-1">Your watchlist is empty.</p>
+                <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                  Monitor supply by region and month to track availability before requesting.
+                </p>
+                <Button>
+                  Add Regions to Watch
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
