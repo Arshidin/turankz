@@ -13,6 +13,7 @@ import SalesCalendar from "./pages/farmer/SalesCalendar";
 import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
 import PurchasePoolRequests from "./pages/mpk/PurchasePoolRequests";
+import MpkProfile from "./pages/mpk/MpkProfile";
 import FarmersManagement from "./pages/admin/FarmersManagement";
 import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/farmer/calendar" element={<SalesCalendar />} />
             
             {/* MPK Routes */}
+            <Route path="/mpk/profile" element={<MpkProfile />} />
             <Route path="/mpk/market" element={<MarketOverview />} />
             <Route path="/mpk/watchlist" element={<Watchlist />} />
             <Route path="/mpk/requests" element={<PurchasePoolRequests />} />

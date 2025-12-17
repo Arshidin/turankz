@@ -346,3 +346,63 @@ export function useMpkPoolRequests(mpkId: string | null) {
     enabled: !!mpkId,
   });
 }
+
+export function useMpkByMpkId(mpkId: string) {
+  return useQuery({
+    queryKey: ['mpk-by-mpk-id', mpkId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mpks')
+        .select('*')
+        .eq('mpk_id', mpkId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Mpk | null;
+    },
+    enabled: !!mpkId,
+  });
+}
+
+export function useUpdateMpkProfile() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ 
+      mpkId, 
+      updates 
+    }: { 
+      mpkId: string; 
+      updates: {
+        name?: string;
+        intake_regions?: string[];
+        typical_volume_min?: number | null;
+        typical_volume_max?: number | null;
+        common_target_weeks?: string[] | null;
+      };
+    }) => {
+      const { error } = await supabase
+        .from('mpks')
+        .update(updates)
+        .eq('id', mpkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mpks'] });
+      queryClient.invalidateQueries({ queryKey: ['mpk-by-mpk-id'] });
+      toast({
+        title: 'Profile updated',
+        description: 'Your intake profile has been updated successfully.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error updating profile',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}

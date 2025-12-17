@@ -32,6 +32,7 @@ const farmerNav: NavItem[] = [
 ];
 
 const mpkNav: NavItem[] = [
+  { label: 'Profile & Access', path: '/mpk/profile', icon: Building2 },
   { label: 'Market Overview', path: '/mpk/market', icon: BarChart3 },
   { label: 'Watchlist', path: '/mpk/watchlist', icon: BookmarkCheck },
   { label: 'Purchase Pool Requests', path: '/mpk/requests', icon: ShoppingCart },
