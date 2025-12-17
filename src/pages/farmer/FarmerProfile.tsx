@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Form,
   FormControl,
@@ -29,20 +30,17 @@ import {
   X, 
   CheckCircle2, 
   Clock, 
-  Eye,
   ArrowRight,
   FileText,
   AlertTriangle,
   Info,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 import { useBatchStats } from '@/hooks/useBatches';
+import { useFarmers, useUpdateFarmerProfile, type FarmerGrading } from '@/hooks/useFarmers';
 
-// Grading levels
-type GradingLevel = 'observer' | 'declared_supplier' | 'standard_supplier';
-
-const GRADING_CONFIG: Record<GradingLevel, { 
+const GRADING_CONFIG: Record<FarmerGrading, { 
   label: string; 
   description: string; 
   access: string;
@@ -90,51 +88,75 @@ const FARM_TYPES = [
 ];
 
 const formSchema = z.object({
-  farmName: z.string().min(2, 'Farm name is required').max(100),
-  contactName: z.string().min(2, 'Contact name is required').max(100),
+  name: z.string().min(2, 'Farm name is required').max(100),
+  contact_name: z.string().min(2, 'Contact name is required').max(100),
   region: z.string().min(1, 'Region is required'),
-  district: z.string().max(100).optional(),
+  district: z.string().max(100).optional().or(z.literal('')),
   phone: z.string().min(5, 'Phone number is required').max(20),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  farmType: z.string().min(1, 'Farm type is required'),
+  farm_type: z.string().min(1, 'Farm type is required'),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 export default function FarmerProfile() {
-  // Mock current grading - in real app, this would come from database
-  const [currentGrading] = useState<GradingLevel>('declared_supplier');
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   
+  // For demo, we'll use the first farmer from the list
+  // In production, this would use the authenticated user's farmer record
+  const { data: farmers, isLoading: farmersLoading, error: farmersError } = useFarmers();
+  const farmer = farmers?.[0] || null;
+  
+  const updateProfile = useUpdateFarmerProfile();
   const stats = useBatchStats();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      farmName: 'Alash Agro Farm',
-      contactName: 'Aibek Nurlanovich',
-      region: 'Almaty',
-      district: 'Enbekshikazakh',
-      phone: '+7 (777) 123-4567',
+      name: '',
+      contact_name: '',
+      region: '',
+      district: '',
+      phone: '',
       email: '',
-      farmType: 'Cattle Ranch',
+      farm_type: 'Cattle Ranch',
     },
   });
 
+  // Update form when farmer data loads
+  useEffect(() => {
+    if (farmer) {
+      form.reset({
+        name: farmer.name || '',
+        contact_name: farmer.contact_name || farmer.name || '',
+        region: farmer.region || '',
+        district: farmer.district || '',
+        phone: farmer.phone || '',
+        email: farmer.email || '',
+        farm_type: farmer.farm_type || 'Cattle Ranch',
+      });
+    }
+  }, [farmer, form]);
+
   const handleSave = async (data: FormData) => {
-    setIsSaving(true);
-    // Simulate save
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setIsEditing(false);
-    toast({
-      title: 'Profile Updated',
-      description: 'Your farm information has been saved.',
+    if (!farmer) return;
+    
+    await updateProfile.mutateAsync({
+      id: farmer.id,
+      name: data.name,
+      contact_name: data.contact_name,
+      region: data.region,
+      district: data.district || undefined,
+      phone: data.phone,
+      email: data.email || undefined,
+      farm_type: data.farm_type,
     });
+    
+    setIsEditing(false);
   };
 
-  const gradingLevels: GradingLevel[] = ['observer', 'declared_supplier', 'standard_supplier'];
+  const gradingLevels: FarmerGrading[] = ['observer', 'declared_supplier', 'standard_supplier'];
+  const currentGrading = farmer?.grading || 'observer';
   const currentIndex = gradingLevels.indexOf(currentGrading);
 
   const getNextAction = (): string => {
@@ -150,6 +172,38 @@ export default function FarmerProfile() {
     }
   };
 
+  if (farmersLoading) {
+    return (
+      <MainLayout>
+        <PageHeader title="Profile & Status" description="Loading..." />
+        <div className="space-y-6">
+          <Skeleton className="h-64 w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-80 lg:col-span-2" />
+            <Skeleton className="h-80" />
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (farmersError || !farmer) {
+    return (
+      <MainLayout>
+        <PageHeader title="Profile & Status" description="Manage your farm information" />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium">No farmer profile found</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Please contact an administrator to set up your profile.
+            </p>
+          </CardContent>
+        </Card>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <PageHeader 
@@ -160,7 +214,10 @@ export default function FarmerProfile() {
       {/* Farmer Status & Progress Section */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base font-medium">Your Status in Turan Standard Pool</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium">Your Status in Turan Standard Pool</CardTitle>
+            <Badge variant="outline">{farmer.farmer_id}</Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Current Grading */}
@@ -178,12 +235,15 @@ export default function FarmerProfile() {
                 {GRADING_CONFIG[currentGrading].description}
               </p>
             </div>
+            {farmer.is_restricted && (
+              <Badge variant="destructive">Restricted</Badge>
+            )}
           </div>
 
           {/* Progression Indicator */}
           <div className="pt-4 border-t">
             <p className="text-xs text-muted-foreground mb-3">Progression Path</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {gradingLevels.map((level, index) => {
                 const isActive = index <= currentIndex;
                 const isCurrent = level === currentGrading;
@@ -235,7 +295,7 @@ export default function FarmerProfile() {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-4 gap-4 pt-4 border-t">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
             <div className="text-center p-3 bg-muted/30 rounded-lg">
               <p className="text-xl font-semibold">{stats.total}</p>
               <p className="text-xs text-muted-foreground">Total Batches</p>
@@ -251,6 +311,22 @@ export default function FarmerProfile() {
             <div className="text-center p-3 bg-emerald-500/10 rounded-lg">
               <p className="text-xl font-semibold text-emerald-600">{stats.confirmed}</p>
               <p className="text-xs text-muted-foreground">Confirmed</p>
+            </div>
+          </div>
+
+          {/* Performance Stats */}
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-emerald-600">{farmer.total_confirmations}</p>
+              <p className="text-xs text-muted-foreground">Confirmations</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold text-destructive">{farmer.total_declines}</p>
+              <p className="text-xs text-muted-foreground">Declines</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold text-amber-600">{farmer.missed_updates}</p>
+              <p className="text-xs text-muted-foreground">Missed Updates</p>
             </div>
           </div>
         </CardContent>
@@ -278,7 +354,7 @@ export default function FarmerProfile() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="farmName"
+                      name="name"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Farm Name</FormLabel>
@@ -291,7 +367,7 @@ export default function FarmerProfile() {
                     />
                     <FormField
                       control={form.control}
-                      name="contactName"
+                      name="contact_name"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Contact Person</FormLabel>
@@ -375,7 +451,7 @@ export default function FarmerProfile() {
 
                   <FormField
                     control={form.control}
-                    name="farmType"
+                    name="farm_type"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Farm Type</FormLabel>
@@ -410,8 +486,8 @@ export default function FarmerProfile() {
                       <X className="w-4 h-4 mr-2" />
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    <Button type="submit" disabled={updateProfile.isPending}>
+                      {updateProfile.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       <Save className="w-4 h-4 mr-2" />
                       Save Changes
                     </Button>
@@ -423,29 +499,29 @@ export default function FarmerProfile() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Farm Name</p>
-                    <p className="text-sm font-medium">{form.getValues('farmName')}</p>
+                    <p className="text-sm font-medium">{farmer.name}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Contact Person</p>
-                    <p className="text-sm font-medium">{form.getValues('contactName')}</p>
+                    <p className="text-sm font-medium">{farmer.contact_name || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Phone</p>
-                    <p className="text-sm font-medium">{form.getValues('phone')}</p>
+                    <p className="text-sm font-medium">{farmer.phone || '—'}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Region</p>
-                    <p className="text-sm font-medium">{form.getValues('region')}</p>
+                    <p className="text-sm font-medium">{farmer.region}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">District</p>
-                    <p className="text-sm font-medium">{form.getValues('district') || '—'}</p>
+                    <p className="text-sm font-medium">{farmer.district || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Farm Type</p>
-                    <p className="text-sm font-medium">{form.getValues('farmType')}</p>
+                    <p className="text-sm font-medium">{farmer.farm_type || '—'}</p>
                   </div>
                 </div>
               </div>
