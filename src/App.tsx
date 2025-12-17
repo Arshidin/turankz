@@ -8,6 +8,7 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import Overview from "./pages/Overview";
 import FarmerProfile from "./pages/farmer/FarmerProfile";
 import LivestockBatches from "./pages/farmer/LivestockBatches";
+import BatchDetail from "./pages/farmer/BatchDetail";
 import SalesCalendar from "./pages/farmer/SalesCalendar";
 import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
@@ -32,6 +33,7 @@ const App = () => (
             {/* Farmer Routes */}
             <Route path="/farmer/profile" element={<FarmerProfile />} />
             <Route path="/farmer/batches" element={<LivestockBatches />} />
+            <Route path="/farmer/batch/:batchId" element={<BatchDetail />} />
             <Route path="/farmer/calendar" element={<SalesCalendar />} />
             
             {/* MPK Routes */}
