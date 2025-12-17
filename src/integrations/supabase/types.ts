@@ -171,6 +171,7 @@ export type Database = {
       }
       farmers: {
         Row: {
+          admin_notes: string | null
           contact_name: string | null
           created_at: string
           district: string | null
@@ -185,6 +186,7 @@ export type Database = {
           name: string
           phone: string | null
           region: string
+          registration_status: string
           reliability: Database["public"]["Enums"]["farmer_reliability"]
           restriction_reason: string | null
           total_confirmations: number
@@ -193,6 +195,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          admin_notes?: string | null
           contact_name?: string | null
           created_at?: string
           district?: string | null
@@ -207,6 +210,7 @@ export type Database = {
           name: string
           phone?: string | null
           region: string
+          registration_status?: string
           reliability?: Database["public"]["Enums"]["farmer_reliability"]
           restriction_reason?: string | null
           total_confirmations?: number
@@ -215,6 +219,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          admin_notes?: string | null
           contact_name?: string | null
           created_at?: string
           district?: string | null
@@ -229,6 +234,7 @@ export type Database = {
           name?: string
           phone?: string | null
           region?: string
+          registration_status?: string
           reliability?: Database["public"]["Enums"]["farmer_reliability"]
           restriction_reason?: string | null
           total_confirmations?: number
@@ -281,6 +287,7 @@ export type Database = {
       }
       mpks: {
         Row: {
+          admin_notes: string | null
           cancelled_requests: number
           common_target_weeks: string[] | null
           created_at: string
@@ -299,6 +306,7 @@ export type Database = {
           mpk_id: string
           name: string
           partial_requests: number
+          registration_status: string
           request_changes_count: number
           restriction_reason: string | null
           status: Database["public"]["Enums"]["mpk_status"]
@@ -306,8 +314,10 @@ export type Database = {
           typical_volume_max: number | null
           typical_volume_min: number | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
+          admin_notes?: string | null
           cancelled_requests?: number
           common_target_weeks?: string[] | null
           created_at?: string
@@ -326,6 +336,7 @@ export type Database = {
           mpk_id: string
           name: string
           partial_requests?: number
+          registration_status?: string
           request_changes_count?: number
           restriction_reason?: string | null
           status?: Database["public"]["Enums"]["mpk_status"]
@@ -333,8 +344,10 @@ export type Database = {
           typical_volume_max?: number | null
           typical_volume_min?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
+          admin_notes?: string | null
           cancelled_requests?: number
           common_target_weeks?: string[] | null
           created_at?: string
@@ -353,6 +366,7 @@ export type Database = {
           mpk_id?: string
           name?: string
           partial_requests?: number
+          registration_status?: string
           request_changes_count?: number
           restriction_reason?: string | null
           status?: Database["public"]["Enums"]["mpk_status"]
@@ -360,6 +374,7 @@ export type Database = {
           typical_volume_max?: number | null
           typical_volume_min?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -590,12 +605,43 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       activity_event_type:
@@ -617,6 +663,7 @@ export type Database = {
         | "invitation_sent"
         | "invitation_accepted"
         | "invitation_declined"
+      app_role: "admin" | "farmer" | "mpk"
       batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
@@ -781,6 +828,7 @@ export const Constants = {
         "invitation_accepted",
         "invitation_declined",
       ],
+      app_role: ["admin", "farmer", "mpk"],
       batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
