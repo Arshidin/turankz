@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          actor_name: string | null
+          actor_role: string
+          created_at: string
+          description: string
+          event_type: Database["public"]["Enums"]["activity_event_type"]
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_name: string | null
+          target_type: string | null
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_role: string
+          created_at?: string
+          description: string
+          event_type: Database["public"]["Enums"]["activity_event_type"]
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          actor_name?: string | null
+          actor_role?: string
+          created_at?: string
+          description?: string
+          event_type?: Database["public"]["Enums"]["activity_event_type"]
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       batches: {
         Row: {
           action_type: string | null
@@ -285,6 +324,45 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_read: boolean
+          is_urgent: boolean
+          link_to: string | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          target_id: string | null
+          title: string
+          user_role: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          is_read?: boolean
+          is_urgent?: boolean
+          link_to?: string | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          target_id?: string | null
+          title: string
+          user_role: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          is_urgent?: boolean
+          link_to?: string | null
+          notification_type?: Database["public"]["Enums"]["notification_type"]
+          target_id?: string | null
+          title?: string
+          user_role?: string
+        }
+        Relationships: []
+      }
       pool_matches: {
         Row: {
           batch_id: string
@@ -383,10 +461,41 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      activity_event_type:
+        | "farmer_onboarded"
+        | "farmer_grading_changed"
+        | "farmer_restricted"
+        | "farmer_unrestricted"
+        | "mpk_onboarded"
+        | "mpk_status_changed"
+        | "mpk_restricted"
+        | "mpk_unrestricted"
+        | "pool_request_created"
+        | "pool_request_updated"
+        | "pool_request_cancelled"
+        | "pool_match_proposed"
+        | "pool_match_confirmed"
+        | "batch_confirmed"
+        | "batch_declined"
+        | "invitation_sent"
+        | "invitation_accepted"
+        | "invitation_declined"
       batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
       mpk_status: "active" | "restricted" | "inactive"
+      notification_type:
+        | "pool_invitation"
+        | "batch_action_required"
+        | "batch_status_changed"
+        | "grading_updated"
+        | "request_status_changed"
+        | "watchlist_supply_added"
+        | "matching_window_approaching"
+        | "request_at_risk"
+        | "farmer_declined"
+        | "request_stalled"
+        | "reliability_dropped"
       pool_request_status: "pending" | "partial" | "fulfilled" | "cancelled"
     }
     CompositeTypes: {
@@ -515,10 +624,43 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_event_type: [
+        "farmer_onboarded",
+        "farmer_grading_changed",
+        "farmer_restricted",
+        "farmer_unrestricted",
+        "mpk_onboarded",
+        "mpk_status_changed",
+        "mpk_restricted",
+        "mpk_unrestricted",
+        "pool_request_created",
+        "pool_request_updated",
+        "pool_request_cancelled",
+        "pool_match_proposed",
+        "pool_match_confirmed",
+        "batch_confirmed",
+        "batch_declined",
+        "invitation_sent",
+        "invitation_accepted",
+        "invitation_declined",
+      ],
       batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
       mpk_status: ["active", "restricted", "inactive"],
+      notification_type: [
+        "pool_invitation",
+        "batch_action_required",
+        "batch_status_changed",
+        "grading_updated",
+        "request_status_changed",
+        "watchlist_supply_added",
+        "matching_window_approaching",
+        "request_at_risk",
+        "farmer_declined",
+        "request_stalled",
+        "reliability_dropped",
+      ],
       pool_request_status: ["pending", "partial", "fulfilled", "cancelled"],
     },
   },

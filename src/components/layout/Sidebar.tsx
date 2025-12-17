@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   Users,
   Building2,
-  GitMerge
+  GitMerge,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +62,7 @@ const adminNav: NavItem[] = [
   { label: 'Pool Matching', path: '/admin/matching', icon: GitMerge },
   { label: 'Farmer Management', path: '/admin/farmers', icon: Users },
   { label: 'MPK Management', path: '/admin/mpks', icon: Building2 },
+  { label: 'Activity Log', path: '/admin/activity', icon: Activity },
 ];
 
 export function Sidebar() {
