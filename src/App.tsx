@@ -19,6 +19,7 @@ import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
 import PoolMatching from "./pages/admin/PoolMatching";
 import ActivityLog from "./pages/admin/ActivityLog";
+import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,9 @@ const App = () => (
             <Route path="/admin/grading" element={<GradingStatus />} />
             <Route path="/admin/matching" element={<PoolMatching />} />
             <Route path="/admin/activity" element={<ActivityLog />} />
+            
+            {/* Shared Routes */}
+            <Route path="/price-grid" element={<PriceGrid />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -11,7 +11,8 @@ import {
   Users,
   Building2,
   GitMerge,
-  Activity
+  Activity,
+  Grid3X3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,12 +29,14 @@ interface NavItem {
  * - Overview
  * - Livestock Batches
  * - Sales Calendar
+ * - Price Grid
  * - Profile
  * 
  * MPK:
  * - Market Overview
  * - Watchlist
  * - Purchase Pool Requests
+ * - Price Grid
  * - Profile
  * 
  * Admin:
@@ -41,12 +44,15 @@ interface NavItem {
  * - Pool Matching
  * - Farmer Management
  * - MPK Management
+ * - Price Grid
+ * - Activity Log
  */
 
 const farmerNav: NavItem[] = [
   { label: 'Overview', path: '/', icon: Home },
   { label: 'Livestock Batches', path: '/farmer/batches', icon: Boxes },
   { label: 'Sales Calendar', path: '/farmer/calendar', icon: Calendar },
+  { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
   { label: 'Profile', path: '/farmer/profile', icon: User },
 ];
 
@@ -54,6 +60,7 @@ const mpkNav: NavItem[] = [
   { label: 'Market Overview', path: '/mpk/market', icon: BarChart3 },
   { label: 'Watchlist', path: '/mpk/watchlist', icon: BookmarkCheck },
   { label: 'Purchase Pool Requests', path: '/mpk/requests', icon: ShoppingCart },
+  { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
   { label: 'Profile', path: '/mpk/profile', icon: User },
 ];
 
@@ -62,6 +69,7 @@ const adminNav: NavItem[] = [
   { label: 'Pool Matching', path: '/admin/matching', icon: GitMerge },
   { label: 'Farmer Management', path: '/admin/farmers', icon: Users },
   { label: 'MPK Management', path: '/admin/mpks', icon: Building2 },
+  { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
   { label: 'Activity Log', path: '/admin/activity', icon: Activity },
 ];
 
