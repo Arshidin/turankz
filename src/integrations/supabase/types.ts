@@ -68,6 +68,101 @@ export type Database = {
         }
         Relationships: []
       }
+      farmer_activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          farmer_id: string
+          id: string
+          new_value: string | null
+          note: string | null
+          performed_by: string | null
+          previous_value: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          farmer_id: string
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string | null
+          previous_value?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          farmer_id?: string
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string | null
+          previous_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmer_activity_log_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      farmers: {
+        Row: {
+          created_at: string
+          farmer_id: string
+          grading: Database["public"]["Enums"]["farmer_grading"]
+          id: string
+          is_restricted: boolean
+          last_activity_at: string | null
+          missed_updates: number
+          name: string
+          region: string
+          reliability: Database["public"]["Enums"]["farmer_reliability"]
+          restriction_reason: string | null
+          total_confirmations: number
+          total_declines: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          farmer_id: string
+          grading?: Database["public"]["Enums"]["farmer_grading"]
+          id?: string
+          is_restricted?: boolean
+          last_activity_at?: string | null
+          missed_updates?: number
+          name: string
+          region: string
+          reliability?: Database["public"]["Enums"]["farmer_reliability"]
+          restriction_reason?: string | null
+          total_confirmations?: number
+          total_declines?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          farmer_id?: string
+          grading?: Database["public"]["Enums"]["farmer_grading"]
+          id?: string
+          is_restricted?: boolean
+          last_activity_at?: string | null
+          missed_updates?: number
+          name?: string
+          region?: string
+          reliability?: Database["public"]["Enums"]["farmer_reliability"]
+          restriction_reason?: string | null
+          total_confirmations?: number
+          total_declines?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       pool_matches: {
         Row: {
           batch_id: string
@@ -167,6 +262,8 @@ export type Database = {
     }
     Enums: {
       batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
+      farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
+      farmer_reliability: "high" | "medium" | "low"
       pool_request_status: "pending" | "partial" | "fulfilled" | "cancelled"
     }
     CompositeTypes: {
@@ -296,6 +393,8 @@ export const Constants = {
   public: {
     Enums: {
       batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
+      farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
+      farmer_reliability: ["high", "medium", "low"],
       pool_request_status: ["pending", "partial", "fulfilled", "cancelled"],
     },
   },
