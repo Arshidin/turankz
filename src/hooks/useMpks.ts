@@ -4,11 +4,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 export type MpkStatus = 'active' | 'restricted' | 'inactive';
+export type RegistrationStatus = 'pending' | 'active' | 'rejected' | 'clarification_needed';
 
 export interface Mpk {
   id: string;
   mpk_id: string;
   name: string;
+  user_id: string | null;
   intake_regions: string[];
   status: MpkStatus;
   is_request_restricted: boolean;
@@ -25,6 +27,8 @@ export interface Mpk {
   last_activity_at: string | null;
   created_at: string;
   updated_at: string;
+  registration_status: RegistrationStatus;
+  admin_notes: string | null;
 }
 
 export interface MpkActivityLog {
@@ -403,6 +407,82 @@ export function useUpdateMpkProfile() {
         description: error.message,
         variant: 'destructive',
       });
+    },
+  });
+}
+
+// Update MPK registration status
+export function useUpdateMpkRegistration() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      mpkId,
+      newStatus,
+      previousStatus,
+      note,
+      adminNotes,
+    }: {
+      mpkId: string;
+      newStatus: RegistrationStatus;
+      previousStatus: RegistrationStatus;
+      note: string;
+      adminNotes?: string;
+    }) => {
+      const updates: Record<string, unknown> = { 
+        registration_status: newStatus,
+        admin_notes: adminNotes || null,
+      };
+      
+      // If activating, also set status to active
+      if (newStatus === 'active') {
+        updates.status = 'active';
+      }
+
+      const { error: updateError } = await supabase
+        .from('mpks')
+        .update(updates)
+        .eq('id', mpkId);
+
+      if (updateError) throw updateError;
+
+      const { error: logError } = await supabase
+        .from('mpk_activity_log')
+        .insert({
+          mpk_id: mpkId,
+          action_type: 'registration_status_change',
+          previous_value: previousStatus,
+          new_value: newStatus,
+          note,
+          performed_by: 'Admin',
+        });
+
+      if (logError) throw logError;
+    },
+    onSuccess: (_, { newStatus }) => {
+      queryClient.invalidateQueries({ queryKey: ['mpks'] });
+      queryClient.invalidateQueries({ queryKey: ['mpk-activity-log'] });
+      
+      const messages: Record<RegistrationStatus, string> = {
+        active: 'MPK has been activated.',
+        pending: 'Status set to pending.',
+        rejected: 'Registration has been rejected.',
+        clarification_needed: 'Clarification requested from MPK.',
+      };
+      
+      toast({
+        title: 'Registration updated',
+        description: messages[newStatus],
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update registration. Please try again.',
+        variant: 'destructive',
+      });
+      console.error('Registration update error:', error);
     },
   });
 }
