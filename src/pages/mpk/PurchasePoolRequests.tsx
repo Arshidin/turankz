@@ -211,13 +211,17 @@ export default function PurchasePoolRequests() {
         </CardHeader>
         <CardContent>
           {activeRequests.length === 0 ? (
-            <div className="py-12 text-center">
-              <CalendarClock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-medium">No active requests</p>
-              <p className="text-sm text-muted-foreground mb-4">Create your first purchase request to start sourcing supply.</p>
-              <Button size="sm" onClick={() => setNewRequestOpen(true)}>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <CalendarClock className="w-10 h-10 text-muted-foreground/60" />
+              </div>
+              <p className="font-medium text-foreground mb-1">No purchase requests created yet.</p>
+              <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                Requests define your demand for upcoming matching windows.
+              </p>
+              <Button onClick={() => setNewRequestOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                New Request
+                Create Pool Request
               </Button>
             </div>
           ) : (

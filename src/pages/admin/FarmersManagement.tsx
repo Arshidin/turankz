@@ -307,6 +307,24 @@ export default function FarmersManagement() {
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
+              ) : filteredFarmers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    No farmers found for selected criteria.
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterRegion('all');
+                      setFilterGrading('all');
+                      setFilterReliability('all');
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
               ) : (
                 <div className="overflow-auto max-h-[500px]">
                   <Table>
