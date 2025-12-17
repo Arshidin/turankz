@@ -9,6 +9,7 @@ import {
   BookmarkCheck,
   ShoppingCart,
   Users,
+  Building2,
   Award,
   GitMerge
 } from 'lucide-react';
@@ -38,6 +39,7 @@ const mpkNav: NavItem[] = [
 
 const adminNav: NavItem[] = [
   { label: 'Farmers Management', path: '/admin/farmers', icon: Users },
+  { label: 'MPK Management', path: '/admin/mpks', icon: Building2 },
   { label: 'Grading & Status', path: '/admin/grading', icon: Award },
   { label: 'Pool Matching', path: '/admin/matching', icon: GitMerge },
 ];

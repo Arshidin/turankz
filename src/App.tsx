@@ -14,6 +14,7 @@ import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
 import PurchasePoolRequests from "./pages/mpk/PurchasePoolRequests";
 import FarmersManagement from "./pages/admin/FarmersManagement";
+import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
 import PoolMatching from "./pages/admin/PoolMatching";
 import NotFound from "./pages/NotFound";
@@ -43,6 +44,7 @@ const App = () => (
             
             {/* Admin Routes */}
             <Route path="/admin/farmers" element={<FarmersManagement />} />
+            <Route path="/admin/mpks" element={<MpkManagement />} />
             <Route path="/admin/grading" element={<GradingStatus />} />
             <Route path="/admin/matching" element={<PoolMatching />} />
             
