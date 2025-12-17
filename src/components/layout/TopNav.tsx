@@ -2,6 +2,7 @@ import { useRole, UserRole } from '@/contexts/RoleContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { NotificationBell } from '@/components/notifications';
 
 const roleConfig: Record<UserRole, { label: string; badgeClass: string }> = {
   admin: { 
@@ -39,8 +40,11 @@ export function TopNav() {
         </Badge>
       </div>
 
-      {/* Right: Role Selector & User */}
+      {/* Right: Notifications, Role Selector & User */}
       <div className="flex items-center gap-3">
+        {/* Notifications */}
+        <NotificationBell />
+
         {/* Role Selector */}
         <Select value={role} onValueChange={(value: UserRole) => setRole(value)}>
           <SelectTrigger className="w-[180px] bg-secondary/50 border-border text-sm">

@@ -18,6 +18,7 @@ import FarmersManagement from "./pages/admin/FarmersManagement";
 import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
 import PoolMatching from "./pages/admin/PoolMatching";
+import ActivityLog from "./pages/admin/ActivityLog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/admin/mpks" element={<MpkManagement />} />
             <Route path="/admin/grading" element={<GradingStatus />} />
             <Route path="/admin/matching" element={<PoolMatching />} />
+            <Route path="/admin/activity" element={<ActivityLog />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
