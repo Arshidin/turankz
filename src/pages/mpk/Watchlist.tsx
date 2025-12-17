@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bookmark, Trash2, Plus, TrendingUp, TrendingDown, AlertCircle, Clock, ArrowRight } from 'lucide-react';
+import { Bookmark, Trash2, Plus, TrendingUp, TrendingDown, AlertCircle, Clock, ArrowRight, Database } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
+import { useMarketBatches, batchMatchesCriteria, aggregateByRegion, calculateMarketSummary } from '@/hooks/useMarketData';
 
 interface WatchlistItem {
   id: string;
@@ -283,12 +284,40 @@ export default function Watchlist() {
   const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
   const isFiltered = hasActiveFilters(criteriaFilters);
   
-  // Filter watchlist items based on criteria
+  // Fetch real batch data
+  const { data: realBatches, isLoading: batchesLoading } = useMarketBatches();
+  const hasRealData = (realBatches?.length || 0) > 0;
+  
+  // Filter watchlist items based on criteria (using mock data for watchlist structure)
+  // In production, this would be a saved watchlist in the database
   const filteredItems = isFiltered
     ? watchlistItems.filter(item => itemMatchesFilter(item, criteriaFilters))
     : watchlistItems;
   
-  const groupedByMonth = filteredItems.reduce((acc, item) => {
+  // If we have real batch data, calculate real statistics for regions that match watchlist items
+  const enhancedItems = useMemo(() => {
+    if (!hasRealData || !realBatches) return filteredItems;
+    
+    // Filter real batches by criteria
+    const filteredRealBatches = realBatches.filter(batch => batchMatchesCriteria(batch, criteriaFilters));
+    const regionData = aggregateByRegion(filteredRealBatches);
+    
+    return filteredItems.map(item => {
+      const realRegion = regionData.find(r => r.region.toLowerCase().includes(item.region.toLowerCase()));
+      if (realRegion) {
+        return {
+          ...item,
+          totalHeads: realRegion.total,
+          confirmed: realRegion.confirmed,
+          softCommitted: realRegion.softCommitted,
+          forecast: realRegion.forecast,
+        };
+      }
+      return item;
+    });
+  }, [filteredItems, realBatches, hasRealData, criteriaFilters]);
+  
+  const groupedByMonth = enhancedItems.reduce((acc, item) => {
     if (!acc[item.targetMonth]) {
       acc[item.targetMonth] = [];
     }
@@ -296,10 +325,10 @@ export default function Watchlist() {
     return acc;
   }, {} as Record<string, WatchlistItem[]>);
 
-  const totalWatched = filteredItems.length;
-  const totalHeads = filteredItems.reduce((sum, item) => sum + item.totalHeads, 0);
-  const approachingWindow = filteredItems.filter(item => item.isApproachingWindow).length;
-  const itemsWithChanges = filteredItems.filter(
+  const totalWatched = enhancedItems.length;
+  const totalHeads = enhancedItems.reduce((sum, item) => sum + item.totalHeads, 0);
+  const approachingWindow = enhancedItems.filter(item => item.isApproachingWindow).length;
+  const itemsWithChanges = enhancedItems.filter(
     item => item.changesSinceLastVisit.volumeChange !== 0 || item.changesSinceLastVisit.newSoftCommitted > 0
   ).length;
 
@@ -327,7 +356,18 @@ export default function Watchlist() {
         <CriteriaFilter filters={criteriaFilters} onFiltersChange={setCriteriaFilters} />
         {isFiltered && (
           <p className="text-xs text-muted-foreground mt-2">
-            Showing {filteredItems.length} of {watchlistItems.length} watched items matching your criteria.
+            Showing {enhancedItems.length} of {watchlistItems.length} watched items matching your criteria.
+          </p>
+        )}
+        {hasRealData && (
+          <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+            <Database className="w-3 h-3" />
+            Supply data updated from live farmer declarations.
+          </p>
+        )}
+        {!hasRealData && (
+          <p className="text-xs text-amber-600 mt-2">
+            Displaying sample data. Real supply data will appear when farmers declare batches.
           </p>
         )}
       </div>
@@ -393,7 +433,7 @@ export default function Watchlist() {
         </div>
       ))}
 
-      {filteredItems.length === 0 && (
+      {enhancedItems.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
