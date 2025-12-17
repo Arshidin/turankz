@@ -8,11 +8,17 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Sticky Header */}
       <TopNav />
-      <div className="flex flex-1">
+      
+      {/* Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Fixed Sidebar */}
         <Sidebar />
-        <main className="flex-1 p-6 overflow-auto">
+        
+        {/* Scrollable Main Content */}
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>

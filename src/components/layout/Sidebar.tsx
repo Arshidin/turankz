@@ -100,7 +100,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
+    <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 h-full overflow-y-auto">
       {/* Role Section Header */}
       <div className="px-4 pt-5 pb-3">
         <span className="text-[11px] font-medium uppercase tracking-wider text-sidebar-muted">
