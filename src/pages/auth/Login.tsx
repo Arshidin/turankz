@@ -17,8 +17,9 @@ const loginSchema = z.object({
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signIn } = useAuthContext();
+  const { signIn, signUp } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -43,6 +44,36 @@ export default function Login() {
     }
 
     setIsLoading(true);
+
+    if (isSignUp) {
+      const { error } = await signUp(formData.email, formData.password);
+      setIsLoading(false);
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast({
+            title: 'Account exists',
+            description: 'An account with this email already exists. Please sign in.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Registration failed',
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+
+      toast({
+        title: 'Account created',
+        description: 'You can now sign in with your credentials.',
+      });
+      setIsSignUp(false);
+      return;
+    }
+
     const { error } = await signIn(formData.email, formData.password);
     setIsLoading(false);
 
@@ -74,9 +105,11 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign In</CardTitle>
+          <CardTitle className="text-2xl">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
           <CardDescription>
-            Enter your credentials to access Turan Standard Pool
+            {isSignUp 
+              ? 'Create your account to access Turan Standard Pool'
+              : 'Enter your credentials to access Turan Standard Pool'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,21 +144,34 @@ export default function Login() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  {isSignUp ? 'Creating account...' : 'Signing in...'}
                 </>
               ) : (
-                'Sign In'
+                isSignUp ? 'Create Account' : 'Sign In'
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/auth')}>
-                Register
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <Button 
+                variant="link" 
+                className="p-0 h-auto" 
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp ? 'Sign in' : 'Create account'}
               </Button>
             </p>
+            
+            {!isSignUp && (
+              <p className="text-sm text-muted-foreground">
+                New to the platform?{' '}
+                <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/auth')}>
+                  Register as Farmer or MPK
+                </Button>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
