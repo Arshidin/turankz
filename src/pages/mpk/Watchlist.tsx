@@ -305,14 +305,16 @@ export default function Watchlist() {
 
       {watchlistItems.length === 0 && (
         <Card>
-          <CardContent className="p-12 text-center">
-            <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No items in watchlist</h3>
-            <p className="text-muted-foreground mb-4">
-              Add regions or batches from Market Overview to monitor availability
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Bookmark className="w-10 h-10 text-muted-foreground/60" />
+            </div>
+            <p className="font-medium text-foreground mb-1">Your watchlist is empty.</p>
+            <p className="text-sm text-muted-foreground max-w-sm mb-4">
+              Monitor supply by region and month to track availability before requesting.
             </p>
             <Button>
-              Go to Market Overview
+              Add Regions to Watch
             </Button>
           </CardContent>
         </Card>

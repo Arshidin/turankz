@@ -292,11 +292,16 @@ export default function LivestockBatches() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FileText className="w-10 h-10 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground mb-4">No batches found. Create your first batch to get started.</p>
-              <Button size="sm" onClick={() => setNewBatchOpen(true)}>
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <FileText className="w-10 h-10 text-muted-foreground/60" />
+              </div>
+              <p className="font-medium text-foreground mb-1">No batches declared yet.</p>
+              <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                Declared batches are required to be considered for pool matching.
+              </p>
+              <Button onClick={() => setNewBatchOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                New Batch
+                Declare First Batch
               </Button>
             </div>
           )}

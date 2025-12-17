@@ -258,7 +258,12 @@ export default function PoolMatching() {
                   ))}
                 </div>
               ) : requests?.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No purchase requests</p>
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="font-medium text-foreground mb-1">No active pool requests.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pool requests appear once MPKs submit demand.
+                  </p>
+                </div>
               ) : (
                 requests?.map(request => {
                   const fillRate = Math.round((request.matched_volume / request.required_volume) * 100);

@@ -310,6 +310,23 @@ export default function MpkManagement() {
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
+              ) : filteredMpks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    No MPKs found for selected criteria.
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterStatus('all');
+                      setFilterRegion('all');
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
               ) : (
                 <div className="overflow-auto max-h-[500px]">
                   <Table>

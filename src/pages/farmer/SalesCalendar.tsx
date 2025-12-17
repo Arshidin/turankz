@@ -271,7 +271,10 @@ export default function SalesCalendar() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       {data.totals.batchCount === 0 ? (
-                        <p className="text-sm text-muted-foreground">No batches planned</p>
+                        <div className="text-center py-2">
+                          <p className="text-sm text-muted-foreground">No batches declared.</p>
+                          <p className="text-xs text-muted-foreground mt-1">Add batches to see expected supply.</p>
+                        </div>
                       ) : (
                         <div className="space-y-3">
                           <div className="flex items-baseline gap-2">
@@ -468,9 +471,14 @@ export default function SalesCalendar() {
                   })}
               </div>
             ) : (
-              <div className="py-8 text-center">
-                <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No batches declared yet.</p>
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8 text-muted-foreground/60" />
+                </div>
+                <p className="font-medium text-foreground mb-1">No batches declared yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  Add batches to see expected supply by month.
+                </p>
               </div>
             )}
           </CardContent>
