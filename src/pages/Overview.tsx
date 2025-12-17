@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRole } from '@/contexts/RoleContext';
 import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Calendar, Shield, Info } from 'lucide-react';
+import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
+import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
+import { AttentionRequired } from '@/components/admin/AttentionRequired';
+import { MatchingWindowBanner } from '@/components/admin/MatchingWindowBanner';
+import { useFarmers } from '@/hooks/useFarmers';
+import { useMpks } from '@/hooks/useMpks';
+import { useBatches } from '@/hooks/useBatches';
+import { usePoolRequests } from '@/hooks/usePoolRequests';
 
 const stats = {
   farmer: [
@@ -19,12 +27,6 @@ const stats = {
     { label: 'In Watchlist', value: '23', icon: CheckCircle2 },
     { label: 'Active Requests', value: '7', icon: Clock },
     { label: 'Pool Fill Rate', value: '72%', icon: TrendingUp },
-  ],
-  admin: [
-    { label: 'Registered Farmers', value: '89', icon: Boxes },
-    { label: 'Active MPKs', value: '12', icon: CheckCircle2 },
-    { label: 'Pending Matches', value: '18', icon: Clock },
-    { label: 'Match Success', value: '94%', icon: TrendingUp },
   ],
 };
 
@@ -56,11 +58,155 @@ const nextMatchingWindow = {
 export default function Overview() {
   const { role, roleName } = useRole();
   const navigate = useNavigate();
-  const currentStats = stats[role];
+  
+  // Fetch real data for Admin dashboard
+  const { data: farmers = [] } = useFarmers();
+  const { data: mpks = [] } = useMpks();
+  const { data: batches = [] } = useBatches();
+  const { data: poolRequests = [] } = usePoolRequests();
 
   const handleActionClick = (batchId: string, action: string) => {
     navigate(`/farmer/batch/${batchId}?action=${action}`);
   };
+
+  // Calculate admin metrics from real data
+  const activeFarmers = farmers.filter(f => !f.is_restricted).length;
+  const activeMpks = mpks.filter(m => m.status === 'active').length;
+  const totalDeclaredVolume = batches.reduce((sum, b) => sum + b.heads, 0);
+  const activePoolRequests = poolRequests.filter(r => r.status === 'pending' || r.status === 'partial').length;
+
+  // Calculate supply totals
+  const supplyTotals = {
+    forecast: batches.filter(b => b.status === 'forecast').reduce((sum, b) => sum + b.heads, 0),
+    softCommitted: batches.filter(b => b.status === 'soft_committed').reduce((sum, b) => sum + b.heads, 0),
+    confirmed: batches.filter(b => b.status === 'confirmed').reduce((sum, b) => sum + b.heads, 0),
+  };
+
+  // Calculate demand totals
+  const demandTotals = {
+    pending: poolRequests.filter(r => r.status === 'pending').reduce((sum, r) => sum + r.required_volume, 0),
+    partial: poolRequests.filter(r => r.status === 'partial').reduce((sum, r) => sum + r.required_volume, 0),
+    fulfilled: poolRequests.filter(r => r.status === 'fulfilled').reduce((sum, r) => sum + r.required_volume, 0),
+  };
+
+  // Calculate regional breakdown
+  const regions = [...new Set([...batches.map(b => b.region), ...poolRequests.flatMap(r => r.regions)])];
+  const byRegion = regions.map(region => ({
+    region,
+    supply: batches.filter(b => b.region === region).reduce((sum, b) => sum + b.heads, 0),
+    demand: poolRequests.filter(r => r.regions.includes(region)).reduce((sum, r) => sum + r.required_volume, 0),
+  })).filter(r => r.supply > 0 || r.demand > 0);
+
+  // Calculate monthly breakdown (simplified - using static months)
+  const byMonth = [
+    {
+      month: 'January 2026',
+      supply: { forecast: 320, softCommitted: 180, confirmed: 85 },
+      demand: { pending: 250, partial: 120, fulfilled: 80 },
+    },
+    {
+      month: 'February 2026',
+      supply: { forecast: 280, softCommitted: 150, confirmed: 60 },
+      demand: { pending: 200, partial: 100, fulfilled: 50 },
+    },
+    {
+      month: 'March 2026',
+      supply: { forecast: 350, softCommitted: 120, confirmed: 40 },
+      demand: { pending: 180, partial: 80, fulfilled: 30 },
+    },
+  ];
+
+  // Generate attention items
+  const attentionItems = [
+    ...poolRequests
+      .filter(r => r.status === 'pending' && r.matched_volume < r.required_volume * 0.3)
+      .slice(0, 2)
+      .map(r => ({
+        id: r.id,
+        type: 'request_at_risk' as const,
+        title: `Request ${r.request_number} at risk`,
+        description: `Only ${Math.round((r.matched_volume / r.required_volume) * 100)}% filled for ${r.target_week}`,
+        severity: 'high' as const,
+        linkTo: '/admin/pool-matching',
+        linkLabel: 'Review',
+      })),
+    ...farmers
+      .filter(f => f.reliability === 'low')
+      .slice(0, 2)
+      .map(f => ({
+        id: f.id,
+        type: 'farmer_declining' as const,
+        title: `${f.name} reliability declining`,
+        description: `${f.missed_updates} missed updates, ${f.total_declines} declines`,
+        severity: 'medium' as const,
+        linkTo: '/admin/farmers',
+        linkLabel: 'Review',
+      })),
+    ...mpks
+      .filter(m => m.status === 'restricted')
+      .slice(0, 2)
+      .map(m => ({
+        id: m.id,
+        type: 'mpk_stalled' as const,
+        title: `${m.name} restricted`,
+        description: m.restriction_reason || 'Request behavior flagged',
+        severity: 'medium' as const,
+        linkTo: '/admin/mpks',
+        linkLabel: 'Review',
+      })),
+  ];
+
+  // Admin Dashboard
+  if (role === 'admin') {
+    return (
+      <MainLayout>
+        <PageHeader 
+          title="Platform Overview" 
+          description="TURAN / ZENGI — Command & Control Dashboard" 
+        />
+
+        {/* Matching Window Banner */}
+        <div className="mb-6">
+          <MatchingWindowBanner
+            windowDate={nextMatchingWindow.date}
+            daysRemaining={nextMatchingWindow.daysRemaining}
+            currentPoolPeriod="Week 51, 2025"
+          />
+        </div>
+
+        {/* System Health Summary */}
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">System Health</h2>
+          <SystemHealthSummary
+            activeFarmers={activeFarmers}
+            activeMpks={activeMpks}
+            totalDeclaredVolume={totalDeclaredVolume}
+            activePoolRequests={activePoolRequests}
+          />
+        </div>
+
+        {/* Supply vs Demand Snapshot */}
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Supply vs Demand</h2>
+          <SupplyDemandSnapshot
+            supplyTotals={supplyTotals}
+            demandTotals={demandTotals}
+            byRegion={byRegion}
+            byMonth={byMonth}
+          />
+        </div>
+
+        {/* Attention Required */}
+        <div>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Attention Required</h2>
+          <AttentionRequired items={attentionItems} />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Farmer and MPK Dashboard (existing code)
+  const currentStats = stats[role as 'farmer' | 'mpk'];
 
   return (
     <MainLayout>
