@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,7 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, type ReadinessStatus } from '@/components/ui/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -39,11 +39,21 @@ import {
   ArrowUpCircle,
   Save,
   X,
-  Loader2
+  Loader2,
+  ArrowDownCircle
 } from 'lucide-react';
 import { useBatch, useConfirmBatch, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
+
+// Data integrity components
+import {
+  ChangeConfirmationDialog,
+  EditHelperNote,
+  ReadinessTransitionDialog,
+} from '@/components/data-integrity';
+import { useChangeTracking } from '@/hooks/useChangeTracking';
+import { DEFAULT_CONSTRAINTS, requiresReadinessConfirmation } from '@/lib/change-constraints';
 
 const REGIONS = [
   'Almaty',
@@ -119,10 +129,14 @@ export default function BatchDetail() {
   const action = searchParams.get('action') || 'view';
   
   const [isEditing, setIsEditing] = useState(action === 'update');
+  const [showQuantityConfirm, setShowQuantityConfirm] = useState(false);
+  const [showReadinessDialog, setShowReadinessDialog] = useState(false);
+  const [pendingQuantityChange, setPendingQuantityChange] = useState<{ old: number; new: number } | null>(null);
   
   const { data: batch, isLoading, error } = useBatch(batchId ? `BTH-${batchId}` : undefined);
   const confirmBatch = useConfirmBatch();
   const updateBatch = useUpdateBatch();
+  const { trackBatchQuantityChange, trackReadinessChange, trackMonthChange } = useChangeTracking();
 
   const weekOptions = getTargetWeekOptions();
 
@@ -141,6 +155,27 @@ export default function BatchDetail() {
   const handleSave = async (data: FormData) => {
     if (!batch) return;
     
+    // Check for quantity reduction
+    if (data.heads < batch.heads) {
+      setPendingQuantityChange({ old: batch.heads, new: data.heads });
+      setShowQuantityConfirm(true);
+      return;
+    }
+    
+    await performSave(data);
+  };
+
+  const performSave = async (data: FormData, reason?: string) => {
+    if (!batch) return;
+    
+    // Track changes
+    if (data.heads !== batch.heads) {
+      await trackBatchQuantityChange(batch.id, batch.heads, data.heads, reason);
+    }
+    if (data.target_week !== batch.target_week) {
+      await trackMonthChange(batch.id, batch.target_week, data.target_week, reason);
+    }
+    
     await updateBatch.mutateAsync({
       id: batch.id,
       region: data.region,
@@ -158,6 +193,14 @@ export default function BatchDetail() {
       description: `${batch.batch_number} has been updated.`,
     });
     setIsEditing(false);
+    setPendingQuantityChange(null);
+  };
+
+  const handleQuantityConfirm = (reason?: string) => {
+    if (!pendingQuantityChange) return;
+    const formData = form.getValues();
+    performSave(formData, reason);
+    setShowQuantityConfirm(false);
   };
 
   const handleEscalateStatus = async () => {
@@ -165,6 +208,8 @@ export default function BatchDetail() {
     
     const nextStatus = getNextStatus(batch.status);
     if (!nextStatus) return;
+    
+    await trackReadinessChange(batch.id, batch.status, nextStatus);
     
     await updateBatch.mutateAsync({
       id: batch.id,
@@ -176,6 +221,26 @@ export default function BatchDetail() {
     toast({
       title: 'Status Updated',
       description: `Batch status changed to ${getStatusLabel(nextStatus)}.`,
+    });
+  };
+
+  const handleReadinessChange = async (newStatus: ReadinessStatus, reason?: string) => {
+    if (!batch) return;
+    
+    const dbStatus = newStatus.replace('-', '_') as BatchStatus;
+    
+    await trackReadinessChange(batch.id, batch.status, dbStatus, reason);
+    
+    await updateBatch.mutateAsync({
+      id: batch.id,
+      status: dbStatus,
+      requires_action: false,
+      action_type: null,
+    });
+    
+    toast({
+      title: 'Status Updated',
+      description: `Batch status changed to ${getStatusLabel(dbStatus)}.`,
     });
   };
 
@@ -449,6 +514,13 @@ export default function BatchDetail() {
                       )}
                     />
 
+                    {/* Data integrity helper note */}
+                    <EditHelperNote
+                      variant="info"
+                      message="Frequent changes reduce matching priority."
+                      className="mt-2"
+                    />
+
                     <div className="flex justify-end gap-3 pt-4">
                       <Button 
                         type="button" 
@@ -619,6 +691,24 @@ export default function BatchDetail() {
                   </p>
                 </div>
               )}
+
+              {/* Allow status modification (including downgrades) */}
+              {(batch.status === 'confirmed' || batch.status === 'soft_committed') && (
+                <div className="border-t pt-4">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowReadinessDialog(true)}
+                  >
+                    <ArrowDownCircle className="w-4 h-4 mr-2" />
+                    Modify Status
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Downgrades require confirmation and will be logged.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -646,6 +736,27 @@ export default function BatchDetail() {
           )}
         </div>
       </div>
+
+      {/* Data Integrity Dialogs */}
+      <ChangeConfirmationDialog
+        open={showQuantityConfirm}
+        onOpenChange={setShowQuantityConfirm}
+        changeType="quantity_reduction"
+        entityName={batch?.batch_number || ''}
+        previousValue={pendingQuantityChange ? `${pendingQuantityChange.old} heads` : ''}
+        newValue={pendingQuantityChange ? `${pendingQuantityChange.new} heads` : ''}
+        requiresReason={false}
+        onConfirm={handleQuantityConfirm}
+        onCancel={() => setPendingQuantityChange(null)}
+      />
+
+      <ReadinessTransitionDialog
+        open={showReadinessDialog}
+        onOpenChange={setShowReadinessDialog}
+        batchNumber={batch?.batch_number || ''}
+        currentStatus={mapStatus(batch?.status || 'forecast')}
+        onConfirm={handleReadinessChange}
+      />
     </MainLayout>
   );
 }
