@@ -8,6 +8,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
   usePoolRequests, 
   useUpdatePoolRequest, 
   useAvailableBatchesForMatching,
@@ -16,6 +23,9 @@ import {
   PoolRequestStatus,
   getAcceptanceCriteria
 } from '@/hooks/usePoolRequests';
+import { useBulkUpdateStandardStatus, type StandardStatus } from '@/hooks/useAdminBatches';
+import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
+import { PremiumBadge } from '@/components/premium';
 import { checkBatchMatch, formatCriteriaDisplay, type MatchLevel } from '@/lib/livestock-criteria';
 import { 
   Clock, 
@@ -29,7 +39,8 @@ import {
   RotateCcw,
   ArrowRight,
   Loader2,
-  Filter
+  Filter,
+  Award
 } from 'lucide-react';
 
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
@@ -48,6 +59,8 @@ interface SupplyBlock {
   age_max: number | null;
   weight_min: number | null;
   weight_max: number | null;
+  // Standard status
+  standard_status: string | null;
   // Computed match level
   matchLevel?: MatchLevel;
 }
@@ -120,8 +133,10 @@ export default function PoolMatching() {
 
   const { data: requests, isLoading: requestsLoading } = usePoolRequests();
   const { data: batches, isLoading: batchesLoading } = useAvailableBatchesForMatching();
+  const { data: standardPremiums } = useStandardPremiums();
   const updateRequest = useUpdatePoolRequest();
   const createMatch = useCreatePoolMatch();
+  const bulkUpdateStatus = useBulkUpdateStandardStatus();
 
   const activeRequest = requests?.find(r => r.id === activeRequestId);
   const activeCriteria = activeRequest ? getAcceptanceCriteria(activeRequest) : null;
@@ -145,6 +160,7 @@ export default function PoolMatching() {
         age_max: b.age_max,
         weight_min: b.weight_min,
         weight_max: b.weight_max,
+        standard_status: (b as any).standard_status || 'non_standard',
       };
       
       // Calculate match level if we have active criteria
@@ -244,6 +260,14 @@ export default function PoolMatching() {
   const handleSelectRequest = (id: string) => {
     setActiveRequestId(id);
     clearSelection();
+  };
+
+  const handleBulkStandardStatus = (status: StandardStatus) => {
+    if (selectedBatchIds.size === 0) return;
+    bulkUpdateStatus.mutate({
+      batchIds: Array.from(selectedBatchIds),
+      standardStatus: status,
+    });
   };
 
   const handleProposeMatch = async () => {
@@ -415,6 +439,34 @@ export default function PoolMatching() {
                   </div>
                 )}
               </div>
+              
+              {/* Standard Status Assignment Controls */}
+              {selectedBatchIds.size > 0 && (
+                <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm font-medium text-foreground">
+                        {selectedBatchIds.size} batch{selectedBatchIds.size > 1 ? 'es' : ''} selected
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Assign Standard Status:</span>
+                      <Select onValueChange={(value) => handleBulkStandardStatus(value as StandardStatus)}>
+                        <SelectTrigger className="w-[140px] h-7 text-xs">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="non_standard">Non-Standard</SelectItem>
+                          <SelectItem value="standard">Standard (+50₸)</SelectItem>
+                          <SelectItem value="high_standard">High Standard (+100₸)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {activeRequest && (
                 <div className="mt-2 space-y-2">
                   <p className="text-xs text-muted-foreground">
@@ -488,7 +540,10 @@ export default function PoolMatching() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-foreground">{block.batchRef}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-foreground">{block.batchRef}</span>
+                              <PremiumBadge status={block.standard_status || 'non_standard'} size="sm" />
+                            </div>
                             <div className="flex items-center gap-1">
                               {hasCriteria && block.matchLevel && getMatchBadge(block.matchLevel)}
                               {getReadinessBadge(block.readiness)}

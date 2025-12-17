@@ -158,7 +158,7 @@ export function useAvailableBatchesForMatching() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
-        .select('id, batch_number, region, status, grade, heads, breed, gender, age_min, age_max, weight_min, weight_max')
+        .select('id, batch_number, region, status, grade, heads, breed, gender, age_min, age_max, weight_min, weight_max, standard_status')
         .in('status', ['confirmed', 'soft_committed', 'forecast'])
         .order('status', { ascending: true });
 
