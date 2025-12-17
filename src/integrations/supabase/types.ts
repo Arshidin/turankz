@@ -56,9 +56,13 @@ export type Database = {
       batches: {
         Row: {
           action_type: string | null
+          age_max: number | null
+          age_min: number | null
           avg_weight: number | null
           batch_number: string
+          breed: string | null
           created_at: string
+          gender: string | null
           grade: string
           heads: number
           id: string
@@ -70,12 +74,18 @@ export type Database = {
           target_week: string
           updated_at: string
           user_id: string
+          weight_max: number | null
+          weight_min: number | null
         }
         Insert: {
           action_type?: string | null
+          age_max?: number | null
+          age_min?: number | null
           avg_weight?: number | null
           batch_number: string
+          breed?: string | null
           created_at?: string
+          gender?: string | null
           grade: string
           heads: number
           id?: string
@@ -87,12 +97,18 @@ export type Database = {
           target_week: string
           updated_at?: string
           user_id: string
+          weight_max?: number | null
+          weight_min?: number | null
         }
         Update: {
           action_type?: string | null
+          age_max?: number | null
+          age_min?: number | null
           avg_weight?: number | null
           batch_number?: string
+          breed?: string | null
           created_at?: string
+          gender?: string | null
           grade?: string
           heads?: number
           id?: string
@@ -104,6 +120,8 @@ export type Database = {
           target_week?: string
           updated_at?: string
           user_id?: string
+          weight_max?: number | null
+          weight_min?: number | null
         }
         Relationships: []
       }
@@ -263,6 +281,12 @@ export type Database = {
           cancelled_requests: number
           common_target_weeks: string[] | null
           created_at: string
+          default_accepted_breeds: string[] | null
+          default_accepted_genders: string[] | null
+          default_age_range_max: number | null
+          default_age_range_min: number | null
+          default_weight_range_max: number | null
+          default_weight_range_min: number | null
           fulfilled_requests: number
           id: string
           intake_regions: string[]
@@ -284,6 +308,12 @@ export type Database = {
           cancelled_requests?: number
           common_target_weeks?: string[] | null
           created_at?: string
+          default_accepted_breeds?: string[] | null
+          default_accepted_genders?: string[] | null
+          default_age_range_max?: number | null
+          default_age_range_min?: number | null
+          default_weight_range_max?: number | null
+          default_weight_range_min?: number | null
           fulfilled_requests?: number
           id?: string
           intake_regions?: string[]
@@ -305,6 +335,12 @@ export type Database = {
           cancelled_requests?: number
           common_target_weeks?: string[] | null
           created_at?: string
+          default_accepted_breeds?: string[] | null
+          default_accepted_genders?: string[] | null
+          default_age_range_max?: number | null
+          default_age_range_min?: number | null
+          default_weight_range_max?: number | null
+          default_weight_range_min?: number | null
           fulfilled_requests?: number
           id?: string
           intake_regions?: string[]
@@ -407,6 +443,10 @@ export type Database = {
       }
       purchase_pool_requests: {
         Row: {
+          accepted_breeds: string[] | null
+          accepted_genders: string[] | null
+          age_range_max: number | null
+          age_range_min: number | null
           created_at: string
           id: string
           matched_volume: number
@@ -420,8 +460,14 @@ export type Database = {
           status: Database["public"]["Enums"]["pool_request_status"]
           target_week: string
           updated_at: string
+          weight_range_max: number | null
+          weight_range_min: number | null
         }
         Insert: {
+          accepted_breeds?: string[] | null
+          accepted_genders?: string[] | null
+          age_range_max?: number | null
+          age_range_min?: number | null
           created_at?: string
           id?: string
           matched_volume?: number
@@ -435,8 +481,14 @@ export type Database = {
           status?: Database["public"]["Enums"]["pool_request_status"]
           target_week: string
           updated_at?: string
+          weight_range_max?: number | null
+          weight_range_min?: number | null
         }
         Update: {
+          accepted_breeds?: string[] | null
+          accepted_genders?: string[] | null
+          age_range_max?: number | null
+          age_range_min?: number | null
           created_at?: string
           id?: string
           matched_volume?: number
@@ -450,6 +502,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["pool_request_status"]
           target_week?: string
           updated_at?: string
+          weight_range_max?: number | null
+          weight_range_min?: number | null
         }
         Relationships: []
       }

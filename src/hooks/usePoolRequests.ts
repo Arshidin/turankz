@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import type { AcceptanceCriteria } from '@/lib/livestock-criteria';
 
 export type PoolRequestStatus = 'pending' | 'partial' | 'fulfilled' | 'cancelled';
 
@@ -19,6 +20,13 @@ export interface PoolRequest {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // Acceptance criteria
+  accepted_breeds: string[];
+  accepted_genders: string[];
+  age_range_min: number | null;
+  age_range_max: number | null;
+  weight_range_min: number | null;
+  weight_range_max: number | null;
 }
 
 export interface PoolMatch {
@@ -150,7 +158,7 @@ export function useAvailableBatchesForMatching() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
-        .select('id, batch_number, region, status, grade, heads')
+        .select('id, batch_number, region, status, grade, heads, breed, gender, age_min, age_max, weight_min, weight_max')
         .in('status', ['confirmed', 'soft_committed', 'forecast'])
         .order('status', { ascending: true });
 
@@ -181,6 +189,13 @@ export function useCreatePoolRequest() {
       regions: string[];
       target_week: string;
       notes: string | null;
+      // Acceptance criteria
+      accepted_breeds?: string[];
+      accepted_genders?: string[];
+      age_range_min?: number | null;
+      age_range_max?: number | null;
+      weight_range_min?: number | null;
+      weight_range_max?: number | null;
     }) => {
       const { data, error } = await supabase
         .from('purchase_pool_requests')
@@ -189,6 +204,12 @@ export function useCreatePoolRequest() {
           request_number: generateRequestNumber(),
           matched_volume: 0,
           status: 'pending' as PoolRequestStatus,
+          accepted_breeds: request.accepted_breeds || [],
+          accepted_genders: request.accepted_genders || [],
+          age_range_min: request.age_range_min ?? null,
+          age_range_max: request.age_range_max ?? null,
+          weight_range_min: request.weight_range_min ?? null,
+          weight_range_max: request.weight_range_max ?? null,
         })
         .select()
         .single();
@@ -245,4 +266,16 @@ export function useCancelPoolRequest() {
       });
     },
   });
+}
+
+// Helper to extract acceptance criteria from a request
+export function getAcceptanceCriteria(request: PoolRequest): AcceptanceCriteria {
+  return {
+    accepted_breeds: request.accepted_breeds || [],
+    accepted_genders: request.accepted_genders || [],
+    age_range_min: request.age_range_min,
+    age_range_max: request.age_range_max,
+    weight_range_min: request.weight_range_min,
+    weight_range_max: request.weight_range_max,
+  };
 }

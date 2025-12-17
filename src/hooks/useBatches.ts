@@ -21,6 +21,13 @@ export interface Batch {
   action_type: 'confirm' | 'review' | 'update' | null;
   created_at: string;
   updated_at: string;
+  // Livestock criteria
+  breed: string | null;
+  gender: string | null;
+  age_min: number | null;
+  age_max: number | null;
+  weight_min: number | null;
+  weight_max: number | null;
 }
 
 export const useBatches = () => {
@@ -221,3 +228,15 @@ export const useBatchStats = () => {
     requiresAction: batches.filter(b => b.requires_action).length,
   };
 };
+
+// Helper to get batch criteria for matching
+export function getBatchCriteria(batch: Batch) {
+  return {
+    breed: batch.breed,
+    gender: batch.gender,
+    age_min: batch.age_min,
+    age_max: batch.age_max,
+    weight_min: batch.weight_min,
+    weight_max: batch.weight_max,
+  };
+}

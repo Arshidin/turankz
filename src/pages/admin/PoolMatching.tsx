@@ -13,8 +13,10 @@ import {
   useAvailableBatchesForMatching,
   useCreatePoolMatch,
   PoolRequest,
-  PoolRequestStatus
+  PoolRequestStatus,
+  getAcceptanceCriteria
 } from '@/hooks/usePoolRequests';
+import { checkBatchMatch, formatCriteriaDisplay, type MatchLevel } from '@/lib/livestock-criteria';
 import { 
   Clock, 
   Target, 
@@ -26,7 +28,8 @@ import {
   CheckCheck,
   RotateCcw,
   ArrowRight,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
@@ -38,6 +41,15 @@ interface SupplyBlock {
   readiness: 'confirmed' | 'soft_committed' | 'forecast';
   grade: string;
   heads: number;
+  // Livestock criteria
+  breed: string | null;
+  gender: string | null;
+  age_min: number | null;
+  age_max: number | null;
+  weight_min: number | null;
+  weight_max: number | null;
+  // Computed match level
+  matchLevel?: MatchLevel;
 }
 
 const getStatusBadge = (status: PoolRequestStatus) => {
@@ -61,6 +73,17 @@ const getReadinessBadge = (readiness: string) => {
       return <Badge variant="outline" className="text-status-soft border-status-soft text-xs">Soft</Badge>;
     case 'forecast':
       return <Badge variant="outline" className="text-status-forecast border-status-forecast text-xs">Forecast</Badge>;
+  }
+};
+
+const getMatchBadge = (matchLevel: MatchLevel) => {
+  switch (matchLevel) {
+    case 'full':
+      return <Badge className="bg-status-confirmed-bg text-status-confirmed border-0 text-xs">Full Match</Badge>;
+    case 'partial':
+      return <Badge className="bg-status-soft-bg text-status-soft border-0 text-xs">Partial Match</Badge>;
+    case 'none':
+      return <Badge variant="outline" className="text-muted-foreground text-xs">No Match</Badge>;
   }
 };
 
@@ -93,6 +116,7 @@ const getPoolHealthIndicator = (health: PoolHealth) => {
 export default function PoolMatching() {
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
+  const [showOnlyMatching, setShowOnlyMatching] = useState(false);
 
   const { data: requests, isLoading: requestsLoading } = usePoolRequests();
   const { data: batches, isLoading: batchesLoading } = useAvailableBatchesForMatching();
@@ -100,37 +124,82 @@ export default function PoolMatching() {
   const createMatch = useCreatePoolMatch();
 
   const activeRequest = requests?.find(r => r.id === activeRequestId);
+  const activeCriteria = activeRequest ? getAcceptanceCriteria(activeRequest) : null;
+  const criteriaDisplay = activeCriteria ? formatCriteriaDisplay(activeCriteria) : [];
+  const hasCriteria = criteriaDisplay.length > 0;
 
-  // Transform batches to supply blocks
+  // Transform batches to supply blocks with match level
   const supplyBlocks: SupplyBlock[] = useMemo(() => {
     if (!batches) return [];
-    return batches.map(b => ({
-      id: b.id,
-      batchRef: b.batch_number,
-      region: b.region,
-      readiness: b.status as 'confirmed' | 'soft_committed' | 'forecast',
-      grade: b.grade,
-      heads: b.heads,
-    }));
-  }, [batches]);
+    return batches.map(b => {
+      const block: SupplyBlock = {
+        id: b.id,
+        batchRef: b.batch_number,
+        region: b.region,
+        readiness: b.status as 'confirmed' | 'soft_committed' | 'forecast',
+        grade: b.grade,
+        heads: b.heads,
+        breed: b.breed,
+        gender: b.gender,
+        age_min: b.age_min,
+        age_max: b.age_max,
+        weight_min: b.weight_min,
+        weight_max: b.weight_max,
+      };
+      
+      // Calculate match level if we have active criteria
+      if (activeCriteria) {
+        block.matchLevel = checkBatchMatch(
+          { breed: b.breed, gender: b.gender, age_min: b.age_min, age_max: b.age_max, weight_min: b.weight_min, weight_max: b.weight_max },
+          activeCriteria
+        );
+      }
+      
+      return block;
+    });
+  }, [batches, activeCriteria]);
 
   // Filter supply based on active request
   const filteredSupply = useMemo(() => {
     if (!activeRequest) return [];
-    return supplyBlocks.filter(s => {
+    let filtered = supplyBlocks.filter(s => {
       const gradeMatch = activeRequest.required_grade === 'A/B' 
         ? ['A', 'B'].includes(s.grade)
+        : activeRequest.required_grade === 'B/C'
+        ? ['B', 'C'].includes(s.grade)
+        : activeRequest.required_grade === 'Any'
+        ? true
         : s.grade === activeRequest.required_grade;
       const regionMatch = activeRequest.regions.includes('Any') || activeRequest.regions.includes(s.region);
       return gradeMatch && regionMatch;
     });
-  }, [activeRequest, supplyBlocks]);
+
+    // Optionally filter by criteria match
+    if (showOnlyMatching && hasCriteria) {
+      filtered = filtered.filter(s => s.matchLevel === 'full' || s.matchLevel === 'partial');
+    }
+
+    // Sort by match level (full first, then partial, then none)
+    return filtered.sort((a, b) => {
+      const order = { full: 0, partial: 1, none: 2 };
+      return (order[a.matchLevel || 'none'] || 2) - (order[b.matchLevel || 'none'] || 2);
+    });
+  }, [activeRequest, supplyBlocks, showOnlyMatching, hasCriteria]);
 
   const selectedSupply = filteredSupply.filter(s => selectedBatchIds.has(s.id));
   const selectedHeads = selectedSupply.reduce((sum, s) => sum + s.heads, 0);
   const totalMatchedVolume = activeRequest ? activeRequest.matched_volume + selectedHeads : 0;
   const remainingVolume = activeRequest ? Math.max(0, activeRequest.required_volume - totalMatchedVolume) : 0;
   const fillPercentage = activeRequest ? Math.min(100, (totalMatchedVolume / activeRequest.required_volume) * 100) : 0;
+
+  // Count by match level
+  const matchCounts = useMemo(() => {
+    return {
+      full: filteredSupply.filter(s => s.matchLevel === 'full').length,
+      partial: filteredSupply.filter(s => s.matchLevel === 'partial').length,
+      none: filteredSupply.filter(s => s.matchLevel === 'none').length,
+    };
+  }, [filteredSupply]);
 
   // Calculate readiness mix
   const readinessMix = {
@@ -162,6 +231,10 @@ export default function PoolMatching() {
 
   const selectAllFiltered = () => {
     setSelectedBatchIds(new Set(filteredSupply.map(s => s.id)));
+  };
+
+  const selectFullMatches = () => {
+    setSelectedBatchIds(new Set(filteredSupply.filter(s => s.matchLevel === 'full').map(s => s.id)));
   };
 
   const clearSelection = () => {
@@ -268,6 +341,8 @@ export default function PoolMatching() {
                 requests?.map(request => {
                   const fillRate = Math.round((request.matched_volume / request.required_volume) * 100);
                   const isActive = request.id === activeRequestId;
+                  const reqCriteria = getAcceptanceCriteria(request);
+                  const hasCrit = formatCriteriaDisplay(reqCriteria).length > 0;
                   
                   return (
                     <div
@@ -288,6 +363,12 @@ export default function PoolMatching() {
                         <p>{request.required_volume} heads · Grade {request.required_grade}</p>
                         <p className="text-xs">{request.regions.join(', ')}</p>
                       </div>
+                      {hasCrit && (
+                        <div className="mt-2 flex items-center gap-1">
+                          <Filter className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Has acceptance criteria</span>
+                        </div>
+                      )}
                       <div className="mt-2">
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-muted-foreground">Fill Rate</span>
@@ -320,6 +401,11 @@ export default function PoolMatching() {
                 <CardTitle className="text-sm font-medium">Available Supply Pool</CardTitle>
                 {activeRequest && (
                   <div className="flex gap-2">
+                    {hasCriteria && (
+                      <Button variant="ghost" size="sm" onClick={selectFullMatches} className="text-xs h-7">
+                        Select Matches
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={selectAllFiltered} className="text-xs h-7">
                       Select All
                     </Button>
@@ -330,9 +416,38 @@ export default function PoolMatching() {
                 )}
               </div>
               {activeRequest && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Filtered for {activeRequest.request_number}: Grade {activeRequest.required_grade} · {activeRequest.regions.join(', ')}
-                </p>
+                <div className="mt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Filtered for {activeRequest.request_number}: Grade {activeRequest.required_grade} · {activeRequest.regions.join(', ')}
+                  </p>
+                  
+                  {/* Acceptance Criteria Display */}
+                  {hasCriteria && (
+                    <div className="p-2 rounded-lg bg-muted/50 border">
+                      <p className="text-xs font-medium mb-1">Acceptance Criteria:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {criteriaDisplay.map((crit, i) => (
+                          <Badge key={i} variant="outline" className="text-xs font-normal">
+                            {crit}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-3 mt-2 text-xs">
+                        <span className="text-status-confirmed">{matchCounts.full} full</span>
+                        <span className="text-status-soft">{matchCounts.partial} partial</span>
+                        <span className="text-muted-foreground">{matchCounts.none} none</span>
+                        <label className="flex items-center gap-1 ml-auto cursor-pointer">
+                          <Checkbox 
+                            checked={showOnlyMatching} 
+                            onCheckedChange={(checked) => setShowOnlyMatching(!!checked)}
+                            className="h-3 w-3"
+                          />
+                          <span className="text-muted-foreground">Show matching only</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </CardHeader>
             <CardContent>
@@ -361,6 +476,8 @@ export default function PoolMatching() {
                       className={`p-3 rounded-lg border transition-colors ${
                         selectedBatchIds.has(block.id) 
                           ? 'border-primary bg-primary/5' 
+                          : block.matchLevel === 'none' 
+                          ? 'border-border bg-muted/30 opacity-60'
                           : 'border-border hover:border-border'
                       }`}
                     >
@@ -372,7 +489,10 @@ export default function PoolMatching() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-sm font-medium text-foreground">{block.batchRef}</span>
-                            {getReadinessBadge(block.readiness)}
+                            <div className="flex items-center gap-1">
+                              {hasCriteria && block.matchLevel && getMatchBadge(block.matchLevel)}
+                              {getReadinessBadge(block.readiness)}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{block.region}</span>
@@ -381,6 +501,27 @@ export default function PoolMatching() {
                             <span>·</span>
                             <span className="font-medium text-foreground">{block.heads} heads</span>
                           </div>
+                          {/* Show batch characteristics if available */}
+                          {(block.breed || block.gender || block.age_min || block.weight_min) && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {block.breed && (
+                                <Badge variant="outline" className="text-xs font-normal py-0">{block.breed}</Badge>
+                              )}
+                              {block.gender && (
+                                <Badge variant="outline" className="text-xs font-normal py-0">{block.gender}</Badge>
+                              )}
+                              {(block.age_min || block.age_max) && (
+                                <Badge variant="outline" className="text-xs font-normal py-0">
+                                  {block.age_min || '–'}–{block.age_max || '–'} mo
+                                </Badge>
+                              )}
+                              {(block.weight_min || block.weight_max) && (
+                                <Badge variant="outline" className="text-xs font-normal py-0">
+                                  {block.weight_min || '–'}–{block.weight_max || '–'} kg
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -426,32 +567,30 @@ export default function PoolMatching() {
                       <span className="text-sm text-foreground">{activeRequest.matched_volume} heads</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">New Selection</span>
-                      <span className="text-sm font-medium text-primary">{selectedHeads > 0 ? `+${selectedHeads}` : '0'} heads</span>
+                      <span className="text-sm text-muted-foreground">Selected</span>
+                      <span className="text-sm font-medium text-primary">+{selectedHeads} heads</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-foreground">Total Matched</span>
-                      <span className="text-lg font-semibold text-foreground">{totalMatchedVolume} heads</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Remaining to Fill</span>
-                      <span className={`text-sm font-medium ${remainingVolume === 0 ? 'text-status-confirmed' : 'text-status-forecast'}`}>
+                      <span className="text-sm font-medium">Remaining</span>
+                      <span className={`text-sm font-medium ${remainingVolume === 0 ? 'text-status-confirmed' : 'text-foreground'}`}>
                         {remainingVolume} heads
                       </span>
                     </div>
                   </div>
 
                   {/* Fill Progress */}
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Fill Progress</span>
-                      <span className="font-medium text-foreground">{Math.round(fillPercentage)}%</span>
+                      <span className={fillPercentage >= 100 ? 'text-status-confirmed' : 'text-foreground'}>
+                        {Math.round(fillPercentage)}%
+                      </span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all ${
-                          fillPercentage >= 90 ? 'bg-status-confirmed' : fillPercentage >= 50 ? 'bg-status-soft' : 'bg-status-forecast'
+                          fillPercentage >= 100 ? 'bg-status-confirmed' : fillPercentage >= 50 ? 'bg-status-soft' : 'bg-status-forecast'
                         }`}
                         style={{ width: `${fillPercentage}%` }}
                       />
@@ -460,20 +599,20 @@ export default function PoolMatching() {
 
                   {/* Readiness Mix */}
                   {selectedHeads > 0 && (
-                    <div className="p-3 bg-secondary/30 rounded-lg space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Readiness Mix (New Selection)</p>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className="text-lg font-semibold text-status-confirmed">{readinessMix.confirmed}</p>
-                          <p className="text-xs text-muted-foreground">Confirmed</p>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Readiness Mix</p>
+                      <div className="flex gap-4 text-xs">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-status-confirmed" />
+                          <span className="text-foreground">{readinessMix.confirmed} confirmed</span>
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-status-soft">{readinessMix.soft}</p>
-                          <p className="text-xs text-muted-foreground">Soft</p>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-status-soft" />
+                          <span className="text-foreground">{readinessMix.soft} soft</span>
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-status-forecast">{readinessMix.forecast}</p>
-                          <p className="text-xs text-muted-foreground">Forecast</p>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-status-forecast" />
+                          <span className="text-foreground">{readinessMix.forecast} forecast</span>
                         </div>
                       </div>
                     </div>
@@ -485,40 +624,42 @@ export default function PoolMatching() {
                   <div className="space-y-2">
                     <Button 
                       className="w-full" 
-                      disabled={selectedHeads === 0 || createMatch.isPending}
                       onClick={handleProposeMatch}
+                      disabled={selectedSupply.length === 0 || createMatch.isPending}
                     >
                       {createMatch.isPending ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
                         <Send className="w-4 h-4 mr-2" />
                       )}
-                      Propose Match
+                      Propose Match ({selectedSupply.length})
                     </Button>
+                    
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm">
-                        <Settings2 className="w-4 h-4 mr-1" />
+                      <Button variant="outline" size="sm" className="text-xs">
+                        <Settings2 className="w-3 h-3 mr-1" />
                         Adjust Request
                       </Button>
-                      {activeRequest.status === 'partial' && (
+                      {activeRequest.status !== 'fulfilled' ? (
                         <Button 
                           variant="outline" 
-                          size="sm"
+                          size="sm" 
+                          className="text-xs"
                           onClick={handleMarkFulfilled}
                           disabled={updateRequest.isPending}
                         >
-                          <CheckCheck className="w-4 h-4 mr-1" />
+                          <CheckCheck className="w-3 h-3 mr-1" />
                           Mark Fulfilled
                         </Button>
-                      )}
-                      {activeRequest.status === 'fulfilled' && (
+                      ) : (
                         <Button 
                           variant="outline" 
-                          size="sm"
+                          size="sm" 
+                          className="text-xs"
                           onClick={handleReopen}
                           disabled={updateRequest.isPending}
                         >
-                          <RotateCcw className="w-4 h-4 mr-1" />
+                          <RotateCcw className="w-3 h-3 mr-1" />
                           Reopen
                         </Button>
                       )}
