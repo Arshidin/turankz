@@ -159,3 +159,90 @@ export function useAvailableBatchesForMatching() {
     },
   });
 }
+
+// Generate a request number
+function generateRequestNumber() {
+  const year = new Date().getFullYear();
+  const num = Math.floor(100 + Math.random() * 900);
+  return `REQ-${year}-${num}`;
+}
+
+// Create new pool request
+export function useCreatePoolRequest() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (request: {
+      mpk_id: string;
+      mpk_name: string;
+      required_volume: number;
+      required_grade: string;
+      regions: string[];
+      target_week: string;
+      notes: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .insert({
+          ...request,
+          request_number: generateRequestNumber(),
+          matched_volume: 0,
+          status: 'pending' as PoolRequestStatus,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as PoolRequest;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+      toast({
+        title: 'Request created',
+        description: 'Your purchase request has been submitted to the pool.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error creating request',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Cancel pool request
+export function useCancelPoolRequest() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .update({ status: 'cancelled' as PoolRequestStatus })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+      toast({
+        title: 'Request cancelled',
+        description: 'The purchase request has been cancelled.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error cancelling request',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}

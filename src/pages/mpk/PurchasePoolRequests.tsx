@@ -1,88 +1,184 @@
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, CheckCircle2, AlertTriangle, Info, MapPin, Medal, CalendarClock } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  Plus, 
+  Clock, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Info, 
+  MapPin, 
+  Medal, 
+  CalendarClock,
+  XCircle,
+  AlertCircle,
+  MoreHorizontal
+} from 'lucide-react';
+import { usePoolRequests, useCancelPoolRequest, useUpdatePoolRequest, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
+import { useMpks } from '@/hooks/useMpks';
+import { NewRequestDialog } from '@/components/mpk/NewRequestDialog';
+import { format, parseISO } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/hooks/use-toast';
 
-const requests = [
-  { 
-    id: 'REQ-2024-087', 
-    headsRequested: 120, 
-    headsMatched: 120,
-    gradeRequired: 'A', 
-    region: 'Almaty / Akmola',
-    targetWeek: 'Week 52',
-    targetDate: 'Dec 23–29',
-    status: 'fulfilled' as const,
-    createdAt: 'Dec 10, 2025',
-    supply: { confirmed: 120, softCommitted: 0, forecast: 0 },
-    atRisk: false,
-  },
-  { 
-    id: 'REQ-2024-088', 
-    headsRequested: 85, 
-    headsMatched: 65,
-    gradeRequired: 'A/B', 
-    region: 'Any',
-    targetWeek: 'Week 1',
-    targetDate: 'Dec 30 – Jan 5',
-    status: 'partial' as const,
-    createdAt: 'Dec 12, 2025',
-    supply: { confirmed: 45, softCommitted: 20, forecast: 35 },
-    atRisk: false,
-  },
-  { 
-    id: 'REQ-2024-089', 
-    headsRequested: 50, 
-    headsMatched: 12,
-    gradeRequired: 'A', 
-    region: 'East Kazakhstan',
-    targetWeek: 'Week 2',
-    targetDate: 'Jan 6–12',
-    status: 'partial' as const,
-    createdAt: 'Dec 15, 2025',
-    supply: { confirmed: 8, softCommitted: 4, forecast: 18 },
-    atRisk: true,
-  },
-  { 
-    id: 'REQ-2024-090', 
-    headsRequested: 40, 
-    headsMatched: 0,
-    gradeRequired: 'A', 
-    region: 'Karaganda',
-    targetWeek: 'Week 3',
-    targetDate: 'Jan 13–19',
-    status: 'pending' as const,
-    createdAt: 'Dec 16, 2025',
-    supply: { confirmed: 0, softCommitted: 0, forecast: 25 },
-    atRisk: true,
-  },
-];
-
-const statusConfig = {
+const statusConfig: Record<PoolRequestStatus, {
+  label: string;
+  icon: typeof CheckCircle2;
+  className: string;
+  description: string;
+}> = {
   fulfilled: { 
     label: 'Fulfilled', 
     icon: CheckCircle2, 
-    className: 'bg-status-confirmed/10 text-status-confirmed border-status-confirmed/30',
+    className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
     description: 'Request fully matched. Awaiting delivery confirmation.'
   },
   partial: { 
     label: 'Partial', 
     icon: Clock, 
-    className: 'bg-status-soft-committed/10 text-status-soft-committed border-status-soft-committed/30',
+    className: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
     description: 'Matching in progress. Additional supply being sourced.'
   },
   pending: { 
     label: 'Pending', 
     icon: Clock, 
-    className: 'bg-status-forecast/10 text-status-forecast border-status-forecast/30',
+    className: 'bg-muted text-muted-foreground border-border',
     description: 'Request submitted. Awaiting initial matches.'
+  },
+  cancelled: {
+    label: 'Cancelled',
+    icon: XCircle,
+    className: 'bg-destructive/10 text-destructive border-destructive/30',
+    description: 'Request has been cancelled.'
   },
 };
 
+// Check if request is at risk (low fill rate, approaching deadline)
+function isAtRisk(request: PoolRequest): boolean {
+  if (request.status === 'fulfilled' || request.status === 'cancelled') return false;
+  const fillRate = request.required_volume > 0 ? request.matched_volume / request.required_volume : 0;
+  // Consider at risk if less than 50% filled
+  return fillRate < 0.5;
+}
+
 export default function PurchasePoolRequests() {
+  const { data: requests, isLoading, error } = usePoolRequests();
+  const { data: mpks } = useMpks();
+  const cancelRequest = useCancelPoolRequest();
+  const updateRequest = useUpdatePoolRequest();
+  
+  const [newRequestOpen, setNewRequestOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState<string | null>(null);
+
+  // For demo, use first MPK or default values
+  const currentMpk = mpks?.[0] || { id: 'demo', mpk_id: 'MPK-001', name: 'Demo MPK' };
+
+  // Filter out cancelled requests from main view
+  const activeRequests = useMemo(() => 
+    requests?.filter(r => r.status !== 'cancelled') || [],
+    [requests]
+  );
+
+  const stats = useMemo(() => {
+    if (!activeRequests.length) return { total: 0, requested: 0, matched: 0, fillRate: 0, atRisk: 0 };
+    
+    const requested = activeRequests.reduce((sum, r) => sum + r.required_volume, 0);
+    const matched = activeRequests.reduce((sum, r) => sum + r.matched_volume, 0);
+    
+    return {
+      total: activeRequests.length,
+      requested,
+      matched,
+      fillRate: requested > 0 ? Math.round((matched / requested) * 100) : 0,
+      atRisk: activeRequests.filter(isAtRisk).length,
+    };
+  }, [activeRequests]);
+
+  const handleCancel = async () => {
+    if (!cancelDialogOpen) return;
+    await cancelRequest.mutateAsync(cancelDialogOpen);
+    setCancelDialogOpen(null);
+  };
+
+  const handleExpandRegions = async (request: PoolRequest) => {
+    // Add all regions
+    const allRegions = ['Almaty', 'Astana', 'Shymkent', 'Aktobe', 'Karaganda', 'Pavlodar', 'Kostanay', 'East Kazakhstan', 'West Kazakhstan', 'North Kazakhstan'];
+    await updateRequest.mutateAsync({
+      id: request.id,
+      regions: allRegions,
+    });
+    toast({
+      title: 'Regions expanded',
+      description: 'Request now accepts supply from all regions.',
+    });
+  };
+
+  const handleLowerGrade = async (request: PoolRequest) => {
+    const gradeProgression: Record<string, string> = {
+      'A': 'A/B',
+      'A/B': 'B',
+      'B': 'B/C',
+      'B/C': 'C',
+    };
+    const newGrade = gradeProgression[request.required_grade] || 'Any';
+    await updateRequest.mutateAsync({
+      id: request.id,
+      required_grade: newGrade,
+    });
+    toast({
+      title: 'Grade requirement lowered',
+      description: `Request now accepts Grade ${newGrade}.`,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <PageHeader title="Purchase Pool Requests" description="Loading..." />
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <PageHeader title="Purchase Pool Requests" description="Manage procurement requests" />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium">Failed to load requests</p>
+            <p className="text-sm text-muted-foreground">Please try again later.</p>
+          </CardContent>
+        </Card>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <PageHeader 
@@ -96,7 +192,7 @@ export default function PurchasePoolRequests() {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-foreground font-medium">How Matching Works</p>
+              <p className="text-sm font-medium">How Matching Works</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Matching continues until the start of the target week. Adjust request parameters to improve fill rates before the deadline.
               </p>
@@ -108,145 +204,179 @@ export default function PurchasePoolRequests() {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-medium">Active Requests</CardTitle>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setNewRequestOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Request
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {requests.map((request) => {
-              const config = statusConfig[request.status];
-              const StatusIcon = config.icon;
-              const fillRate = Math.round((request.headsMatched / request.headsRequested) * 100);
-              const isActionable = request.status === 'pending' || request.status === 'partial';
-              
-              return (
-                <div 
-                  key={request.id} 
-                  className={`p-4 border rounded-lg transition-colors ${
-                    request.atRisk 
-                      ? 'border-amber-500/50 bg-amber-500/5' 
-                      : 'border-border hover:bg-muted/30'
-                  }`}
-                >
-                  {/* Header Row */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-foreground">{request.id}</p>
-                        <Badge variant="outline" className={config.className}>
-                          <StatusIcon className="w-3 h-3 mr-1" />
-                          {config.label}
-                        </Badge>
-                        {request.atRisk && (
-                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            At Risk
+          {activeRequests.length === 0 ? (
+            <div className="py-12 text-center">
+              <CalendarClock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium">No active requests</p>
+              <p className="text-sm text-muted-foreground mb-4">Create your first purchase request to start sourcing supply.</p>
+              <Button size="sm" onClick={() => setNewRequestOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Request
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {activeRequests.map((request) => {
+                const config = statusConfig[request.status];
+                const StatusIcon = config.icon;
+                const fillRate = request.required_volume > 0 
+                  ? Math.round((request.matched_volume / request.required_volume) * 100) 
+                  : 0;
+                const atRisk = isAtRisk(request);
+                const isActionable = request.status === 'pending' || request.status === 'partial';
+                
+                return (
+                  <div 
+                    key={request.id} 
+                    className={`p-4 border rounded-lg transition-colors ${
+                      atRisk 
+                        ? 'border-amber-500/50 bg-amber-500/5' 
+                        : 'border-border hover:bg-muted/30'
+                    }`}
+                  >
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold">{request.request_number}</p>
+                          <Badge variant="outline" className={config.className}>
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {config.label}
                           </Badge>
-                        )}
+                          {atRisk && (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              At Risk
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleExpandRegions(request)}>
+                            <MapPin className="w-4 h-4 mr-2" />
+                            Expand Regions
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleLowerGrade(request)}>
+                            <Medal className="w-4 h-4 mr-2" />
+                            Lower Grade Requirement
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => setCancelDialogOpen(request.id)}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Cancel Request
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Progress Section */}
+                    <div className="bg-secondary/30 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Fill Rate</span>
+                        <span className={`text-lg font-bold ${
+                          fillRate >= 100 ? 'text-emerald-600' : 
+                          fillRate >= 50 ? 'text-foreground' : 'text-amber-600'
+                        }`}>
+                          {fillRate}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={fillRate} 
+                        className={`h-3 ${atRisk ? '[&>div]:bg-amber-500' : ''}`}
+                      />
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-sm text-muted-foreground">
+                          <span className="font-semibold text-foreground">{request.matched_volume}</span> / {request.required_volume} heads matched
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {request.required_volume - request.matched_volume} remaining
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Request Parameters */}
+                    <div className="grid grid-cols-3 gap-4 py-3 border-t">
+                      <div className="flex items-center gap-2">
+                        <Medal className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Grade</p>
+                          <p className="text-sm font-medium">{request.required_grade}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Regions</p>
+                          <p className="text-sm font-medium">
+                            {request.regions.length > 2 
+                              ? `${request.regions.slice(0, 2).join(', ')} +${request.regions.length - 2}`
+                              : request.regions.join(', ') || 'Any'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Target Week</p>
+                          <p className="text-sm font-medium">{request.target_week}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Actions for At-Risk Requests */}
+                    {isActionable && atRisk && (
+                      <div className="pt-3 mt-3 border-t">
+                        <p className="text-xs text-muted-foreground mb-2">Optimization options:</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs"
+                            onClick={() => handleExpandRegions(request)}
+                          >
+                            <MapPin className="w-3 h-3 mr-1" />
+                            Expand Regions
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs"
+                            onClick={() => handleLowerGrade(request)}
+                          >
+                            <Medal className="w-3 h-3 mr-1" />
+                            Lower Grade
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="pt-3 mt-3 border-t text-xs text-muted-foreground flex justify-between">
+                      <span>Created {format(parseISO(request.created_at), 'MMM d, yyyy')}</span>
+                      <span>{request.mpk_name}</span>
                     </div>
                   </div>
-
-                  {/* Progress Section */}
-                  <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">Fill Rate</span>
-                      <span className={`text-lg font-bold ${
-                        fillRate >= 100 ? 'text-status-confirmed' : 
-                        fillRate >= 50 ? 'text-foreground' : 'text-amber-600'
-                      }`}>
-                        {fillRate}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={fillRate} 
-                      className={`h-3 ${request.atRisk ? '[&>div]:bg-amber-500' : ''}`}
-                    />
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">
-                        <span className="font-semibold text-foreground">{request.headsMatched}</span> / {request.headsRequested} heads matched
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {request.headsRequested - request.headsMatched} remaining
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Supply Signals */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                    <div className="p-2 bg-secondary/20 rounded">
-                      <p className="text-xs text-status-confirmed font-medium">Confirmed</p>
-                      <p className="text-sm font-semibold text-foreground">{request.supply.confirmed} heads</p>
-                    </div>
-                    <div className="p-2 bg-secondary/20 rounded">
-                      <p className="text-xs text-status-soft-committed font-medium">Soft Committed</p>
-                      <p className="text-sm font-semibold text-foreground">{request.supply.softCommitted} heads</p>
-                    </div>
-                    <div className="p-2 bg-secondary/20 rounded">
-                      <p className="text-xs text-status-forecast font-medium">Forecast</p>
-                      <p className="text-sm font-semibold text-foreground">{request.supply.forecast} heads</p>
-                    </div>
-                    <div className="p-2 bg-secondary/20 rounded">
-                      <p className="text-xs text-muted-foreground font-medium">Potential Total</p>
-                      <p className="text-sm font-semibold text-foreground">
-                        {request.supply.confirmed + request.supply.softCommitted + request.supply.forecast} heads
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Request Parameters */}
-                  <div className="grid grid-cols-3 gap-4 py-3 border-t border-border">
-                    <div className="flex items-center gap-2">
-                      <Medal className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Grade</p>
-                        <p className="text-sm font-medium text-foreground">{request.gradeRequired}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Region</p>
-                        <p className="text-sm font-medium text-foreground">{request.region}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarClock className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Target Week</p>
-                        <p className="text-sm font-medium text-foreground">{request.targetWeek}</p>
-                        <p className="text-xs text-muted-foreground">{request.targetDate}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions for Actionable Requests */}
-                  {isActionable && (
-                    <div className="pt-3 mt-3 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2">Optimization options:</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" className="text-xs">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          Expand Regions
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs">
-                          <Medal className="w-3 h-3 mr-1" />
-                          Lower Grade Requirement
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs">
-                          <CalendarClock className="w-3 h-3 mr-1" />
-                          Extend Target Week
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -257,37 +387,58 @@ export default function PurchasePoolRequests() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="p-4 bg-secondary/50 rounded-lg text-center">
-              <p className="text-2xl font-semibold text-foreground">{requests.length}</p>
-              <p className="text-sm text-muted-foreground">Total Requests</p>
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-2xl font-semibold">{stats.total}</p>
+              <p className="text-sm text-muted-foreground">Active Requests</p>
             </div>
-            <div className="p-4 bg-secondary/50 rounded-lg text-center">
-              <p className="text-2xl font-semibold text-foreground">
-                {requests.reduce((sum, r) => sum + r.headsRequested, 0)}
-              </p>
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-2xl font-semibold">{stats.requested}</p>
               <p className="text-sm text-muted-foreground">Heads Requested</p>
             </div>
-            <div className="p-4 bg-secondary/50 rounded-lg text-center">
-              <p className="text-2xl font-semibold text-foreground">
-                {requests.reduce((sum, r) => sum + r.headsMatched, 0)}
-              </p>
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-2xl font-semibold">{stats.matched}</p>
               <p className="text-sm text-muted-foreground">Heads Matched</p>
             </div>
-            <div className="p-4 bg-secondary/50 rounded-lg text-center">
-              <p className="text-2xl font-semibold text-accent">
-                {Math.round((requests.reduce((sum, r) => sum + r.headsMatched, 0) / requests.reduce((sum, r) => sum + r.headsRequested, 0)) * 100)}%
-              </p>
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-2xl font-semibold text-primary">{stats.fillRate}%</p>
               <p className="text-sm text-muted-foreground">Overall Fill Rate</p>
             </div>
             <div className="p-4 bg-amber-500/10 rounded-lg text-center border border-amber-500/30">
-              <p className="text-2xl font-semibold text-amber-600">
-                {requests.filter(r => r.atRisk).length}
-              </p>
+              <p className="text-2xl font-semibold text-amber-600">{stats.atRisk}</p>
               <p className="text-sm text-muted-foreground">At Risk</p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* New Request Dialog */}
+      <NewRequestDialog 
+        open={newRequestOpen} 
+        onOpenChange={setNewRequestOpen}
+        mpkId={currentMpk.id}
+        mpkName={currentMpk.name}
+      />
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={!!cancelDialogOpen} onOpenChange={() => setCancelDialogOpen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this purchase request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Request</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
