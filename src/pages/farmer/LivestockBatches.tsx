@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,6 +24,7 @@ import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/h
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
 import { PremiumBadge } from '@/components/premium';
 import { format, parseISO, differenceInDays } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +61,7 @@ const isApproachingDeadline = (targetWeek: string, status: BatchStatus): boolean
 
 export default function LivestockBatches() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { data: batches, isLoading, error } = useBatches();
   const stats = useBatchStats();
   const updateBatch = useUpdateBatch();
@@ -68,9 +71,17 @@ export default function LivestockBatches() {
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
   const [newBatchOpen, setNewBatchOpen] = useState(false);
 
+  const dateLocale = i18n.language === 'ru' ? ru : undefined;
+
   const handleRowClick = (batchNumber: string) => {
     const id = batchNumber.replace('BTH-', '');
     navigate(`/farmer/batch/${id}`);
+  };
+
+  const getStatusLabel = (status: BatchStatus): string => {
+    if (status === 'forecast') return t('batches.forecast');
+    if (status === 'soft_committed') return t('batches.softCommitted');
+    return t('batches.confirmed');
   };
 
   const handleEscalateStatus = () => {
@@ -83,8 +94,8 @@ export default function LivestockBatches() {
       {
         onSuccess: () => {
           toast({
-            title: 'Status Updated',
-            description: `Batch status changed to ${newStatus === 'soft_committed' ? 'Soft Committed' : 'Confirmed'}.`,
+            title: t('batches.statusUpdated'),
+            description: t('batches.statusChangedTo', { status: getStatusLabel(newStatus) }),
           });
           setEscalateBatch(null);
         },
@@ -95,26 +106,24 @@ export default function LivestockBatches() {
   const handleWithdraw = () => {
     if (!withdrawBatchId) return;
     
-    // For now, we'll set status to a withdrawn state or delete
-    // Since there's no 'withdrawn' status, we'll show a toast
     toast({
-      title: 'Batch Withdrawn',
-      description: 'The batch has been withdrawn from pool consideration.',
+      title: t('batches.batchWithdrawn'),
+      description: t('batches.batchWithdrawnDescription'),
     });
     setWithdrawBatchId(null);
   };
 
   const getNextStatus = (status: BatchStatus): string | null => {
-    if (status === 'forecast') return 'Soft Committed';
-    if (status === 'soft_committed') return 'Confirmed';
+    if (status === 'forecast') return t('batches.softCommitted');
+    if (status === 'soft_committed') return t('batches.confirmed');
     return null;
   };
 
   return (
     <MainLayout>
       <PageHeader 
-        title="Livestock Batches" 
-        description="Declare supply availability and signal readiness for pool matching" 
+        title={t('batches.title')} 
+        description={t('batches.description')} 
       />
 
       {/* Summary Section */}
@@ -127,7 +136,7 @@ export default function LivestockBatches() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.forecast}</p>
-                <p className="text-sm text-muted-foreground">Forecast</p>
+                <p className="text-sm text-muted-foreground">{t('batches.forecast')}</p>
               </div>
             </div>
           </CardContent>
@@ -141,7 +150,7 @@ export default function LivestockBatches() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.softCommitted}</p>
-                <p className="text-sm text-muted-foreground">Soft Committed</p>
+                <p className="text-sm text-muted-foreground">{t('batches.softCommitted')}</p>
               </div>
             </div>
           </CardContent>
@@ -155,7 +164,7 @@ export default function LivestockBatches() {
               </div>
               <div>
                 <p className="text-2xl font-semibold">{stats.confirmed}</p>
-                <p className="text-sm text-muted-foreground">Confirmed</p>
+                <p className="text-sm text-muted-foreground">{t('batches.confirmed')}</p>
               </div>
             </div>
           </CardContent>
@@ -166,7 +175,7 @@ export default function LivestockBatches() {
       <Card className="mb-6 border-primary/20 bg-primary/5">
         <CardContent className="py-3">
           <p className="text-sm text-muted-foreground">
-            <strong>Note:</strong> Only <span className="text-amber-600 font-medium">Soft Committed</span> and <span className="text-emerald-600 font-medium">Confirmed</span> batches are considered for pool matching. Moving to higher readiness increases your priority.
+            <strong>{t('common.notes')}:</strong> {t('batches.notePoolMatching')}
           </p>
         </CardContent>
       </Card>
@@ -175,12 +184,12 @@ export default function LivestockBatches() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base font-medium">Batch Registry</CardTitle>
-            <CardDescription>Manage your declared livestock batches</CardDescription>
+            <CardTitle className="text-base font-medium">{t('batches.batchRegistry')}</CardTitle>
+            <CardDescription>{t('batches.manageBatches')}</CardDescription>
           </div>
           <Button size="sm" onClick={() => setNewBatchOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            New Batch
+            {t('batches.newBatch')}
           </Button>
         </CardHeader>
         <CardContent>
@@ -193,23 +202,23 @@ export default function LivestockBatches() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <AlertCircle className="w-10 h-10 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">Failed to load batches. Please try again.</p>
+              <p className="text-sm text-muted-foreground">{t('batches.failedToLoad')}</p>
             </div>
           ) : batches && batches.length > 0 ? (
             <>
             <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Batch ID</TableHead>
-                    <TableHead>Region</TableHead>
-                    <TableHead>Target Week</TableHead>
-                    <TableHead>Heads</TableHead>
-                    <TableHead>Characteristics</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Standard</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Updated</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('batches.batchNumber')}</TableHead>
+                    <TableHead>{t('common.region')}</TableHead>
+                    <TableHead>{t('batches.targetWeek')}</TableHead>
+                    <TableHead>{t('batches.heads')}</TableHead>
+                    <TableHead>{t('batches.characteristics')}</TableHead>
+                    <TableHead>{t('common.grade')}</TableHead>
+                    <TableHead>{t('batches.standardStatus')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead>{t('batches.lastUpdated')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -256,17 +265,17 @@ export default function LivestockBatches() {
                                 <Badge variant="outline" className="text-xs">
                                   {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
                                 </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Not specified</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
-                            {batch.grade}
-                          </span>
-                        </TableCell>
+                                          </div>
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground">{t('batches.notSpecified')}</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
+                                            {batch.grade}
+                                          </span>
+                                        </TableCell>
                         <TableCell>
                           <PremiumBadge 
                             status={standardStatus} 
@@ -279,9 +288,9 @@ export default function LivestockBatches() {
                           <StatusBadge status={mapStatus(batch.status)} />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(parseISO(batch.updated_at), 'MMM d, yyyy')}
+                          {format(parseISO(batch.updated_at), 'd MMM yyyy', { locale: dateLocale })}
                           {stale && (
-                            <span className="block text-xs text-amber-600">Needs update</span>
+                            <span className="block text-xs text-amber-600">{t('batches.needsUpdate')}</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -325,7 +334,7 @@ export default function LivestockBatches() {
               <div className="mt-4 pt-4 border-t">
                 <p className="text-xs text-muted-foreground">
                   <AlertTriangle className="w-3 h-3 inline mr-1 text-amber-500" />
-                  Keeping batch data up to date increases your chances of being included in a pool.
+                  {t('batches.keepDataUpdated')}
                 </p>
               </div>
             </>
@@ -334,13 +343,13 @@ export default function LivestockBatches() {
               <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
                 <FileText className="w-10 h-10 text-muted-foreground/60" />
               </div>
-              <p className="font-medium text-foreground mb-1">No batches declared yet.</p>
+              <p className="font-medium text-foreground mb-1">{t('batches.noBatches')}</p>
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                Declared batches are required to be considered for pool matching.
+                {t('batches.noBatchesDescription')}
               </p>
               <Button onClick={() => setNewBatchOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Declare First Batch
+                {t('batches.declareFirstBatch')}
               </Button>
             </div>
           )}
@@ -351,23 +360,24 @@ export default function LivestockBatches() {
       <AlertDialog open={!!escalateBatch} onOpenChange={() => setEscalateBatch(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Escalate Batch Status</AlertDialogTitle>
+            <AlertDialogTitle>{t('batches.escalateStatus')}</AlertDialogTitle>
             <AlertDialogDescription>
               {escalateBatch && (
                 <>
-                  Are you sure you want to move this batch from{' '}
-                  <strong>{escalateBatch.currentStatus === 'forecast' ? 'Forecast' : 'Soft Committed'}</strong> to{' '}
-                  <strong>{getNextStatus(escalateBatch.currentStatus)}</strong>?
+                  {t('batches.escalateConfirmation', {
+                    from: escalateBatch.currentStatus === 'forecast' ? t('batches.forecast') : t('batches.softCommitted'),
+                    to: getNextStatus(escalateBatch.currentStatus)
+                  })}
                   <br /><br />
-                  Higher readiness status indicates stronger commitment and increases matching priority.
+                  {t('batches.escalateNote')}
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleEscalateStatus}>
-              Confirm Escalation
+              {t('batches.confirmEscalation')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -377,20 +387,20 @@ export default function LivestockBatches() {
       <AlertDialog open={!!withdrawBatchId} onOpenChange={() => setWithdrawBatchId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Withdraw Batch</AlertDialogTitle>
+            <AlertDialogTitle>{t('batches.withdrawBatch')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to withdraw this batch? It will no longer be considered for pool matching.
+              {t('batches.withdrawConfirmation')}
               <br /><br />
-              This action indicates you are no longer able to supply this batch.
+              {t('batches.withdrawNote')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleWithdraw}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Withdraw Batch
+              {t('batches.withdrawBatch')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
