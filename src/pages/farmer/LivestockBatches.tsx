@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Plus, 
@@ -193,14 +194,14 @@ export default function LivestockBatches() {
             </div>
           ) : batches && batches.length > 0 ? (
             <>
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Batch ID</TableHead>
                     <TableHead>Region</TableHead>
                     <TableHead>Target Week</TableHead>
                     <TableHead>Heads</TableHead>
-                    <TableHead>Avg. Weight</TableHead>
+                    <TableHead>Characteristics</TableHead>
                     <TableHead>Grade</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Updated</TableHead>
@@ -212,6 +213,7 @@ export default function LivestockBatches() {
                     const stale = isStale(batch.updated_at);
                     const approaching = isApproachingDeadline(batch.target_week, batch.status);
                     const nextStatus = getNextStatus(batch.status);
+                    const hasCharacteristics = batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max;
                     
                     return (
                       <TableRow 
@@ -230,7 +232,30 @@ export default function LivestockBatches() {
                         <TableCell>{batch.region}</TableCell>
                         <TableCell>{batch.target_week}</TableCell>
                         <TableCell>{batch.heads}</TableCell>
-                        <TableCell>{batch.avg_weight ? `${batch.avg_weight} kg` : '—'}</TableCell>
+                        <TableCell>
+                          {hasCharacteristics ? (
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {batch.breed && (
+                                <Badge variant="outline" className="text-xs">{batch.breed}</Badge>
+                              )}
+                              {batch.gender && (
+                                <Badge variant="outline" className="text-xs">{batch.gender}</Badge>
+                              )}
+                              {(batch.age_min || batch.age_max) && (
+                                <Badge variant="outline" className="text-xs">
+                                  {batch.age_min ?? '–'}–{batch.age_max ?? '–'} mo
+                                </Badge>
+                              )}
+                              {(batch.weight_min || batch.weight_max) && (
+                                <Badge variant="outline" className="text-xs">
+                                  {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Not specified</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
                             {batch.grade}
