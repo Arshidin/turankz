@@ -29,8 +29,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import { useCreatePoolRequest } from '@/hooks/usePoolRequests';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
+import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE, type AcceptanceCriteria } from '@/lib/livestock-criteria';
 
 const REGIONS = [
   'Almaty',
@@ -71,6 +73,13 @@ const formSchema = z.object({
   regions: z.array(z.string()).min(1, 'Select at least one region'),
   target_week: z.string().min(1, 'Target week is required'),
   notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
+  // Acceptance criteria
+  accepted_breeds: z.array(z.string()),
+  accepted_genders: z.array(z.string()),
+  age_range_min: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional(),
+  age_range_max: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional(),
+  weight_range_min: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional(),
+  weight_range_max: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -80,9 +89,10 @@ interface NewRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   mpkId: string;
   mpkName: string;
+  defaultCriteria?: AcceptanceCriteria;
 }
 
-export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequestDialogProps) {
+export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCriteria }: NewRequestDialogProps) {
   const createRequest = useCreatePoolRequest();
   const weekOptions = getTargetWeekOptions();
   
@@ -94,6 +104,12 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequ
       regions: [],
       target_week: '',
       notes: '',
+      accepted_breeds: defaultCriteria?.accepted_breeds || [],
+      accepted_genders: defaultCriteria?.accepted_genders || [],
+      age_range_min: defaultCriteria?.age_range_min ?? undefined,
+      age_range_max: defaultCriteria?.age_range_max ?? undefined,
+      weight_range_min: defaultCriteria?.weight_range_min ?? undefined,
+      weight_range_max: defaultCriteria?.weight_range_max ?? undefined,
     },
   });
 
@@ -106,6 +122,13 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequ
       regions: data.regions,
       target_week: data.target_week,
       notes: data.notes || null,
+      // Acceptance criteria
+      accepted_breeds: data.accepted_breeds,
+      accepted_genders: data.accepted_genders,
+      age_range_min: data.age_range_min || null,
+      age_range_max: data.age_range_max || null,
+      weight_range_min: data.weight_range_min || null,
+      weight_range_max: data.weight_range_max || null,
     });
     
     form.reset();
@@ -113,10 +136,12 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequ
   };
 
   const selectedRegions = form.watch('regions');
+  const selectedBreeds = form.watch('accepted_breeds');
+  const selectedGenders = form.watch('accepted_genders');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Purchase Request</DialogTitle>
           <DialogDescription>
@@ -126,6 +151,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequ
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Basic Request Info */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -209,7 +235,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequ
                   <FormDescription className="text-xs mb-2">
                     Select regions from which you can accept supply
                   </FormDescription>
-                  <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg max-h-40 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
                     {REGIONS.map((region) => (
                       <FormField
                         key={region}
@@ -247,6 +273,192 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName }: NewRequ
                 </FormItem>
               )}
             />
+
+            <Separator />
+
+            {/* Acceptance Criteria Section */}
+            <div>
+              <h4 className="text-sm font-medium mb-1">Acceptance Criteria</h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Define livestock characteristics you can accept
+              </p>
+
+              {/* Breeds */}
+              <FormField
+                control={form.control}
+                name="accepted_breeds"
+                render={() => (
+                  <FormItem className="mb-4">
+                    <FormLabel className="text-sm">Accepted Breeds</FormLabel>
+                    <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
+                      {LIVESTOCK_BREEDS.map((breed) => (
+                        <FormField
+                          key={breed}
+                          control={form.control}
+                          name="accepted_breeds"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(breed)}
+                                  onCheckedChange={(checked) => {
+                                    const currentValue = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...currentValue, breed]);
+                                    } else {
+                                      field.onChange(currentValue.filter((b) => b !== breed));
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-xs font-normal cursor-pointer">
+                                {breed}
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                    {selectedBreeds.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {selectedBreeds.length} breed(s) selected
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* Gender */}
+              <FormField
+                control={form.control}
+                name="accepted_genders"
+                render={() => (
+                  <FormItem className="mb-4">
+                    <FormLabel className="text-sm">Accepted Genders</FormLabel>
+                    <div className="flex flex-wrap gap-4 p-3 border rounded-lg">
+                      {LIVESTOCK_GENDERS.map((gender) => (
+                        <FormField
+                          key={gender}
+                          control={form.control}
+                          name="accepted_genders"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(gender)}
+                                  onCheckedChange={(checked) => {
+                                    const currentValue = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...currentValue, gender]);
+                                    } else {
+                                      field.onChange(currentValue.filter((g) => g !== gender));
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                {gender}
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {/* Age & Weight Ranges */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <FormLabel className="text-sm">Age Range (months)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name="age_range_min"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Min" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <span className="text-muted-foreground text-sm">–</span>
+                    <FormField
+                      control={form.control}
+                      name="age_range_max"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Max" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <FormLabel className="text-sm">Weight Range (kg)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name="weight_range_min"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Min" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <span className="text-muted-foreground text-sm">–</span>
+                    <FormField
+                      control={form.control}
+                      name="weight_range_max"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Max" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              <div className="flex items-start gap-2 p-3 mt-4 rounded-lg bg-muted/50 border">
+                <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-muted-foreground">
+                  Only batches matching acceptance criteria can be included in pool matching.
+                </p>
+              </div>
+            </div>
+
+            <Separator />
 
             <FormField
               control={form.control}

@@ -28,8 +28,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { useCreateBatch } from '@/hooks/useBatches';
 import { Loader2 } from 'lucide-react';
+import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE } from '@/lib/livestock-criteria';
 
 const REGIONS = [
   'Almaty',
@@ -53,6 +55,13 @@ const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
   target_week: z.string().min(1, 'Target week is required'),
   notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
+  // Livestock criteria
+  breed: z.string().optional(),
+  gender: z.string().optional(),
+  age_min: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional(),
+  age_max: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional(),
+  weight_min: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional(),
+  weight_max: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -99,6 +108,12 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
       grade: '',
       target_week: '',
       notes: '',
+      breed: '',
+      gender: '',
+      age_min: undefined,
+      age_max: undefined,
+      weight_min: undefined,
+      weight_max: undefined,
     },
   });
 
@@ -117,6 +132,13 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
       requires_action: false,
       action_type: null,
       mpk_interest: null,
+      // Livestock criteria
+      breed: data.breed || null,
+      gender: data.gender || null,
+      age_min: data.age_min || null,
+      age_max: data.age_max || null,
+      weight_min: data.weight_min || null,
+      weight_max: data.weight_max || null,
     };
 
     createBatch.mutate(batch, {
@@ -129,7 +151,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Declare New Batch</DialogTitle>
           <DialogDescription>
@@ -140,6 +162,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -260,6 +283,150 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
                 </FormItem>
               )}
             />
+
+            <Separator />
+
+            {/* Livestock Characteristics */}
+            <div>
+              <h4 className="text-sm font-medium mb-3">Livestock Characteristics</h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Declare characteristics to improve matching with MPK requirements
+              </p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="breed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Breed</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select breed" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {LIVESTOCK_BREEDS.map((breed) => (
+                            <SelectItem key={breed} value={breed}>
+                              {breed}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {LIVESTOCK_GENDERS.map((gender) => (
+                            <SelectItem key={gender} value={gender}>
+                              {gender}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="space-y-2">
+                  <FormLabel>Age Range (months)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name="age_min"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Min" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <span className="text-muted-foreground text-sm">–</span>
+                    <FormField
+                      control={form.control}
+                      name="age_max"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Max" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <FormLabel>Weight Range (kg)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name="weight_min"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Min" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <span className="text-muted-foreground text-sm">–</span>
+                    <FormField
+                      control={form.control}
+                      name="weight_max"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Max" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
 
             <FormField
               control={form.control}
