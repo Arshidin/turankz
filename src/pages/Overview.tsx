@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,46 +18,47 @@ import { useMpks } from '@/hooks/useMpks';
 import { useBatches } from '@/hooks/useBatches';
 import { usePoolRequests } from '@/hooks/usePoolRequests';
 
+const nextMatchingWindow = {
+  date: '20 декабря 2025',
+  daysRemaining: 3,
+};
+
 const stats = {
   farmer: [
-    { label: 'Active Batches', value: '12', icon: Boxes, description: 'Total batches in system' },
-    { label: 'Batches Requiring Action', value: '2', icon: AlertCircle, highlight: true, description: 'Need your attention' },
-    { label: 'Confirmed Commitments', value: '4', icon: CheckCircle2, description: 'Ready for delivery' },
+    { label: 'Активные партии', value: '12', icon: Boxes, description: 'Всего партий в системе' },
+    { label: 'Требуют действия', value: '2', icon: AlertCircle, highlight: true, description: 'Требуют внимания' },
+    { label: 'Подтверждённые', value: '4', icon: CheckCircle2, description: 'Готовы к поставке' },
   ],
   mpk: [
-    { label: 'Available Batches', value: '156', icon: Boxes },
-    { label: 'In Watchlist', value: '23', icon: CheckCircle2 },
-    { label: 'Active Requests', value: '7', icon: Clock },
-    { label: 'Pool Fill Rate', value: '72%', icon: TrendingUp },
+    { label: 'Доступные партии', value: '156', icon: Boxes },
+    { label: 'В отслеживании', value: '23', icon: CheckCircle2 },
+    { label: 'Активные заявки', value: '7', icon: Clock },
+    { label: 'Заполнение пула', value: '72%', icon: TrendingUp },
   ],
 };
 
 const farmerStatus = {
-  gradingLevel: 'Declared Supplier',
-  gradingDescription: 'Your farm has been verified and you are eligible to participate in pool matching.',
-  accessLevel: 'Eligible for Pool Invitations',
-  nextAction: 'Confirm at least one batch to increase your matching priority.',
+  gradingLevel: 'Объявленный поставщик',
+  gradingDescription: 'Ваше хозяйство верифицировано и вы можете участвовать в пуле сопоставления.',
+  accessLevel: 'Доступны приглашения в пул',
+  nextAction: 'Подтвердите хотя бы одну партию для повышения приоритета.',
   gradingLevels: [
-    { name: 'Observer', active: false },
-    { name: 'Declared Supplier', active: true },
-    { name: 'Standard Supplier', active: false },
+    { name: 'Наблюдатель', active: false },
+    { name: 'Объявленный поставщик', active: true },
+    { name: 'Стандартный поставщик', active: false },
   ],
 };
 
 const recentActivity = [
-  { id: 1, batchId: '2847', description: 'Batch #2847 ready for confirmation', status: 'forecast' as const, time: '2 hours ago', action: 'confirm', actionLabel: 'Confirm', priority: 'high' },
-  { id: 2, batchId: 'mpk-04', description: 'Pool invitation from MPK-04 awaiting response', status: 'soft-committed' as const, time: '4 hours ago', action: 'review', actionLabel: 'Review', priority: 'high' },
-  { id: 3, batchId: '2845', description: 'Batch #2845 details incomplete', status: 'forecast' as const, time: '6 hours ago', action: 'update', actionLabel: 'Update batch', priority: 'medium' },
-  { id: 4, batchId: '2843', description: 'Grading completed for Batch #2843', status: 'confirmed' as const, time: '1 day ago', action: null, actionLabel: null, priority: 'info' },
-  { id: 5, batchId: '2840', description: 'Batch #2840 delivered successfully', status: 'confirmed' as const, time: '3 days ago', action: null, actionLabel: null, priority: 'info' },
+  { id: 1, batchId: '2847', description: 'Партия #2847 готова к подтверждению', status: 'forecast' as const, time: '2 часа назад', action: 'confirm', actionLabel: 'Подтвердить', priority: 'high' },
+  { id: 2, batchId: 'mpk-04', description: 'Приглашение от МПК-04 ожидает ответа', status: 'soft-committed' as const, time: '4 часа назад', action: 'review', actionLabel: 'Просмотр', priority: 'high' },
+  { id: 3, batchId: '2845', description: 'Данные партии #2845 неполные', status: 'forecast' as const, time: '6 часов назад', action: 'update', actionLabel: 'Обновить', priority: 'medium' },
+  { id: 4, batchId: '2843', description: 'Грейдинг завершён для партии #2843', status: 'confirmed' as const, time: '1 день назад', action: null, actionLabel: null, priority: 'info' },
+  { id: 5, batchId: '2840', description: 'Партия #2840 успешно доставлена', status: 'confirmed' as const, time: '3 дня назад', action: null, actionLabel: null, priority: 'info' },
 ];
 
-const nextMatchingWindow = {
-  date: 'Dec 20, 2025',
-  daysRemaining: 3,
-};
-
 export default function Overview() {
+  const { t } = useTranslation();
   const { role, roleName } = useRole();
   const navigate = useNavigate();
   
@@ -162,8 +164,8 @@ export default function Overview() {
     return (
       <MainLayout>
         <PageHeader 
-          title="Platform Overview" 
-          description="TURAN / ZENGI — Command & Control Dashboard" 
+          title={t('admin.platformOverview')} 
+          description={t('admin.commandControl')} 
         />
 
         {/* Matching Window Banner */}
@@ -171,13 +173,13 @@ export default function Overview() {
           <MatchingWindowBanner
             windowDate={nextMatchingWindow.date}
             daysRemaining={nextMatchingWindow.daysRemaining}
-            currentPoolPeriod="Week 51, 2025"
+            currentPoolPeriod={`${t('admin.week')} 51, 2025`}
           />
         </div>
 
         {/* System Health Summary */}
         <div className="mb-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">System Health</h2>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">{t('admin.systemHealth')}</h2>
           <SystemHealthSummary
             activeFarmers={activeFarmers}
             activeMpks={activeMpks}
@@ -188,7 +190,7 @@ export default function Overview() {
 
         {/* Supply vs Demand Snapshot */}
         <div className="mb-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Supply vs Demand</h2>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">{t('admin.supplyVsDemand')}</h2>
           <SupplyDemandSnapshot
             supplyTotals={supplyTotals}
             demandTotals={demandTotals}
@@ -199,7 +201,7 @@ export default function Overview() {
 
         {/* Attention Required */}
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Attention Required</h2>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">{t('admin.attentionRequired')}</h2>
           <AttentionRequired items={attentionItems} />
         </div>
       </MainLayout>
@@ -209,11 +211,13 @@ export default function Overview() {
   // Farmer and MPK Dashboard (existing code)
   const currentStats = stats[role as 'farmer' | 'mpk'];
 
+  const roleTitle = role === 'farmer' ? t('overview.farmerTitle') : t('overview.mpkTitle');
+
   return (
     <MainLayout>
       <PageHeader 
-        title="Overview" 
-        description={`Welcome to Turan Standard Pool — ${roleName} Dashboard`} 
+        title={t('overview.title')} 
+        description={`${t('auth.welcomeBack')}, Turan Standard Pool — ${roleTitle}`} 
       />
 
       {/* Farmer Status Banner */}
@@ -229,7 +233,7 @@ export default function Overview() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm text-muted-foreground">Your Grading Level:</span>
+                      <span className="text-sm text-muted-foreground">{t('farmerOverview.yourGradingLevel')}:</span>
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-semibold">
                         {farmerStatus.gradingLevel}
                       </Badge>
@@ -263,13 +267,13 @@ export default function Overview() {
               <div className="flex flex-col md:flex-row md:items-center gap-4 pt-3 border-t border-border/50">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-status-confirmed" />
-                  <span className="text-sm text-muted-foreground">Access:</span>
+                  <span className="text-sm text-muted-foreground">{t('farmerOverview.access')}:</span>
                   <span className="text-sm font-medium text-foreground">{farmerStatus.accessLevel}</span>
                 </div>
                 <div className="hidden md:block w-px h-4 bg-border" />
                 <div className="flex items-center gap-2">
                   <ArrowRight className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">Next Step:</span>
+                  <span className="text-sm text-muted-foreground">{t('farmerOverview.nextStep')}:</span>
                   <span className="text-sm text-foreground">{farmerStatus.nextAction}</span>
                 </div>
               </div>
@@ -288,16 +292,16 @@ export default function Overview() {
                   <Calendar className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Next Matching Window</p>
+                  <p className="text-sm font-medium text-foreground">{t('admin.nextMatchingWindow')}</p>
                   <p className="text-lg font-bold text-amber-600">{nextMatchingWindow.date}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                  {nextMatchingWindow.daysRemaining} days remaining
+                  {t('admin.daysRemaining', { count: nextMatchingWindow.daysRemaining })}
                 </Badge>
                 <p className="text-sm text-muted-foreground">
-                  Complete pending actions before this date
+                  {t('admin.completeActionsBefore')}
                 </p>
               </div>
             </div>
@@ -338,11 +342,11 @@ export default function Overview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base font-medium">
-              {role === 'farmer' ? 'Action Feed' : 'Recent Activity'}
+              {role === 'farmer' ? t('overview.actionFeed') : t('overview.recentActivity')}
             </CardTitle>
             {role === 'farmer' && (
               <Badge variant="secondary" className="bg-amber-500/10 text-amber-600">
-                {recentActivity.filter(a => a.action).length} pending
+                {recentActivity.filter(a => a.action).length} {t('overview.pending')}
               </Badge>
             )}
           </CardHeader>

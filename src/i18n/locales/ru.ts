@@ -180,6 +180,15 @@ export const ru = {
     viewAll: 'Смотреть все',
     recentActivity: 'Недавняя активность',
     noRecentActivity: 'Нет недавней активности',
+    actionFeed: 'Лента действий',
+    pending: 'ожидают',
+    systemStatus: 'Статус системы',
+  },
+  
+  farmerOverview: {
+    yourGradingLevel: 'Ваш уровень грейдинга',
+    access: 'Доступ',
+    nextStep: 'Следующий шаг',
   },
   
   batches: {
@@ -347,6 +356,37 @@ export const ru = {
     blockRequests: 'Заблокировать заявки',
     unblockRequests: 'Разблокировать заявки',
     maxActiveRequests: 'Макс. активных заявок',
+  },
+  
+  admin: {
+    activeFarmers: 'Активные фермеры',
+    verifiedSuppliers: 'Верифицированные поставщики',
+    activeMpks: 'Активные МПК',
+    processingPlants: 'Мясоперерабатывающие комбинаты',
+    declaredVolume: 'Объявленный объём',
+    headsNext3Months: 'Голов (следующие 3 месяца)',
+    activeRequests: 'Активные заявки',
+    poolRequestsOpen: 'Открытые заявки на пулы',
+    nextMatchingWindow: 'Следующее окно сопоставления',
+    currentPeriod: 'Текущий период',
+    daysRemaining: '{{count}} дн. осталось',
+    daysRemaining_one: '{{count}} день осталось',
+    daysRemaining_few: '{{count}} дня осталось',
+    daysRemaining_many: '{{count}} дней осталось',
+    systemHealth: 'Здоровье системы',
+    supplyVsDemand: 'Предложение vs Спрос',
+    attentionRequired: 'Требуют внимания',
+    platformOverview: 'Обзор платформы',
+    commandControl: 'ТУРАН / ЗЕНГИ — Панель управления',
+    completeActionsBefore: 'Завершите действия до этой даты',
+    week: 'Неделя',
+  },
+  
+  premium: {
+    reliabilityPremium: 'Премия за надёжность',
+    yourReliabilityStatus: 'Ваш текущий статус надёжности',
+    premiumTooltip: 'Премии вознаграждают соответствие стандартам и надёжные подтверждения.',
+    currentLevelCriteria: 'Критерии текущего уровня',
   },
   
   premiums: {

@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useRole } from '@/contexts/RoleContext';
 import { 
   Home, 
@@ -18,64 +19,39 @@ import {
 import { cn } from '@/lib/utils';
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-/**
- * Navigation Structure
- * 
- * Farmer:
- * - Overview
- * - Livestock Batches
- * - Sales Calendar
- * - Price Grid
- * - Profile
- * 
- * MPK:
- * - Market Overview
- * - Watchlist
- * - Purchase Pool Requests
- * - Price Grid
- * - Profile
- * 
- * Admin:
- * - Platform Overview
- * - Pool Matching
- * - Farmer Management
- * - MPK Management
- * - Price Grid
- * - Activity Log
- */
-
 const farmerNav: NavItem[] = [
-  { label: 'Overview', path: '/', icon: Home },
-  { label: 'Livestock Batches', path: '/farmer/batches', icon: Boxes },
-  { label: 'Sales Calendar', path: '/farmer/calendar', icon: Calendar },
-  { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
-  { label: 'Profile', path: '/farmer/profile', icon: User },
+  { labelKey: 'nav.overview', path: '/', icon: Home },
+  { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes },
+  { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar },
+  { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3 },
+  { labelKey: 'nav.profile', path: '/farmer/profile', icon: User },
 ];
 
 const mpkNav: NavItem[] = [
-  { label: 'Market Overview', path: '/mpk/market', icon: BarChart3 },
-  { label: 'Watchlist', path: '/mpk/watchlist', icon: BookmarkCheck },
-  { label: 'Purchase Pool Requests', path: '/mpk/requests', icon: ShoppingCart },
-  { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
-  { label: 'Profile', path: '/mpk/profile', icon: User },
+  { labelKey: 'nav.marketOverview', path: '/mpk/market', icon: BarChart3 },
+  { labelKey: 'nav.watchlist', path: '/mpk/watchlist', icon: BookmarkCheck },
+  { labelKey: 'nav.purchasePoolRequests', path: '/mpk/requests', icon: ShoppingCart },
+  { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3 },
+  { labelKey: 'nav.profile', path: '/mpk/profile', icon: User },
 ];
 
 const adminNav: NavItem[] = [
-  { label: 'Platform Overview', path: '/', icon: Home },
-  { label: 'Pool Matching', path: '/admin/matching', icon: GitMerge },
-  { label: 'Farmer Management', path: '/admin/farmers', icon: Users },
-  { label: 'MPK Management', path: '/admin/mpks', icon: Building2 },
-  { label: 'Premium Management', path: '/admin/premiums', icon: Award },
-  { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
-  { label: 'Activity Log', path: '/admin/activity', icon: Activity },
+  { labelKey: 'nav.platformOverview', path: '/', icon: Home },
+  { labelKey: 'nav.poolMatching', path: '/admin/matching', icon: GitMerge },
+  { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
+  { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },
+  { labelKey: 'nav.premiumManagement', path: '/admin/premiums', icon: Award },
+  { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3 },
+  { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
 ];
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const { role } = useRole();
   const location = useLocation();
 
@@ -86,9 +62,9 @@ export function Sidebar() {
   }[role];
 
   const roleLabel = {
-    farmer: 'Farmer',
-    mpk: 'Processing Plant',
-    admin: 'Administration',
+    farmer: t('roles.farmer'),
+    mpk: t('roles.processingPlant'),
+    admin: t('roles.administration'),
   }[role];
 
   // Check if path matches (exact or starts with for nested routes)
@@ -128,7 +104,7 @@ export function Sidebar() {
                     ? "text-primary" 
                     : "text-sidebar-muted"
                 )} />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </NavLink>
             </li>
           ))}
