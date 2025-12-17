@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,11 +41,11 @@ const farmerStatus = {
 };
 
 const recentActivity = [
-  { id: 1, description: 'Batch #2847 ready for confirmation', status: 'forecast' as const, time: '2 hours ago', action: 'confirm', actionLabel: 'Confirm', priority: 'high' },
-  { id: 2, description: 'Pool invitation from MPK-04 awaiting response', status: 'soft-committed' as const, time: '4 hours ago', action: 'review', actionLabel: 'Review', priority: 'high' },
-  { id: 3, description: 'Batch #2845 details incomplete', status: 'forecast' as const, time: '6 hours ago', action: 'update', actionLabel: 'Update batch', priority: 'medium' },
-  { id: 4, description: 'Grading completed for Batch #2843', status: 'confirmed' as const, time: '1 day ago', action: null, actionLabel: null, priority: 'info' },
-  { id: 5, description: 'Batch #2840 delivered successfully', status: 'confirmed' as const, time: '3 days ago', action: null, actionLabel: null, priority: 'info' },
+  { id: 1, batchId: '2847', description: 'Batch #2847 ready for confirmation', status: 'forecast' as const, time: '2 hours ago', action: 'confirm', actionLabel: 'Confirm', priority: 'high' },
+  { id: 2, batchId: 'mpk-04', description: 'Pool invitation from MPK-04 awaiting response', status: 'soft-committed' as const, time: '4 hours ago', action: 'review', actionLabel: 'Review', priority: 'high' },
+  { id: 3, batchId: '2845', description: 'Batch #2845 details incomplete', status: 'forecast' as const, time: '6 hours ago', action: 'update', actionLabel: 'Update batch', priority: 'medium' },
+  { id: 4, batchId: '2843', description: 'Grading completed for Batch #2843', status: 'confirmed' as const, time: '1 day ago', action: null, actionLabel: null, priority: 'info' },
+  { id: 5, batchId: '2840', description: 'Batch #2840 delivered successfully', status: 'confirmed' as const, time: '3 days ago', action: null, actionLabel: null, priority: 'info' },
 ];
 
 const nextMatchingWindow = {
@@ -54,7 +55,12 @@ const nextMatchingWindow = {
 
 export default function Overview() {
   const { role, roleName } = useRole();
+  const navigate = useNavigate();
   const currentStats = stats[role];
+
+  const handleActionClick = (batchId: string, action: string) => {
+    navigate(`/farmer/batch/${batchId}?action=${action}`);
+  };
 
   return (
     <MainLayout>
@@ -224,6 +230,7 @@ export default function Overview() {
                       variant={activity.priority === 'high' ? 'default' : 'outline'} 
                       size="sm" 
                       className="ml-3 flex-shrink-0"
+                      onClick={() => handleActionClick(activity.batchId, activity.action!)}
                     >
                       {activity.actionLabel}
                     </Button>
