@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -101,14 +102,39 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function FarmerProfile() {
   const [isEditing, setIsEditing] = useState(false);
+  const { t } = useTranslation();
   
-  // For demo, we'll use the first farmer from the list
-  // In production, this would use the authenticated user's farmer record
   const { data: farmers, isLoading: farmersLoading, error: farmersError } = useFarmers();
   const farmer = farmers?.[0] || null;
   
   const updateProfile = useUpdateFarmerProfile();
   const stats = useBatchStats();
+
+  const GRADING_CONFIG_TRANSLATED: Record<FarmerGrading, { 
+    label: string; 
+    description: string; 
+    access: string;
+    color: string;
+  }> = {
+    observer: {
+      label: t('farmers.observer'),
+      description: t('profile.observerDescription'),
+      access: t('profile.observerAccess'),
+      color: 'text-muted-foreground',
+    },
+    declared_supplier: {
+      label: t('farmers.declaredSupplier'),
+      description: t('profile.declaredDescription'),
+      access: t('profile.declaredAccess'),
+      color: 'text-amber-600',
+    },
+    standard_supplier: {
+      label: t('farmers.standardSupplier'),
+      description: t('profile.standardDescription'),
+      access: t('profile.standardAccess'),
+      color: 'text-emerald-600',
+    },
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -123,7 +149,6 @@ export default function FarmerProfile() {
     },
   });
 
-  // Update form when farmer data loads
   useEffect(() => {
     if (farmer) {
       form.reset({
@@ -162,11 +187,11 @@ export default function FarmerProfile() {
   const getNextAction = (): string => {
     switch (currentGrading) {
       case 'observer':
-        return 'Declare your first batch to become a Declared Supplier.';
+        return t('profile.observerNextStep');
       case 'declared_supplier':
-        return 'Confirm batch deliveries to progress to Standard Supplier.';
+        return t('profile.declaredNextStep');
       case 'standard_supplier':
-        return 'Maintain consistent confirmations to retain priority status.';
+        return t('profile.standardNextStep');
       default:
         return '';
     }
@@ -175,7 +200,7 @@ export default function FarmerProfile() {
   if (farmersLoading) {
     return (
       <MainLayout>
-        <PageHeader title="Profile & Status" description="Loading..." />
+        <PageHeader title={t('profile.title')} description={t('common.loading')} />
         <div className="space-y-6">
           <Skeleton className="h-64 w-full" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -190,13 +215,13 @@ export default function FarmerProfile() {
   if (farmersError || !farmer) {
     return (
       <MainLayout>
-        <PageHeader title="Profile & Status" description="Manage your farm information" />
+        <PageHeader title={t('profile.title')} description={t('profile.description')} />
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium">No farmer profile found</p>
+            <p className="text-lg font-medium">{t('profile.noProfileFound')}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Please contact an administrator to set up your profile.
+              {t('profile.contactAdmin')}
             </p>
           </CardContent>
         </Card>
@@ -207,15 +232,15 @@ export default function FarmerProfile() {
   return (
     <MainLayout>
       <PageHeader 
-        title="Profile & Status" 
-        description="Manage your farm information and track your participation status" 
+        title={t('profile.title')} 
+        description={t('profile.description')} 
       />
 
       {/* Farmer Status & Progress Section */}
       <Card className="mb-6">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Your Status in Turan Standard Pool</CardTitle>
+            <CardTitle className="text-base font-medium">{t('profile.yourStatusInPool')}</CardTitle>
             <Badge variant="outline">{farmer.farmer_id}</Badge>
           </div>
         </CardHeader>
@@ -224,25 +249,25 @@ export default function FarmerProfile() {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <span className={`text-2xl font-semibold ${GRADING_CONFIG[currentGrading].color}`}>
-                  {GRADING_CONFIG[currentGrading].label}
+                <span className={`text-2xl font-semibold ${GRADING_CONFIG_TRANSLATED[currentGrading].color}`}>
+                  {GRADING_CONFIG_TRANSLATED[currentGrading].label}
                 </span>
-                <Badge variant="outline" className={GRADING_CONFIG[currentGrading].color}>
-                  {GRADING_CONFIG[currentGrading].access}
+                <Badge variant="outline" className={GRADING_CONFIG_TRANSLATED[currentGrading].color}>
+                  {GRADING_CONFIG_TRANSLATED[currentGrading].access}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {GRADING_CONFIG[currentGrading].description}
+                {GRADING_CONFIG_TRANSLATED[currentGrading].description}
               </p>
             </div>
             {farmer.is_restricted && (
-              <Badge variant="destructive">Restricted</Badge>
+              <Badge variant="destructive">{t('farmers.restricted')}</Badge>
             )}
           </div>
 
           {/* Progression Indicator */}
           <div className="pt-4 border-t">
-            <p className="text-xs text-muted-foreground mb-3">Progression Path</p>
+            <p className="text-xs text-muted-foreground mb-3">{t('profile.progressionPath')}</p>
             <div className="flex items-center gap-2 flex-wrap">
               {gradingLevels.map((level, index) => {
                 const isActive = index <= currentIndex;
@@ -271,7 +296,7 @@ export default function FarmerProfile() {
                         )}
                       </div>
                       <span className={`text-sm ${isCurrent ? 'font-medium' : isActive ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                        {GRADING_CONFIG[level].label}
+                        {GRADING_CONFIG_TRANSLATED[level].label}
                       </span>
                     </div>
                     {index < gradingLevels.length - 1 && (
@@ -288,7 +313,7 @@ export default function FarmerProfile() {
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium">What to do next</p>
+                <p className="text-sm font-medium">{t('profile.whatToDoNext')}</p>
                 <p className="text-sm text-muted-foreground mt-1">{getNextAction()}</p>
               </div>
             </div>
@@ -298,19 +323,19 @@ export default function FarmerProfile() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
             <div className="text-center p-3 bg-muted/30 rounded-lg">
               <p className="text-xl font-semibold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Total Batches</p>
+              <p className="text-xs text-muted-foreground">{t('profile.totalBatches')}</p>
             </div>
             <div className="text-center p-3 bg-muted/30 rounded-lg">
               <p className="text-xl font-semibold">{stats.forecast}</p>
-              <p className="text-xs text-muted-foreground">Forecast</p>
+              <p className="text-xs text-muted-foreground">{t('batches.forecast')}</p>
             </div>
             <div className="text-center p-3 bg-amber-500/10 rounded-lg">
               <p className="text-xl font-semibold text-amber-600">{stats.softCommitted}</p>
-              <p className="text-xs text-muted-foreground">Soft Committed</p>
+              <p className="text-xs text-muted-foreground">{t('batches.softCommitted')}</p>
             </div>
             <div className="text-center p-3 bg-emerald-500/10 rounded-lg">
               <p className="text-xl font-semibold text-emerald-600">{stats.confirmed}</p>
-              <p className="text-xs text-muted-foreground">Confirmed</p>
+              <p className="text-xs text-muted-foreground">{t('batches.confirmed')}</p>
             </div>
           </div>
 
@@ -318,15 +343,15 @@ export default function FarmerProfile() {
           <div className="grid grid-cols-3 gap-4 pt-4 border-t">
             <div className="text-center">
               <p className="text-lg font-semibold text-emerald-600">{farmer.total_confirmations}</p>
-              <p className="text-xs text-muted-foreground">Confirmations</p>
+              <p className="text-xs text-muted-foreground">{t('profile.confirmations')}</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-semibold text-destructive">{farmer.total_declines}</p>
-              <p className="text-xs text-muted-foreground">Declines</p>
+              <p className="text-xs text-muted-foreground">{t('profile.declines')}</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-semibold text-amber-600">{farmer.missed_updates}</p>
-              <p className="text-xs text-muted-foreground">Missed Updates</p>
+              <p className="text-xs text-muted-foreground">{t('profile.missedUpdates')}</p>
             </div>
           </div>
         </CardContent>
@@ -337,13 +362,13 @@ export default function FarmerProfile() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-medium">Farm Profile</CardTitle>
-              <CardDescription>Your registered farm information</CardDescription>
+              <CardTitle className="text-base font-medium">{t('profile.farmProfile')}</CardTitle>
+              <CardDescription>{t('profile.registeredInfo')}</CardDescription>
             </div>
             {!isEditing && (
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit className="w-4 h-4 mr-2" />
-                Edit
+                {t('common.edit')}
               </Button>
             )}
           </CardHeader>
@@ -357,7 +382,7 @@ export default function FarmerProfile() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Farm Name</FormLabel>
+                          <FormLabel>{t('profile.farmName')}</FormLabel>
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
@@ -370,7 +395,7 @@ export default function FarmerProfile() {
                       name="contact_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Contact Person</FormLabel>
+                          <FormLabel>{t('profile.contactPerson')}</FormLabel>
                           <FormControl>
                             <Input {...field} />
                           </FormControl>

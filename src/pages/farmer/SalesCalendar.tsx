@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useBatches, useUpdateBatch, type Batch, type BatchStatus } from '@/hooks/useBatches';
 import { format, parseISO, addMonths, startOfMonth, isSameMonth } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Collapsible,
@@ -80,6 +82,7 @@ interface MonthData {
 
 export default function SalesCalendar() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { data: batches, isLoading, error } = useBatches();
   const updateBatch = useUpdateBatch();
   
@@ -88,6 +91,7 @@ export default function SalesCalendar() {
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
 
   const nextMatchingWindow = getNextMatchingWindow();
+  const dateLocale = i18n.language === 'ru' ? ru : undefined;
 
   // Generate next 6 months
   const months = useMemo(() => {
@@ -137,6 +141,12 @@ export default function SalesCalendar() {
     return batchMonth <= nextMatchingWindow && batch.status === 'forecast';
   };
 
+  const getStatusLabel = (status: BatchStatus): string => {
+    if (status === 'forecast') return t('batches.forecast');
+    if (status === 'soft_committed') return t('batches.softCommitted');
+    return t('batches.confirmed');
+  };
+
   const handleEscalateStatus = () => {
     if (!escalateBatch) return;
     
@@ -147,8 +157,8 @@ export default function SalesCalendar() {
       {
         onSuccess: () => {
           toast({
-            title: 'Status Updated',
-            description: `Batch status changed to ${newStatus === 'soft_committed' ? 'Soft Committed' : 'Confirmed'}.`,
+            title: t('batches.statusUpdated'),
+            description: t('batches.statusChangedTo', { status: getStatusLabel(newStatus) }),
           });
           setEscalateBatch(null);
         },
@@ -157,8 +167,8 @@ export default function SalesCalendar() {
   };
 
   const getNextStatus = (status: BatchStatus): string | null => {
-    if (status === 'forecast') return 'Soft Committed';
-    if (status === 'soft_committed') return 'Confirmed';
+    if (status === 'forecast') return t('batches.softCommitted');
+    if (status === 'soft_committed') return t('batches.confirmed');
     return null;
   };
 
@@ -170,7 +180,7 @@ export default function SalesCalendar() {
   if (isLoading) {
     return (
       <MainLayout>
-        <PageHeader title="Sales Calendar" description="Loading..." />
+        <PageHeader title={t('calendar.title')} description={t('common.loading')} />
         <div className="space-y-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full" />)}
         </div>
@@ -181,11 +191,11 @@ export default function SalesCalendar() {
   if (error) {
     return (
       <MainLayout>
-        <PageHeader title="Sales Calendar" description="Plan your supply timeline" />
+        <PageHeader title={t('calendar.title')} description={t('calendar.description')} />
         <Card>
           <CardContent className="py-8 text-center">
             <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Failed to load calendar data.</p>
+            <p className="text-sm text-muted-foreground">{t('batches.failedToLoad')}</p>
           </CardContent>
         </Card>
       </MainLayout>
@@ -195,8 +205,8 @@ export default function SalesCalendar() {
   return (
     <MainLayout>
       <PageHeader 
-        title="Sales Calendar" 
-        description="Plan your supply timeline and track readiness progression" 
+        title={t('calendar.title')} 
+        description={t('calendar.description')} 
       />
 
       {/* Next Matching Window Banner */}
@@ -208,14 +218,14 @@ export default function SalesCalendar() {
                 <CalendarIcon className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">Next Matching Window</p>
+                <p className="text-sm font-medium">{t('calendar.nextMatchingWindow')}</p>
                 <p className="text-lg font-semibold text-primary">
-                  {format(nextMatchingWindow, 'MMMM d, yyyy')}
+                  {format(nextMatchingWindow, 'd MMMM yyyy', { locale: dateLocale })}
                 </p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground max-w-xs text-right">
-              Batches should be Soft Committed or Confirmed before this date to be considered for pool matching.
+              {t('calendar.matchingWindowNote')}
             </p>
           </div>
         </CardContent>
@@ -227,11 +237,11 @@ export default function SalesCalendar() {
           <TabsList>
             <TabsTrigger value="calendar" className="gap-2">
               <CalendarIcon className="h-4 w-4" />
-              Calendar
+              {t('calendar.monthView')}
             </TabsTrigger>
             <TabsTrigger value="list" className="gap-2">
               <List className="h-4 w-4" />
-              List
+              {t('calendar.listView')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -258,11 +268,11 @@ export default function SalesCalendar() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <CardTitle className="text-base font-medium">
-                            {format(data.month, 'MMMM yyyy')}
+                            {format(data.month, 'LLLL yyyy', { locale: dateLocale })}
                           </CardTitle>
                           {isMatchingMonth && (
                             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                              Matching
+                              {t('calendar.matching')}
                             </span>
                           )}
                         </div>
@@ -272,14 +282,14 @@ export default function SalesCalendar() {
                     <CardContent className="pt-0">
                       {data.totals.batchCount === 0 ? (
                         <div className="text-center py-2">
-                          <p className="text-sm text-muted-foreground">No batches declared.</p>
-                          <p className="text-xs text-muted-foreground mt-1">Add batches to see expected supply.</p>
+                          <p className="text-sm text-muted-foreground">{t('calendar.noBatchesDeclared')}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t('calendar.addBatchesToSee')}</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
                           <div className="flex items-baseline gap-2">
                             <span className="text-2xl font-semibold">{data.totals.heads}</span>
-                            <span className="text-sm text-muted-foreground">heads • {data.totals.batchCount} batches</span>
+                            <span className="text-sm text-muted-foreground">{t('calendar.heads')} • {data.totals.batchCount} {t('calendar.batches')}</span>
                           </div>
                           
                           {/* Status Breakdown */}
@@ -345,7 +355,7 @@ export default function SalesCalendar() {
                                     )}
                                   </div>
                                   <p className="text-xs text-muted-foreground">
-                                    {batch.heads} heads • {batch.region} • Grade {batch.grade}
+                                    {batch.heads} {t('calendar.heads')} • {batch.region} • {t('common.grade')} {batch.grade}
                                   </p>
                                   <StatusBadge status={mapStatus(batch.status)} className="mt-1.5" />
                                 </div>
@@ -382,7 +392,7 @@ export default function SalesCalendar() {
                               </div>
                               {approaching && (
                                 <p className="text-xs text-amber-600 mt-2">
-                                  Update readiness before matching window
+                                  {t('calendar.updateReadinessBeforeWindow')}
                                 </p>
                               )}
                             </div>
@@ -400,8 +410,8 @@ export default function SalesCalendar() {
         /* List View */
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-medium">All Planned Batches</CardTitle>
-            <CardDescription>Sorted by target week</CardDescription>
+            <CardTitle className="text-base font-medium">{t('calendar.allPlannedBatches')}</CardTitle>
+            <CardDescription>{t('calendar.sortedByTargetWeek')}</CardDescription>
           </CardHeader>
           <CardContent>
             {batches && batches.length > 0 ? (
@@ -428,14 +438,14 @@ export default function SalesCalendar() {
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                {batch.heads} heads • {batch.region} • Grade {batch.grade}
+                                {batch.heads} {t('calendar.heads')} • {batch.region} • {t('common.grade')} {batch.grade}
                               </p>
                             </div>
                           </div>
                           
                           <div className="flex items-center gap-4">
                             <div className="text-right">
-                              <p className="text-sm font-medium">{format(batchMonth, 'MMM yyyy')}</p>
+                              <p className="text-sm font-medium">{format(batchMonth, 'LLL yyyy', { locale: dateLocale })}</p>
                               <p className="text-xs text-muted-foreground">{batch.target_week}</p>
                             </div>
                             <StatusBadge status={mapStatus(batch.status)} />
@@ -463,7 +473,7 @@ export default function SalesCalendar() {
                         </div>
                         {approaching && (
                           <p className="text-xs text-amber-600 mt-2">
-                            Update readiness before matching window to be considered for pool matching.
+                            {t('calendar.updateReadinessForMatching')}
                           </p>
                         )}
                       </div>
@@ -475,9 +485,9 @@ export default function SalesCalendar() {
                 <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
                   <FileText className="w-8 h-8 text-muted-foreground/60" />
                 </div>
-                <p className="font-medium text-foreground mb-1">No batches declared yet.</p>
+                <p className="font-medium text-foreground mb-1">{t('calendar.noBatchesYet')}</p>
                 <p className="text-sm text-muted-foreground">
-                  Add batches to see expected supply by month.
+                  {t('calendar.addBatchesByMonth')}
                 </p>
               </div>
             )}
@@ -490,7 +500,7 @@ export default function SalesCalendar() {
         <CardContent className="py-3">
           <p className="text-xs text-muted-foreground">
             <AlertTriangle className="h-3 w-3 inline mr-1 text-amber-500" />
-            Keep batch data up to date and escalate readiness before matching windows to maximize pool inclusion chances.
+            {t('calendar.keepDataUpdated')}
           </p>
         </CardContent>
       </Card>
@@ -499,23 +509,24 @@ export default function SalesCalendar() {
       <AlertDialog open={!!escalateBatch} onOpenChange={() => setEscalateBatch(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Update Readiness Status</AlertDialogTitle>
+            <AlertDialogTitle>{t('calendar.updateReadinessStatus')}</AlertDialogTitle>
             <AlertDialogDescription>
               {escalateBatch && (
                 <>
-                  Move this batch from{' '}
-                  <strong>{escalateBatch.currentStatus === 'forecast' ? 'Forecast' : 'Soft Committed'}</strong> to{' '}
-                  <strong>{getNextStatus(escalateBatch.currentStatus)}</strong>?
+                  {t('calendar.moveFromTo', {
+                    from: escalateBatch.currentStatus === 'forecast' ? t('batches.forecast') : t('batches.softCommitted'),
+                    to: getNextStatus(escalateBatch.currentStatus)
+                  })}
                   <br /><br />
-                  Higher readiness indicates stronger commitment and increases matching priority.
+                  {t('calendar.higherReadinessNote')}
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleEscalateStatus}>
-              Confirm
+              {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
