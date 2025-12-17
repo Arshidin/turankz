@@ -5,67 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CheckCircle2, AlertCircle, Edit, Calendar, MapPin, Weight, Users } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, CheckCircle2, AlertCircle, Edit, Calendar, MapPin, Users } from 'lucide-react';
+import { useBatch, useConfirmBatch, useUpdateBatch } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
 
-// Mock batch data - in real app this would come from database
-const batchesData: Record<string, {
-  id: string;
-  heads: number;
-  avgWeight: string;
-  grade: string;
-  region: string;
-  status: 'forecast' | 'soft-committed' | 'confirmed';
-  targetWeek: string;
-  createdAt: string;
-  notes: string;
-  mpkInterest?: string;
-}> = {
-  '2847': {
-    id: 'BTH-2847',
-    heads: 45,
-    avgWeight: '480 kg',
-    grade: 'A',
-    region: 'Almaty Oblast',
-    status: 'forecast',
-    targetWeek: 'Week 52',
-    createdAt: 'Dec 10, 2025',
-    notes: 'Ready for confirmation. All health checks completed.',
-  },
-  '2845': {
-    id: 'BTH-2845',
-    heads: 38,
-    avgWeight: '—',
-    grade: 'B',
-    region: 'Akmola Oblast',
-    status: 'forecast',
-    targetWeek: 'Week 1',
-    createdAt: 'Dec 8, 2025',
-    notes: 'Missing weight data. Please update batch details.',
-  },
-  '2843': {
-    id: 'BTH-2843',
-    heads: 52,
-    avgWeight: '495 kg',
-    grade: 'A',
-    region: 'East Kazakhstan',
-    status: 'confirmed',
-    targetWeek: 'Week 51',
-    createdAt: 'Dec 5, 2025',
-    notes: 'Grading completed. Awaiting delivery.',
-  },
-  'mpk-04': {
-    id: 'INV-MPK-04',
-    heads: 30,
-    avgWeight: '470 kg',
-    grade: 'A/B',
-    region: 'Any',
-    status: 'soft-committed',
-    targetWeek: 'Week 1',
-    createdAt: 'Dec 12, 2025',
-    notes: 'Pool invitation from MPK-04. Review terms and respond.',
-    mpkInterest: 'MPK-04 (Almaty Meat Processing)',
-  },
+// Map database status to StatusBadge status
+const mapStatus = (status: string): 'forecast' | 'soft-committed' | 'confirmed' => {
+  if (status === 'soft_committed') return 'soft-committed';
+  if (status === 'confirmed' || status === 'delivered') return 'confirmed';
+  return 'forecast';
 };
 
 export default function BatchDetail() {
@@ -74,41 +23,84 @@ export default function BatchDetail() {
   const navigate = useNavigate();
   const action = searchParams.get('action') || 'view';
   
-  const batch = batchId ? batchesData[batchId] : null;
+  const { data: batch, isLoading, error } = useBatch(batchId ? `BTH-${batchId}` : undefined);
+  const confirmBatch = useConfirmBatch();
+  const updateBatch = useUpdateBatch();
 
-  const handleConfirm = () => {
-    toast({
-      title: "Batch Confirmed",
-      description: `${batch?.id} has been confirmed for ${batch?.targetWeek}.`,
-    });
+  const handleConfirm = async () => {
+    if (!batch) return;
+    
+    await confirmBatch.mutateAsync(batch.id);
     navigate('/');
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
+    if (!batch) return;
+    
+    await updateBatch.mutateAsync({
+      id: batch.id,
+      requires_action: false,
+      action_type: null,
+    });
+    
     toast({
-      title: "Batch Updated",
-      description: `${batch?.id} details have been saved.`,
+      title: 'Batch Updated',
+      description: `${batch.batch_number} details have been saved.`,
     });
     navigate('/farmer/batches');
   };
 
-  const handleAcceptInvitation = () => {
+  const handleAcceptInvitation = async () => {
+    if (!batch) return;
+    
+    await updateBatch.mutateAsync({
+      id: batch.id,
+      status: 'soft_committed',
+      requires_action: false,
+      action_type: null,
+    });
+    
     toast({
-      title: "Invitation Accepted",
-      description: `You have accepted the pool invitation from ${batch?.mpkInterest}.`,
+      title: 'Invitation Accepted',
+      description: `You have accepted the pool invitation.`,
     });
     navigate('/');
   };
 
-  const handleDeclineInvitation = () => {
+  const handleDeclineInvitation = async () => {
+    if (!batch) return;
+    
+    await updateBatch.mutateAsync({
+      id: batch.id,
+      requires_action: false,
+      action_type: null,
+      mpk_interest: null,
+    });
+    
     toast({
-      title: "Invitation Declined",
-      description: "The pool invitation has been declined.",
+      title: 'Invitation Declined',
+      description: 'The pool invitation has been declined.',
     });
     navigate('/');
   };
 
-  if (!batch) {
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="mb-4">
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-96 mb-6" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-64 lg:col-span-2" />
+          <Skeleton className="h-48" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error || !batch) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center py-12">
@@ -174,7 +166,7 @@ export default function BatchDetail() {
                   {action === 'review' && 'You have received a pool invitation'}
                   {action === 'update' && 'This batch requires updated information'}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">{batch.notes}</p>
+                <p className="text-sm text-muted-foreground mt-1">{batch.notes || 'No additional notes.'}</p>
               </div>
             </div>
           </CardContent>
@@ -187,7 +179,7 @@ export default function BatchDetail() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium">Batch Information</CardTitle>
-              <StatusBadge status={batch.status} />
+              <StatusBadge status={mapStatus(batch.status)} />
             </div>
           </CardHeader>
           <CardContent>
@@ -195,7 +187,7 @@ export default function BatchDetail() {
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Batch ID</p>
-                  <p className="text-sm font-semibold text-foreground">{batch.id}</p>
+                  <p className="text-sm font-semibold text-foreground">{batch.batch_number}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Number of Heads</p>
@@ -203,9 +195,9 @@ export default function BatchDetail() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Average Weight</p>
-                  <p className={`text-sm font-semibold ${batch.avgWeight === '—' ? 'text-amber-600' : 'text-foreground'}`}>
-                    {batch.avgWeight}
-                    {batch.avgWeight === '—' && (
+                  <p className={`text-sm font-semibold ${!batch.avg_weight ? 'text-amber-600' : 'text-foreground'}`}>
+                    {batch.avg_weight ? `${batch.avg_weight} kg` : '—'}
+                    {!batch.avg_weight && (
                       <span className="text-xs font-normal text-amber-600 ml-2">Missing</span>
                     )}
                   </p>
@@ -227,16 +219,16 @@ export default function BatchDetail() {
                   <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Target Week</p>
-                    <p className="text-sm font-medium text-foreground">{batch.targetWeek}</p>
+                    <p className="text-sm font-medium text-foreground">{batch.target_week}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {batch.mpkInterest && (
+            {batch.mpk_interest && (
               <div className="mt-6 pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground mb-1">Interested Party</p>
-                <p className="text-sm font-medium text-foreground">{batch.mpkInterest}</p>
+                <p className="text-sm font-medium text-foreground">{batch.mpk_interest}</p>
               </div>
             )}
           </CardContent>
@@ -250,9 +242,13 @@ export default function BatchDetail() {
           <CardContent className="space-y-3">
             {action === 'confirm' && (
               <>
-                <Button className="w-full" onClick={handleConfirm}>
+                <Button 
+                  className="w-full" 
+                  onClick={handleConfirm}
+                  disabled={confirmBatch.isPending}
+                >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Confirm Batch
+                  {confirmBatch.isPending ? 'Confirming...' : 'Confirm Batch'}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   By confirming, you commit to delivering this batch during the target week.
@@ -262,11 +258,20 @@ export default function BatchDetail() {
 
             {action === 'review' && (
               <>
-                <Button className="w-full" onClick={handleAcceptInvitation}>
+                <Button 
+                  className="w-full" 
+                  onClick={handleAcceptInvitation}
+                  disabled={updateBatch.isPending}
+                >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Accept Invitation
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleDeclineInvitation}>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleDeclineInvitation}
+                  disabled={updateBatch.isPending}
+                >
                   Decline
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
@@ -277,9 +282,13 @@ export default function BatchDetail() {
 
             {action === 'update' && (
               <>
-                <Button className="w-full" onClick={handleUpdate}>
+                <Button 
+                  className="w-full" 
+                  onClick={handleUpdate}
+                  disabled={updateBatch.isPending}
+                >
                   <Edit className="w-4 h-4 mr-2" />
-                  Save Changes
+                  {updateBatch.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
                 <Button variant="outline" className="w-full" onClick={() => navigate(-1)}>
                   Cancel
