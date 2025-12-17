@@ -163,6 +163,113 @@ export type Database = {
         }
         Relationships: []
       }
+      mpk_activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          mpk_id: string
+          new_value: string | null
+          note: string | null
+          performed_by: string | null
+          previous_value: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          mpk_id: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string | null
+          previous_value?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          mpk_id?: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string | null
+          previous_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mpk_activity_log_mpk_id_fkey"
+            columns: ["mpk_id"]
+            isOneToOne: false
+            referencedRelation: "mpks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mpks: {
+        Row: {
+          cancelled_requests: number
+          common_target_weeks: string[] | null
+          created_at: string
+          fulfilled_requests: number
+          id: string
+          intake_regions: string[]
+          is_request_restricted: boolean
+          last_activity_at: string | null
+          max_active_requests: number | null
+          mpk_id: string
+          name: string
+          partial_requests: number
+          request_changes_count: number
+          restriction_reason: string | null
+          status: Database["public"]["Enums"]["mpk_status"]
+          total_requests: number
+          typical_volume_max: number | null
+          typical_volume_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          cancelled_requests?: number
+          common_target_weeks?: string[] | null
+          created_at?: string
+          fulfilled_requests?: number
+          id?: string
+          intake_regions?: string[]
+          is_request_restricted?: boolean
+          last_activity_at?: string | null
+          max_active_requests?: number | null
+          mpk_id: string
+          name: string
+          partial_requests?: number
+          request_changes_count?: number
+          restriction_reason?: string | null
+          status?: Database["public"]["Enums"]["mpk_status"]
+          total_requests?: number
+          typical_volume_max?: number | null
+          typical_volume_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cancelled_requests?: number
+          common_target_weeks?: string[] | null
+          created_at?: string
+          fulfilled_requests?: number
+          id?: string
+          intake_regions?: string[]
+          is_request_restricted?: boolean
+          last_activity_at?: string | null
+          max_active_requests?: number | null
+          mpk_id?: string
+          name?: string
+          partial_requests?: number
+          request_changes_count?: number
+          restriction_reason?: string | null
+          status?: Database["public"]["Enums"]["mpk_status"]
+          total_requests?: number
+          typical_volume_max?: number | null
+          typical_volume_min?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pool_matches: {
         Row: {
           batch_id: string
@@ -264,6 +371,7 @@ export type Database = {
       batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
+      mpk_status: "active" | "restricted" | "inactive"
       pool_request_status: "pending" | "partial" | "fulfilled" | "cancelled"
     }
     CompositeTypes: {
@@ -395,6 +503,7 @@ export const Constants = {
       batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
+      mpk_status: ["active", "restricted", "inactive"],
       pool_request_status: ["pending", "partial", "fulfilled", "cancelled"],
     },
   },
