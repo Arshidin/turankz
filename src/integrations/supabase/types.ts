@@ -68,6 +68,96 @@ export type Database = {
         }
         Relationships: []
       }
+      pool_matches: {
+        Row: {
+          batch_id: string
+          created_at: string
+          heads_matched: number
+          id: string
+          request_id: string
+          status: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          heads_matched: number
+          id?: string
+          request_id: string
+          status?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          heads_matched?: number
+          id?: string
+          request_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pool_matches_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pool_matches_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_pool_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_pool_requests: {
+        Row: {
+          created_at: string
+          id: string
+          matched_volume: number
+          mpk_id: string
+          mpk_name: string
+          notes: string | null
+          regions: string[]
+          request_number: string
+          required_grade: string
+          required_volume: number
+          status: Database["public"]["Enums"]["pool_request_status"]
+          target_week: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matched_volume?: number
+          mpk_id: string
+          mpk_name: string
+          notes?: string | null
+          regions?: string[]
+          request_number: string
+          required_grade: string
+          required_volume: number
+          status?: Database["public"]["Enums"]["pool_request_status"]
+          target_week: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matched_volume?: number
+          mpk_id?: string
+          mpk_name?: string
+          notes?: string | null
+          regions?: string[]
+          request_number?: string
+          required_grade?: string
+          required_volume?: number
+          status?: Database["public"]["Enums"]["pool_request_status"]
+          target_week?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -77,6 +167,7 @@ export type Database = {
     }
     Enums: {
       batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
+      pool_request_status: "pending" | "partial" | "fulfilled" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -205,6 +296,7 @@ export const Constants = {
   public: {
     Enums: {
       batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
+      pool_request_status: ["pending", "partial", "fulfilled", "cancelled"],
     },
   },
 } as const
