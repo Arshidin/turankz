@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { useRole, UserRole } from '@/contexts/RoleContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/notifications';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 const roleConfig: Record<UserRole, { label: string; badgeClass: string }> = {
   admin: { 
@@ -20,6 +22,7 @@ const roleConfig: Record<UserRole, { label: string; badgeClass: string }> = {
 };
 
 export function TopNav() {
+  const { t } = useTranslation();
   const { role, setRole } = useRole();
   const config = roleConfig[role];
 
@@ -42,6 +45,9 @@ export function TopNav() {
 
       {/* Right: Notifications, Role Selector & User */}
       <div className="flex items-center gap-3">
+        {/* Language Switcher */}
+        <LanguageSwitcher />
+        
         {/* Notifications */}
         <NotificationBell />
 
