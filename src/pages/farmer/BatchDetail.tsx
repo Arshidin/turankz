@@ -595,8 +595,47 @@ export default function BatchDetail() {
                   </div>
                 </div>
 
+                {/* Livestock Characteristics */}
+                <div className="mt-6 pt-4 border-t">
+                  <p className="text-xs text-muted-foreground mb-3">Livestock Characteristics</p>
+                  {(batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max) ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      {batch.breed && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Breed</p>
+                          <p className="text-sm font-medium">{batch.breed}</p>
+                        </div>
+                      )}
+                      {batch.gender && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Gender</p>
+                          <p className="text-sm font-medium">{batch.gender}</p>
+                        </div>
+                      )}
+                      {(batch.age_min || batch.age_max) && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Age Range</p>
+                          <p className="text-sm font-medium">
+                            {batch.age_min ?? '–'} – {batch.age_max ?? '–'} months
+                          </p>
+                        </div>
+                      )}
+                      {(batch.weight_min || batch.weight_max) && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Weight Range</p>
+                          <p className="text-sm font-medium">
+                            {batch.weight_min ?? '–'} – {batch.weight_max ?? '–'} kg
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No characteristics specified</p>
+                  )}
+                </div>
+
                 {batch.notes && (
-                  <div className="mt-6 pt-4 border-t">
+                  <div className="mt-4 pt-4 border-t">
                     <p className="text-xs text-muted-foreground mb-1">Notes</p>
                     <p className="text-sm">{batch.notes}</p>
                   </div>
