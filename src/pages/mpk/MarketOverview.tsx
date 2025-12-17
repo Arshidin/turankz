@@ -4,31 +4,19 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle2, Clock, Eye, Heart, Info } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Eye, Heart, Info, AlertCircle } from 'lucide-react';
 import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
+import { useFilteredMarketData, type RegionSupply } from '@/hooks/useMarketData';
+import { type Batch, type BatchStatus } from '@/hooks/useBatches';
+import { format, parseISO } from 'date-fns';
 
-const marketData = {
-  summary: {
-    confirmed: 487,
-    softCommitted: 512,
-    forecast: 257,
-  },
-  nextMatchingWindow: 'Dec 20, 2025',
-  regions: [
-    { name: 'Almaty Oblast', confirmed: 142, softCommitted: 134, forecast: 69 },
-    { name: 'Akmola Oblast', confirmed: 98, softCommitted: 127, forecast: 64 },
-    { name: 'East Kazakhstan', confirmed: 112, softCommitted: 102, forecast: 53 },
-    { name: 'Karaganda Oblast', confirmed: 78, softCommitted: 85, forecast: 35 },
-    { name: 'Kostanay Oblast', confirmed: 57, softCommitted: 64, forecast: 36 },
-  ],
-  upcomingBatches: [
-    { batchId: 'BTH-2847', region: 'Almaty', heads: 45, grade: 'A', status: 'confirmed' as const, date: 'Dec 28', breed: 'Angus', gender: 'Male', ageRange: '14-16', weightRange: '320-360' },
-    { batchId: 'BTH-2851', region: 'Akmola', heads: 38, grade: 'A', status: 'soft-committed' as const, date: 'Dec 30', breed: 'Hereford', gender: 'Male', ageRange: '12-14', weightRange: '300-340' },
-    { batchId: 'BTH-2856', region: 'Karaganda', heads: 52, grade: 'B', status: 'forecast' as const, date: 'Jan 2', breed: 'Mixed/Crossbred', gender: 'Mixed', ageRange: '15-18', weightRange: '280-320' },
-    { batchId: 'BTH-2859', region: 'East KZ', heads: 30, grade: 'A', status: 'forecast' as const, date: 'Jan 5', breed: 'Kazakh Whiteheaded', gender: 'Male', ageRange: '13-15', weightRange: '310-350' },
-    { batchId: 'BTH-2863', region: 'Almaty', heads: 28, grade: 'B', status: 'forecast' as const, date: 'Jan 8', breed: 'Simmental', gender: 'Male', ageRange: '16-18', weightRange: '340-380' },
-  ]
+// Map database status to display status
+const mapStatus = (status: BatchStatus): 'forecast' | 'soft-committed' | 'confirmed' => {
+  if (status === 'soft_committed') return 'soft-committed';
+  if (status === 'confirmed' || status === 'delivered') return 'confirmed';
+  return 'forecast';
 };
 
 const statusDescriptions = {
@@ -37,56 +25,62 @@ const statusDescriptions = {
   forecast: 'Forecast batches are planned but not yet committed by farmers.',
 };
 
-// Helper to check if batch matches filter criteria
-function batchMatchesFilter(batch: typeof marketData.upcomingBatches[0], filters: CriteriaFilterState): boolean {
-  // Breed filter
-  if (filters.breeds.length > 0 && !filters.breeds.includes(batch.breed)) {
-    return false;
-  }
+// Mock data fallback when database is empty
+const mockData = {
+  summary: { confirmed: 487, softCommitted: 512, forecast: 257 },
+  regions: [
+    { region: 'Almaty Oblast', confirmed: 142, softCommitted: 134, forecast: 69, total: 345 },
+    { region: 'Akmola Oblast', confirmed: 98, softCommitted: 127, forecast: 64, total: 289 },
+    { region: 'East Kazakhstan', confirmed: 112, softCommitted: 102, forecast: 53, total: 267 },
+    { region: 'Karaganda Oblast', confirmed: 78, softCommitted: 85, forecast: 35, total: 198 },
+    { region: 'Kostanay Oblast', confirmed: 57, softCommitted: 64, forecast: 36, total: 157 },
+  ],
+  batches: [
+    { id: '1', batch_number: 'BTH-2847', region: 'Almaty', heads: 45, grade: 'A', status: 'confirmed' as BatchStatus, target_week: '2025-W52', breed: 'Angus', gender: 'Male', age_min: 14, age_max: 16, weight_min: 320, weight_max: 360 },
+    { id: '2', batch_number: 'BTH-2851', region: 'Akmola', heads: 38, grade: 'A', status: 'soft_committed' as BatchStatus, target_week: '2025-W52', breed: 'Hereford', gender: 'Male', age_min: 12, age_max: 14, weight_min: 300, weight_max: 340 },
+    { id: '3', batch_number: 'BTH-2856', region: 'Karaganda', heads: 52, grade: 'B', status: 'forecast' as BatchStatus, target_week: '2026-W01', breed: 'Mixed/Crossbred', gender: 'Mixed', age_min: 15, age_max: 18, weight_min: 280, weight_max: 320 },
+    { id: '4', batch_number: 'BTH-2859', region: 'East KZ', heads: 30, grade: 'A', status: 'forecast' as BatchStatus, target_week: '2026-W01', breed: 'Kazakh Whiteheaded', gender: 'Male', age_min: 13, age_max: 15, weight_min: 310, weight_max: 350 },
+    { id: '5', batch_number: 'BTH-2863', region: 'Almaty', heads: 28, grade: 'B', status: 'forecast' as BatchStatus, target_week: '2026-W02', breed: 'Simmental', gender: 'Male', age_min: 16, age_max: 18, weight_min: 340, weight_max: 380 },
+  ] as Partial<Batch>[],
+};
+
+// Filter mock batches by criteria
+function filterMockBatches(batches: Partial<Batch>[], filters: CriteriaFilterState) {
+  if (!hasActiveFilters(filters)) return batches;
   
-  // Gender filter
-  if (filters.genders.length > 0 && !filters.genders.includes(batch.gender)) {
-    return false;
-  }
-  
-  // Age filter
-  const [ageMin, ageMax] = batch.ageRange.split('-').map(Number);
-  if (filters.ageMin !== null && ageMax < filters.ageMin) {
-    return false;
-  }
-  if (filters.ageMax !== null && ageMin > filters.ageMax) {
-    return false;
-  }
-  
-  // Weight filter
-  const [weightMin, weightMax] = batch.weightRange.split('-').map(Number);
-  if (filters.weightMin !== null && weightMax < filters.weightMin) {
-    return false;
-  }
-  if (filters.weightMax !== null && weightMin > filters.weightMax) {
-    return false;
-  }
-  
-  return true;
+  return batches.filter(batch => {
+    if (filters.breeds.length > 0 && batch.breed && !filters.breeds.includes(batch.breed)) return false;
+    if (filters.genders.length > 0 && batch.gender && !filters.genders.includes(batch.gender)) return false;
+    if (filters.ageMin !== null && batch.age_max && batch.age_max < filters.ageMin) return false;
+    if (filters.ageMax !== null && batch.age_min && batch.age_min > filters.ageMax) return false;
+    if (filters.weightMin !== null && batch.weight_max && batch.weight_max < filters.weightMin) return false;
+    if (filters.weightMax !== null && batch.weight_min && batch.weight_min > filters.weightMax) return false;
+    return true;
+  });
 }
 
 export default function MarketOverview() {
   const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
+  const [gradeFilter, setGradeFilter] = useState<string>('all');
   const isFiltered = hasActiveFilters(criteriaFilters);
   
-  // Filter batches based on criteria
-  const filteredBatches = isFiltered
-    ? marketData.upcomingBatches.filter(batch => batchMatchesFilter(batch, criteriaFilters))
-    : marketData.upcomingBatches;
+  // Fetch real data
+  const { batches: realBatches, summary: realSummary, regions: realRegions, isLoading, hasData } = useFilteredMarketData(criteriaFilters);
   
-  // Calculate filtered summary (in real app, this would come from backend)
-  const filteredSummary = isFiltered
-    ? {
-        confirmed: Math.round(marketData.summary.confirmed * (filteredBatches.length / marketData.upcomingBatches.length)),
-        softCommitted: Math.round(marketData.summary.softCommitted * (filteredBatches.length / marketData.upcomingBatches.length)),
-        forecast: Math.round(marketData.summary.forecast * (filteredBatches.length / marketData.upcomingBatches.length)),
-      }
-    : marketData.summary;
+  // Use real data if available, otherwise use filtered mock data
+  const filteredMockBatches = filterMockBatches(mockData.batches, criteriaFilters);
+  const displayBatches = hasData ? realBatches : filteredMockBatches;
+  const displaySummary = hasData ? realSummary : {
+    confirmed: isFiltered ? Math.round(mockData.summary.confirmed * (filteredMockBatches.length / mockData.batches.length)) : mockData.summary.confirmed,
+    softCommitted: isFiltered ? Math.round(mockData.summary.softCommitted * (filteredMockBatches.length / mockData.batches.length)) : mockData.summary.softCommitted,
+    forecast: isFiltered ? Math.round(mockData.summary.forecast * (filteredMockBatches.length / mockData.batches.length)) : mockData.summary.forecast,
+  };
+  const displayRegions = hasData ? realRegions : mockData.regions;
+  
+  // Apply grade filter to displayed batches
+  const gradedBatches = gradeFilter === 'all' 
+    ? displayBatches 
+    : displayBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
 
   return (
     <MainLayout>
@@ -105,7 +99,7 @@ export default function MarketOverview() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Next Matching Window</p>
-                <p className="text-lg font-semibold text-foreground">{marketData.nextMatchingWindow}</p>
+                <p className="text-lg font-semibold text-foreground">Dec 20, 2025</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground md:text-right">
@@ -123,60 +117,77 @@ export default function MarketOverview() {
             Showing supply matching your acceptance criteria. Individual farmer data remains anonymous.
           </p>
         )}
+        {!hasData && (
+          <p className="text-xs text-amber-600 mt-2">
+            Displaying sample data. Real supply data will appear when farmers declare batches.
+          </p>
+        )}
       </div>
 
       {/* Availability by Readiness */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="border-status-confirmed/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Confirmed Available</p>
-                <p className="text-2xl font-semibold text-foreground">{filteredSummary.confirmed}</p>
-                <p className="text-xs text-status-confirmed">Ready for commitment</p>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="border-status-confirmed/30">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Confirmed Available</p>
+                  <p className="text-2xl font-semibold text-foreground">{displaySummary.confirmed}</p>
+                  <p className="text-xs text-status-confirmed">Ready for commitment</p>
+                </div>
+                <div className="w-10 h-10 bg-status-confirmed/10 rounded-lg flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-status-confirmed" />
+                </div>
               </div>
-              <div className="w-10 h-10 bg-status-confirmed/10 rounded-lg flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-status-confirmed" />
+            </CardContent>
+          </Card>
+          <Card className="border-status-soft-committed/30">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Soft Committed</p>
+                  <p className="text-2xl font-semibold text-foreground">{displaySummary.softCommitted}</p>
+                  <p className="text-xs text-status-soft-committed">Pending farmer confirmation</p>
+                </div>
+                <div className="w-10 h-10 bg-status-soft-committed/10 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-status-soft-committed" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-status-soft-committed/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Soft Committed</p>
-                <p className="text-2xl font-semibold text-foreground">{filteredSummary.softCommitted}</p>
-                <p className="text-xs text-status-soft-committed">Pending farmer confirmation</p>
+            </CardContent>
+          </Card>
+          <Card className="border-status-forecast/30">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Forecast</p>
+                  <p className="text-2xl font-semibold text-foreground">{displaySummary.forecast}</p>
+                  <p className="text-xs text-status-forecast">Planned availability</p>
+                </div>
+                <div className="w-10 h-10 bg-status-forecast/10 rounded-lg flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-status-forecast" />
+                </div>
               </div>
-              <div className="w-10 h-10 bg-status-soft-committed/10 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-status-soft-committed" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-status-forecast/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Forecast</p>
-                <p className="text-2xl font-semibold text-foreground">{filteredSummary.forecast}</p>
-                <p className="text-xs text-status-forecast">Planned availability</p>
-              </div>
-              <div className="w-10 h-10 bg-status-forecast/10 rounded-lg flex items-center justify-center">
-                <Eye className="w-5 h-5 text-status-forecast" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Supply by Region */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base font-medium">Supply by Region</CardTitle>
-            <Select defaultValue="all">
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Grade" />
               </SelectTrigger>
@@ -189,36 +200,51 @@ export default function MarketOverview() {
             </Select>
           </CardHeader>
           <CardContent>
-            {/* Table Header */}
-            <div className="grid grid-cols-4 gap-2 pb-2 border-b border-border mb-3">
-              <div className="text-xs font-medium text-muted-foreground">Region</div>
-              <div className="text-xs font-medium text-status-confirmed text-center">Confirmed</div>
-              <div className="text-xs font-medium text-status-soft-committed text-center">Soft Comm.</div>
-              <div className="text-xs font-medium text-status-forecast text-center">Forecast</div>
-            </div>
-            <div className="space-y-2">
-              {marketData.regions.map((region) => (
-                <div key={region.name} className="grid grid-cols-4 gap-2 py-2 border-b border-border/50 last:border-0 items-center">
-                  <div className="text-sm font-medium text-foreground">{region.name}</div>
-                  <div className="text-sm text-center font-medium text-foreground">{region.confirmed}</div>
-                  <div className="text-sm text-center text-foreground">{region.softCommitted}</div>
-                  <div className="text-sm text-center text-muted-foreground">{region.forecast}</div>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Skeleton key={i} className="h-8 w-full" />
+                ))}
+              </div>
+            ) : displayRegions.length > 0 ? (
+              <>
+                {/* Table Header */}
+                <div className="grid grid-cols-4 gap-2 pb-2 border-b border-border mb-3">
+                  <div className="text-xs font-medium text-muted-foreground">Region</div>
+                  <div className="text-xs font-medium text-status-confirmed text-center">Confirmed</div>
+                  <div className="text-xs font-medium text-status-soft-committed text-center">Soft Comm.</div>
+                  <div className="text-xs font-medium text-status-forecast text-center">Forecast</div>
                 </div>
-              ))}
-            </div>
-            {/* Totals Row */}
-            <div className="grid grid-cols-4 gap-2 pt-3 mt-2 border-t border-border">
-              <div className="text-sm font-semibold text-foreground">Total</div>
-              <div className="text-sm text-center font-semibold text-foreground">
-                {marketData.regions.reduce((sum, r) => sum + r.confirmed, 0)}
+                <div className="space-y-2">
+                  {displayRegions.map((region) => (
+                    <div key={region.region} className="grid grid-cols-4 gap-2 py-2 border-b border-border/50 last:border-0 items-center">
+                      <div className="text-sm font-medium text-foreground">{region.region}</div>
+                      <div className="text-sm text-center font-medium text-foreground">{region.confirmed}</div>
+                      <div className="text-sm text-center text-foreground">{region.softCommitted}</div>
+                      <div className="text-sm text-center text-muted-foreground">{region.forecast}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Totals Row */}
+                <div className="grid grid-cols-4 gap-2 pt-3 mt-2 border-t border-border">
+                  <div className="text-sm font-semibold text-foreground">Total</div>
+                  <div className="text-sm text-center font-semibold text-foreground">
+                    {displayRegions.reduce((sum, r) => sum + r.confirmed, 0)}
+                  </div>
+                  <div className="text-sm text-center font-semibold text-foreground">
+                    {displayRegions.reduce((sum, r) => sum + r.softCommitted, 0)}
+                  </div>
+                  <div className="text-sm text-center font-semibold text-muted-foreground">
+                    {displayRegions.reduce((sum, r) => sum + r.forecast, 0)}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertCircle className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No supply data available for the selected criteria.</p>
               </div>
-              <div className="text-sm text-center font-semibold text-foreground">
-                {marketData.regions.reduce((sum, r) => sum + r.softCommitted, 0)}
-              </div>
-              <div className="text-sm text-center font-semibold text-muted-foreground">
-                {marketData.regions.reduce((sum, r) => sum + r.forecast, 0)}
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -228,7 +254,7 @@ export default function MarketOverview() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium">Upcoming Batches</CardTitle>
               {isFiltered && (
-                <span className="text-xs text-muted-foreground">{filteredBatches.length} matching</span>
+                <span className="text-xs text-muted-foreground">{gradedBatches.length} matching</span>
               )}
             </div>
           </CardHeader>
@@ -245,49 +271,69 @@ export default function MarketOverview() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              {filteredBatches.length > 0 ? (
-                filteredBatches.map((batch, idx) => (
-                  <div key={idx} className="p-3 bg-secondary/50 rounded-lg">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-secondary rounded flex items-center justify-center">
-                          <span className="text-sm font-medium text-foreground">{batch.grade}</span>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <Skeleton key={i} className="h-32 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {gradedBatches.length > 0 ? (
+                  gradedBatches.slice(0, 5).map((batch) => (
+                    <div key={batch.id || batch.batch_number} className="p-3 bg-secondary/50 rounded-lg">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-secondary rounded flex items-center justify-center">
+                            <span className="text-sm font-medium text-foreground">{batch.grade}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{batch.batch_number}</p>
+                            <p className="text-xs text-muted-foreground">{batch.region} • {batch.heads} heads</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{batch.batchId}</p>
-                          <p className="text-xs text-muted-foreground">{batch.region} • {batch.heads} heads</p>
+                        <div className="text-right">
+                          <StatusBadge status={mapStatus(batch.status as BatchStatus)} />
+                          <p className="text-xs text-muted-foreground mt-1">{batch.target_week}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <StatusBadge status={batch.status} />
-                        <p className="text-xs text-muted-foreground mt-1">{batch.date}</p>
+                      {/* Show criteria info */}
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {batch.breed && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.breed}</span>
+                        )}
+                        {batch.gender && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.gender}</span>
+                        )}
+                        {(batch.age_min || batch.age_max) && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                            {batch.age_min ?? '–'}–{batch.age_max ?? '–'} mo
+                          </span>
+                        )}
+                        {(batch.weight_min || batch.weight_max) && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                            {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2 mt-3 pt-2 border-t border-border/50">
+                        <Button variant="outline" size="sm" className="flex-1 text-xs">
+                          <Heart className="w-3 h-3 mr-1" />
+                          Add to Watchlist
+                        </Button>
+                        <Button variant="default" size="sm" className="flex-1 text-xs">
+                          Express Interest
+                        </Button>
                       </div>
                     </div>
-                    {/* Show criteria match info */}
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.breed}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.gender}</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.ageRange} mo</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.weightRange} kg</span>
-                    </div>
-                    <div className="flex gap-2 mt-3 pt-2 border-t border-border/50">
-                      <Button variant="outline" size="sm" className="flex-1 text-xs">
-                        <Heart className="w-3 h-3 mr-1" />
-                        Add to Watchlist
-                      </Button>
-                      <Button variant="default" size="sm" className="flex-1 text-xs">
-                        Express Interest
-                      </Button>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-sm text-muted-foreground">
+                    No batches match your criteria filters.
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-sm text-muted-foreground">
-                  No batches match your criteria filters.
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
