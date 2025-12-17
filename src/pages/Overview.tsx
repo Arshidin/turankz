@@ -11,6 +11,7 @@ import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
 import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
 import { AttentionRequired } from '@/components/admin/AttentionRequired';
 import { MatchingWindowBanner } from '@/components/admin/MatchingWindowBanner';
+import { ReliabilityPremiumCard } from '@/components/premium';
 import { useFarmers } from '@/hooks/useFarmers';
 import { useMpks } from '@/hooks/useMpks';
 import { useBatches } from '@/hooks/useBatches';
@@ -325,6 +326,12 @@ export default function Overview() {
           </Card>
         ))}
       </div>
+      {/* Reliability Premium Card for Farmer */}
+      {role === 'farmer' && (
+        <div className="mb-6">
+          <ReliabilityPremiumCard farmerGrading="declared_supplier" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Action Feed */}
