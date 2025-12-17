@@ -23,7 +23,7 @@ import {
   PoolRequestStatus,
   getAcceptanceCriteria
 } from '@/hooks/usePoolRequests';
-import { useBulkUpdateStandardStatus, type StandardStatus } from '@/hooks/useAdminBatches';
+import { useBulkUpdateStandardStatus, useAutoCalculateStandardStatus, type StandardStatus } from '@/hooks/useAdminBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
 import { PremiumBadge } from '@/components/premium';
 import { checkBatchMatch, formatCriteriaDisplay, type MatchLevel } from '@/lib/livestock-criteria';
@@ -40,7 +40,8 @@ import {
   ArrowRight,
   Loader2,
   Filter,
-  Award
+  Award,
+  Wand2
 } from 'lucide-react';
 
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
@@ -137,6 +138,7 @@ export default function PoolMatching() {
   const updateRequest = useUpdatePoolRequest();
   const createMatch = useCreatePoolMatch();
   const bulkUpdateStatus = useBulkUpdateStandardStatus();
+  const autoCalculateStatus = useAutoCalculateStandardStatus();
 
   const activeRequest = requests?.find(r => r.id === activeRequestId);
   const activeCriteria = activeRequest ? getAcceptanceCriteria(activeRequest) : null;
@@ -268,6 +270,20 @@ export default function PoolMatching() {
       batchIds: Array.from(selectedBatchIds),
       standardStatus: status,
     });
+  };
+
+  const handleAutoCalculate = () => {
+    if (selectedBatchIds.size === 0 || !batches) return;
+    const selectedBatches = batches.filter(b => selectedBatchIds.has(b.id)).map(b => ({
+      id: b.id,
+      breed: b.breed,
+      gender: b.gender,
+      age_min: b.age_min,
+      age_max: b.age_max,
+      weight_min: b.weight_min,
+      weight_max: b.weight_max,
+    }));
+    autoCalculateStatus.mutate(selectedBatches);
   };
 
   const handleProposeMatch = async () => {
@@ -451,10 +467,10 @@ export default function PoolMatching() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Assign Standard Status:</span>
+                      <span className="text-xs text-muted-foreground">Assign:</span>
                       <Select onValueChange={(value) => handleBulkStandardStatus(value as StandardStatus)}>
-                        <SelectTrigger className="w-[140px] h-7 text-xs">
-                          <SelectValue placeholder="Select..." />
+                        <SelectTrigger className="w-[130px] h-7 text-xs">
+                          <SelectValue placeholder="Manual..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="non_standard">Non-Standard</SelectItem>
@@ -462,6 +478,17 @@ export default function PoolMatching() {
                           <SelectItem value="high_standard">High Standard (+100₸)</SelectItem>
                         </SelectContent>
                       </Select>
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={handleAutoCalculate}
+                        disabled={autoCalculateStatus.isPending}
+                      >
+                        <Wand2 className="h-3 w-3" />
+                        {autoCalculateStatus.isPending ? 'Calculating...' : 'Auto-Calculate'}
+                      </Button>
                     </div>
                   </div>
                 </div>
