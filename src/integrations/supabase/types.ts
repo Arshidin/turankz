@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      batches: {
+        Row: {
+          action_type: string | null
+          avg_weight: number | null
+          batch_number: string
+          created_at: string
+          grade: string
+          heads: number
+          id: string
+          mpk_interest: string | null
+          notes: string | null
+          region: string
+          requires_action: boolean | null
+          status: Database["public"]["Enums"]["batch_status"]
+          target_week: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type?: string | null
+          avg_weight?: number | null
+          batch_number: string
+          created_at?: string
+          grade: string
+          heads: number
+          id?: string
+          mpk_interest?: string | null
+          notes?: string | null
+          region: string
+          requires_action?: boolean | null
+          status?: Database["public"]["Enums"]["batch_status"]
+          target_week: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string | null
+          avg_weight?: number | null
+          batch_number?: string
+          created_at?: string
+          grade?: string
+          heads?: number
+          id?: string
+          mpk_interest?: string | null
+          notes?: string | null
+          region?: string
+          requires_action?: boolean | null
+          status?: Database["public"]["Enums"]["batch_status"]
+          target_week?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +76,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +203,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
+    },
   },
 } as const
