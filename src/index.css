@@ -36,13 +36,93 @@
 
     --radius: 0.375rem;
 
-    /* Status colors */
-    --status-forecast: 38 92% 50%;
-    --status-forecast-bg: 38 92% 95%;
-    --status-soft-committed: 210 70% 50%;
-    --status-soft-committed-bg: 210 70% 95%;
-    --status-confirmed: 145 60% 40%;
-    --status-confirmed-bg: 145 60% 95%;
+    /* ===========================================
+       READINESS STATUS COLORS
+       Consistent visual treatment across platform
+       =========================================== */
+    
+    /* Forecast - Neutral/Light Gray (not urgent) */
+    --status-forecast: 215 15% 45%;
+    --status-forecast-bg: 215 15% 95%;
+    
+    /* Soft Committed - Attention/Amber (pending action) */
+    --status-soft: 38 85% 50%;
+    --status-soft-bg: 38 85% 95%;
+    
+    /* Confirmed - Stable/Green (complete) */
+    --status-confirmed: 150 50% 38%;
+    --status-confirmed-bg: 150 50% 95%;
+
+    /* Delivered - Muted success (final state) */
+    --status-delivered: 175 35% 40%;
+    --status-delivered-bg: 175 35% 94%;
+
+    /* ===========================================
+       FARMER GRADING COLORS
+       Visually secondary to readiness statuses
+       =========================================== */
+    
+    /* Observer - Neutral/Gray */
+    --grading-observer: 215 15% 50%;
+    --grading-observer-bg: 215 15% 96%;
+    
+    /* Declared Supplier - Teal accent */
+    --grading-declared: 180 40% 40%;
+    --grading-declared-bg: 180 40% 95%;
+    
+    /* Standard Supplier - Primary (trusted) */
+    --grading-standard: 200 45% 35%;
+    --grading-standard-bg: 200 45% 95%;
+
+    /* ===========================================
+       MPK STATUS COLORS
+       Muted, not alerting
+       =========================================== */
+    
+    /* Active - Subtle green */
+    --mpk-active: 150 40% 42%;
+    --mpk-active-bg: 150 40% 95%;
+    
+    /* Restricted - Muted amber (warning, not error) */
+    --mpk-restricted: 35 60% 50%;
+    --mpk-restricted-bg: 35 60% 95%;
+    
+    /* Inactive - Gray */
+    --mpk-inactive: 215 10% 55%;
+    --mpk-inactive-bg: 215 10% 95%;
+
+    /* ===========================================
+       ADMIN SIGNALS (Risk flags only)
+       Red reserved for admin risk indicators
+       =========================================== */
+    
+    /* At Risk - For admin alerts only */
+    --signal-risk: 0 65% 50%;
+    --signal-risk-bg: 0 65% 96%;
+    
+    /* Warning - Amber signal */
+    --signal-warning: 38 90% 50%;
+    --signal-warning-bg: 38 90% 96%;
+    
+    /* On Track - Positive signal */
+    --signal-positive: 150 50% 40%;
+    --signal-positive-bg: 150 50% 95%;
+
+    /* ===========================================
+       POOL REQUEST STATUS
+       =========================================== */
+    
+    --pool-pending: 38 80% 50%;
+    --pool-pending-bg: 38 80% 95%;
+    
+    --pool-partial: 200 60% 50%;
+    --pool-partial-bg: 200 60% 95%;
+    
+    --pool-fulfilled: 150 50% 40%;
+    --pool-fulfilled-bg: 150 50% 95%;
+    
+    --pool-cancelled: 215 15% 55%;
+    --pool-cancelled-bg: 215 15% 95%;
 
     /* Sidebar */
     --sidebar-background: 215 25% 18%;
@@ -85,6 +165,62 @@
     --input: 215 25% 22%;
     --ring: 175 40% 50%;
 
+    /* Dark mode status colors */
+    --status-forecast: 215 15% 60%;
+    --status-forecast-bg: 215 15% 20%;
+    
+    --status-soft: 38 75% 55%;
+    --status-soft-bg: 38 75% 15%;
+    
+    --status-confirmed: 150 45% 50%;
+    --status-confirmed-bg: 150 45% 15%;
+
+    --status-delivered: 175 35% 50%;
+    --status-delivered-bg: 175 35% 15%;
+
+    /* Dark mode grading colors */
+    --grading-observer: 215 15% 60%;
+    --grading-observer-bg: 215 15% 18%;
+    
+    --grading-declared: 180 35% 50%;
+    --grading-declared-bg: 180 35% 15%;
+    
+    --grading-standard: 200 40% 55%;
+    --grading-standard-bg: 200 40% 15%;
+
+    /* Dark mode MPK status */
+    --mpk-active: 150 35% 50%;
+    --mpk-active-bg: 150 35% 15%;
+    
+    --mpk-restricted: 35 55% 55%;
+    --mpk-restricted-bg: 35 55% 15%;
+    
+    --mpk-inactive: 215 10% 60%;
+    --mpk-inactive-bg: 215 10% 18%;
+
+    /* Dark mode signals */
+    --signal-risk: 0 60% 55%;
+    --signal-risk-bg: 0 60% 15%;
+    
+    --signal-warning: 38 80% 55%;
+    --signal-warning-bg: 38 80% 15%;
+    
+    --signal-positive: 150 45% 50%;
+    --signal-positive-bg: 150 45% 15%;
+
+    /* Dark mode pool status */
+    --pool-pending: 38 70% 55%;
+    --pool-pending-bg: 38 70% 15%;
+    
+    --pool-partial: 200 55% 55%;
+    --pool-partial-bg: 200 55% 15%;
+    
+    --pool-fulfilled: 150 45% 50%;
+    --pool-fulfilled-bg: 150 45% 15%;
+    
+    --pool-cancelled: 215 15% 60%;
+    --pool-cancelled-bg: 215 15% 18%;
+
     --sidebar-background: 215 28% 8%;
     --sidebar-foreground: 210 20% 90%;
     --sidebar-primary: 175 40% 50%;
@@ -107,16 +243,204 @@
   }
 }
 
-@layer utilities {
+@layer components {
+  /* ===========================================
+     READINESS STATUS BADGES
+     Use: <span className="status-badge status-forecast">
+     =========================================== */
+  
+  .status-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
   .status-forecast {
-    @apply bg-[hsl(var(--status-forecast-bg))] text-[hsl(var(--status-forecast))] border border-[hsl(var(--status-forecast)/0.3)];
+    background-color: hsl(var(--status-forecast-bg));
+    color: hsl(var(--status-forecast));
+    border: 1px solid hsl(var(--status-forecast) / 0.2);
   }
   
-  .status-soft-committed {
-    @apply bg-[hsl(var(--status-soft-committed-bg))] text-[hsl(var(--status-soft-committed))] border border-[hsl(var(--status-soft-committed)/0.3)];
+  .status-soft {
+    background-color: hsl(var(--status-soft-bg));
+    color: hsl(var(--status-soft));
+    border: 1px solid hsl(var(--status-soft) / 0.25);
   }
   
   .status-confirmed {
-    @apply bg-[hsl(var(--status-confirmed-bg))] text-[hsl(var(--status-confirmed))] border border-[hsl(var(--status-confirmed)/0.3)];
+    background-color: hsl(var(--status-confirmed-bg));
+    color: hsl(var(--status-confirmed));
+    border: 1px solid hsl(var(--status-confirmed) / 0.25);
+  }
+
+  .status-delivered {
+    background-color: hsl(var(--status-delivered-bg));
+    color: hsl(var(--status-delivered));
+    border: 1px solid hsl(var(--status-delivered) / 0.2);
+  }
+
+  /* ===========================================
+     FARMER GRADING BADGES
+     Visually secondary, compact
+     =========================================== */
+  
+  .grading-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .grading-observer {
+    background-color: hsl(var(--grading-observer-bg));
+    color: hsl(var(--grading-observer));
+    border: 1px solid hsl(var(--grading-observer) / 0.15);
+  }
+
+  .grading-declared {
+    background-color: hsl(var(--grading-declared-bg));
+    color: hsl(var(--grading-declared));
+    border: 1px solid hsl(var(--grading-declared) / 0.2);
+  }
+
+  .grading-standard {
+    background-color: hsl(var(--grading-standard-bg));
+    color: hsl(var(--grading-standard));
+    border: 1px solid hsl(var(--grading-standard) / 0.2);
+  }
+
+  /* ===========================================
+     MPK STATUS BADGES
+     Muted, not alerting
+     =========================================== */
+  
+  .mpk-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .mpk-active {
+    background-color: hsl(var(--mpk-active-bg));
+    color: hsl(var(--mpk-active));
+    border: 1px solid hsl(var(--mpk-active) / 0.2);
+  }
+
+  .mpk-restricted {
+    background-color: hsl(var(--mpk-restricted-bg));
+    color: hsl(var(--mpk-restricted));
+    border: 1px solid hsl(var(--mpk-restricted) / 0.25);
+  }
+
+  .mpk-inactive {
+    background-color: hsl(var(--mpk-inactive-bg));
+    color: hsl(var(--mpk-inactive));
+    border: 1px solid hsl(var(--mpk-inactive) / 0.15);
+  }
+
+  /* ===========================================
+     ADMIN SIGNAL BADGES
+     Risk flags - red reserved for these only
+     =========================================== */
+  
+  .signal-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .signal-risk {
+    background-color: hsl(var(--signal-risk-bg));
+    color: hsl(var(--signal-risk));
+    border: 1px solid hsl(var(--signal-risk) / 0.3);
+  }
+
+  .signal-warning {
+    background-color: hsl(var(--signal-warning-bg));
+    color: hsl(var(--signal-warning));
+    border: 1px solid hsl(var(--signal-warning) / 0.3);
+  }
+
+  .signal-positive {
+    background-color: hsl(var(--signal-positive-bg));
+    color: hsl(var(--signal-positive));
+    border: 1px solid hsl(var(--signal-positive) / 0.25);
+  }
+
+  /* ===========================================
+     POOL REQUEST STATUS BADGES
+     =========================================== */
+  
+  .pool-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .pool-pending {
+    background-color: hsl(var(--pool-pending-bg));
+    color: hsl(var(--pool-pending));
+    border: 1px solid hsl(var(--pool-pending) / 0.25);
+  }
+
+  .pool-partial {
+    background-color: hsl(var(--pool-partial-bg));
+    color: hsl(var(--pool-partial));
+    border: 1px solid hsl(var(--pool-partial) / 0.25);
+  }
+
+  .pool-fulfilled {
+    background-color: hsl(var(--pool-fulfilled-bg));
+    color: hsl(var(--pool-fulfilled));
+    border: 1px solid hsl(var(--pool-fulfilled) / 0.25);
+  }
+
+  .pool-cancelled {
+    background-color: hsl(var(--pool-cancelled-bg));
+    color: hsl(var(--pool-cancelled));
+    border: 1px solid hsl(var(--pool-cancelled) / 0.15);
+  }
+
+  /* ===========================================
+     DATA TABLE UTILITIES
+     Consistent alignment and spacing
+     =========================================== */
+  
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table th {
+    @apply text-left text-xs font-medium text-muted-foreground uppercase tracking-wide py-3 px-4 border-b;
+  }
+
+  .data-table td {
+    @apply py-3 px-4 border-b border-border/50;
+  }
+
+  .data-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table .col-number {
+    @apply text-right tabular-nums;
+  }
+
+  .data-table .col-date {
+    @apply text-muted-foreground tabular-nums;
+  }
+
+  .data-table .col-status {
+    @apply text-center;
+  }
+
+  /* ===========================================
+     CARD VARIANTS
+     Summary cards vs data cards
+     =========================================== */
+  
+  .summary-card {
+    @apply bg-card rounded-lg border p-4;
+  }
+
+  .summary-card-label {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wide;
+  }
+
+  .summary-card-value {
+    @apply text-2xl font-semibold text-foreground mt-1;
+  }
+
+  .summary-card-meta {
+    @apply text-xs text-muted-foreground mt-1;
   }
 }
