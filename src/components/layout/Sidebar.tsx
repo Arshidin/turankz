@@ -12,7 +12,8 @@ import {
   Building2,
   GitMerge,
   Activity,
-  Grid3X3
+  Grid3X3,
+  Award
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -69,6 +70,7 @@ const adminNav: NavItem[] = [
   { label: 'Pool Matching', path: '/admin/matching', icon: GitMerge },
   { label: 'Farmer Management', path: '/admin/farmers', icon: Users },
   { label: 'MPK Management', path: '/admin/mpks', icon: Building2 },
+  { label: 'Premium Management', path: '/admin/premiums', icon: Award },
   { label: 'Price Grid', path: '/price-grid', icon: Grid3X3 },
   { label: 'Activity Log', path: '/admin/activity', icon: Activity },
 ];

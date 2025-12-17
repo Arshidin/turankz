@@ -70,6 +70,7 @@ export type Database = {
           notes: string | null
           region: string
           requires_action: boolean | null
+          standard_status: string | null
           status: Database["public"]["Enums"]["batch_status"]
           target_week: string
           updated_at: string
@@ -93,6 +94,7 @@ export type Database = {
           notes?: string | null
           region: string
           requires_action?: boolean | null
+          standard_status?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           target_week: string
           updated_at?: string
@@ -116,6 +118,7 @@ export type Database = {
           notes?: string | null
           region?: string
           requires_action?: boolean | null
+          standard_status?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           target_week?: string
           updated_at?: string
@@ -440,6 +443,86 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      premium_change_log: {
+        Row: {
+          change_reason: string | null
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_value: number | null
+          premium_setting_id: string | null
+          previous_value: number | null
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_value?: number | null
+          premium_setting_id?: string | null
+          previous_value?: number | null
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_value?: number | null
+          premium_setting_id?: string | null
+          previous_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premium_change_log_premium_setting_id_fkey"
+            columns: ["premium_setting_id"]
+            isOneToOne: false
+            referencedRelation: "premium_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      premium_settings: {
+        Row: {
+          created_at: string
+          criteria: string[] | null
+          description: string | null
+          id: string
+          is_active: boolean
+          level_key: string
+          level_name: string
+          premium_type: string
+          premium_value: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criteria?: string[] | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level_key: string
+          level_name: string
+          premium_type: string
+          premium_value?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criteria?: string[] | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level_key?: string
+          level_name?: string
+          premium_type?: string
+          premium_value?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       purchase_pool_requests: {
         Row: {

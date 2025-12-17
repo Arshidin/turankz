@@ -20,6 +20,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
+import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
+import { PremiumBadge } from '@/components/premium';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import {
   AlertDialog,
@@ -60,6 +62,7 @@ export default function LivestockBatches() {
   const { data: batches, isLoading, error } = useBatches();
   const stats = useBatchStats();
   const updateBatch = useUpdateBatch();
+  const { data: standardPremiums } = useStandardPremiums();
   
   const [withdrawBatchId, setWithdrawBatchId] = useState<string | null>(null);
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
@@ -203,6 +206,7 @@ export default function LivestockBatches() {
                     <TableHead>Heads</TableHead>
                     <TableHead>Characteristics</TableHead>
                     <TableHead>Grade</TableHead>
+                    <TableHead>Standard</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Updated</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -214,6 +218,8 @@ export default function LivestockBatches() {
                     const approaching = isApproachingDeadline(batch.target_week, batch.status);
                     const nextStatus = getNextStatus(batch.status);
                     const hasCharacteristics = batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max;
+                    const standardStatus = (batch as any).standard_status || 'non_standard';
+                    const premiumValue = getPremiumByLevel(standardPremiums, standardStatus)?.premium_value ?? 0;
                     
                     return (
                       <TableRow 
@@ -260,6 +266,14 @@ export default function LivestockBatches() {
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
                             {batch.grade}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <PremiumBadge 
+                            status={standardStatus} 
+                            premiumValue={premiumValue}
+                            showValue={premiumValue > 0}
+                            size="sm"
+                          />
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={mapStatus(batch.status)} />

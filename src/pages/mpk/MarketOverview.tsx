@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle2, Clock, Eye, Heart, Info, AlertCircle } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Eye, Heart, Info, AlertCircle, Award } from 'lucide-react';
 import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
 import { useFilteredMarketData, type RegionSupply } from '@/hooks/useMarketData';
+import { useStandardPremiums } from '@/hooks/usePremiums';
 import { type Batch, type BatchStatus } from '@/hooks/useBatches';
 import { format, parseISO } from 'date-fns';
 
@@ -63,6 +65,9 @@ export default function MarketOverview() {
   const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const isFiltered = hasActiveFilters(criteriaFilters);
+  
+  // Fetch premium settings for display
+  const { data: standardPremiums } = useStandardPremiums();
   
   // Fetch real data
   const { batches: realBatches, summary: realSummary, regions: realRegions, isLoading, hasData } = useFilteredMarketData(criteriaFilters);
@@ -136,50 +141,72 @@ export default function MarketOverview() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="border-status-confirmed/30">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Card className="border-status-confirmed/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Confirmed Available</p>
+                    <p className="text-2xl font-semibold text-foreground">{displaySummary.confirmed}</p>
+                    <p className="text-xs text-status-confirmed">Ready for commitment</p>
+                  </div>
+                  <div className="w-10 h-10 bg-status-confirmed/10 rounded-lg flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-status-confirmed" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-status-soft-committed/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Soft Committed</p>
+                    <p className="text-2xl font-semibold text-foreground">{displaySummary.softCommitted}</p>
+                    <p className="text-xs text-status-soft-committed">Pending farmer confirmation</p>
+                  </div>
+                  <div className="w-10 h-10 bg-status-soft-committed/10 rounded-lg flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-status-soft-committed" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-status-forecast/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Forecast</p>
+                    <p className="text-2xl font-semibold text-foreground">{displaySummary.forecast}</p>
+                    <p className="text-xs text-status-forecast">Planned availability</p>
+                  </div>
+                  <div className="w-10 h-10 bg-status-forecast/10 rounded-lg flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-status-forecast" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Premium Eligibility Indicator */}
+          <Card className="mb-6 border-amber-500/20 bg-amber-500/5">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Confirmed Available</p>
-                  <p className="text-2xl font-semibold text-foreground">{displaySummary.confirmed}</p>
-                  <p className="text-xs text-status-confirmed">Ready for commitment</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                  <Award className="w-5 h-5 text-amber-600" />
                 </div>
-                <div className="w-10 h-10 bg-status-confirmed/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-status-confirmed" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Standard Premium Eligible Supply</p>
+                  <p className="text-xs text-muted-foreground">
+                    Available supply may qualify for standard premiums of up to +{standardPremiums?.[standardPremiums.length - 1]?.premium_value ?? 100} ₸/kg based on batch quality and standardization.
+                  </p>
                 </div>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                  Reference
+                </Badge>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-status-soft-committed/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Soft Committed</p>
-                  <p className="text-2xl font-semibold text-foreground">{displaySummary.softCommitted}</p>
-                  <p className="text-xs text-status-soft-committed">Pending farmer confirmation</p>
-                </div>
-                <div className="w-10 h-10 bg-status-soft-committed/10 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-status-soft-committed" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-status-forecast/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Forecast</p>
-                  <p className="text-2xl font-semibold text-foreground">{displaySummary.forecast}</p>
-                  <p className="text-xs text-status-forecast">Planned availability</p>
-                </div>
-                <div className="w-10 h-10 bg-status-forecast/10 rounded-lg flex items-center justify-center">
-                  <Eye className="w-5 h-5 text-status-forecast" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
