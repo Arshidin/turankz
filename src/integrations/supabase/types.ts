@@ -111,7 +111,11 @@ export type Database = {
       }
       farmers: {
         Row: {
+          contact_name: string | null
           created_at: string
+          district: string | null
+          email: string | null
+          farm_type: string | null
           farmer_id: string
           grading: Database["public"]["Enums"]["farmer_grading"]
           id: string
@@ -119,6 +123,7 @@ export type Database = {
           last_activity_at: string | null
           missed_updates: number
           name: string
+          phone: string | null
           region: string
           reliability: Database["public"]["Enums"]["farmer_reliability"]
           restriction_reason: string | null
@@ -128,7 +133,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          contact_name?: string | null
           created_at?: string
+          district?: string | null
+          email?: string | null
+          farm_type?: string | null
           farmer_id: string
           grading?: Database["public"]["Enums"]["farmer_grading"]
           id?: string
@@ -136,6 +145,7 @@ export type Database = {
           last_activity_at?: string | null
           missed_updates?: number
           name: string
+          phone?: string | null
           region: string
           reliability?: Database["public"]["Enums"]["farmer_reliability"]
           restriction_reason?: string | null
@@ -145,7 +155,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          contact_name?: string | null
           created_at?: string
+          district?: string | null
+          email?: string | null
+          farm_type?: string | null
           farmer_id?: string
           grading?: Database["public"]["Enums"]["farmer_grading"]
           id?: string
@@ -153,6 +167,7 @@ export type Database = {
           last_activity_at?: string | null
           missed_updates?: number
           name?: string
+          phone?: string | null
           region?: string
           reliability?: Database["public"]["Enums"]["farmer_reliability"]
           restriction_reason?: string | null

@@ -12,6 +12,11 @@ export interface Farmer {
   farmer_id: string;
   name: string;
   region: string;
+  district: string | null;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  farm_type: string | null;
   grading: FarmerGrading;
   reliability: FarmerReliability;
   is_restricted: boolean;
@@ -235,5 +240,91 @@ export function useFarmerBatchStats(userId: string | null) {
       return stats;
     },
     enabled: !!userId,
+  });
+}
+
+// Fetch single farmer by ID
+export function useFarmer(farmerId: string | null) {
+  return useQuery({
+    queryKey: ['farmer', farmerId],
+    queryFn: async () => {
+      if (!farmerId) return null;
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('*')
+        .eq('id', farmerId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Farmer | null;
+    },
+    enabled: !!farmerId,
+  });
+}
+
+// Fetch farmer by farmer_id (the display ID like FRM-001)
+export function useFarmerByFarmerId(farmerId: string | null) {
+  return useQuery({
+    queryKey: ['farmer-by-farmer-id', farmerId],
+    queryFn: async () => {
+      if (!farmerId) return null;
+      const { data, error } = await supabase
+        .from('farmers')
+        .select('*')
+        .eq('farmer_id', farmerId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Farmer | null;
+    },
+    enabled: !!farmerId,
+  });
+}
+
+// Update farmer profile
+export function useUpdateFarmerProfile() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      ...updates 
+    }: { 
+      id: string; 
+      name?: string;
+      contact_name?: string;
+      region?: string;
+      district?: string;
+      phone?: string;
+      email?: string;
+      farm_type?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('farmers')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Farmer;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['farmers'] });
+      queryClient.invalidateQueries({ queryKey: ['farmer', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['farmer-by-farmer-id', data.farmer_id] });
+      toast({
+        title: 'Profile updated',
+        description: 'Your farm profile has been saved.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error updating profile',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
   });
 }
