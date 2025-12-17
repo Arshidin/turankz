@@ -37,8 +37,11 @@ import {
   useUpdateMpkStatus,
   useToggleMpkRequestRestriction,
   useUpdateMpkMaxRequests,
+  useMpkRequestStats,
+  useMpkPoolRequests,
   Mpk,
   MpkStatus,
+  MpkRequestStats,
 } from '@/hooks/useMpks';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
@@ -52,7 +55,7 @@ import {
   PowerOff,
   FileText,
   TrendingDown,
-  RefreshCcw,
+  Clock,
   Loader2,
   MapPin,
   Target,
@@ -89,12 +92,26 @@ export default function MpkManagement() {
   const [limitNote, setLimitNote] = useState('');
 
   const { data: mpks, isLoading: mpksLoading } = useMpks();
+  const { data: requestStats } = useMpkRequestStats();
   const { data: activityLog, isLoading: logLoading } = useMpkActivityLog(selectedMpkId);
   const updateStatus = useUpdateMpkStatus();
   const toggleRestriction = useToggleMpkRequestRestriction();
   const updateMaxRequests = useUpdateMpkMaxRequests();
 
   const selectedMpk = mpks?.find(m => m.id === selectedMpkId);
+  const { data: selectedMpkRequests } = useMpkPoolRequests(selectedMpk?.mpk_id || null);
+
+  // Get stats for a specific MPK
+  const getStatsForMpk = (mpkId: string): MpkRequestStats => {
+    return requestStats?.[mpkId] || {
+      mpk_id: mpkId,
+      total: 0,
+      fulfilled: 0,
+      partial: 0,
+      pending: 0,
+      cancelled: 0,
+    };
+  };
 
   // Get unique regions for filter
   const allRegions = useMemo(() => {
@@ -116,16 +133,18 @@ export default function MpkManagement() {
     });
   }, [mpks, searchQuery, filterStatus, filterRegion]);
 
-  // Calculate fulfillment rate
-  const getFulfillmentRate = (mpk: Mpk) => {
-    if (mpk.total_requests === 0) return 0;
-    return Math.round((mpk.fulfilled_requests / mpk.total_requests) * 100);
+  // Calculate fulfillment rate from real data
+  const getFulfillmentRate = (mpkId: string) => {
+    const stats = getStatsForMpk(mpkId);
+    if (stats.total === 0) return 0;
+    return Math.round((stats.fulfilled / stats.total) * 100);
   };
 
   // Check if MPK has warning signals
   const hasWarningSignals = (mpk: Mpk) => {
-    const fulfillmentRate = getFulfillmentRate(mpk);
-    const cancelRate = mpk.total_requests > 0 ? mpk.cancelled_requests / mpk.total_requests : 0;
+    const stats = getStatsForMpk(mpk.mpk_id);
+    const fulfillmentRate = getFulfillmentRate(mpk.mpk_id);
+    const cancelRate = stats.total > 0 ? stats.cancelled / stats.total : 0;
     const daysSinceActivity = mpk.last_activity_at
       ? (Date.now() - new Date(mpk.last_activity_at).getTime()) / (1000 * 60 * 60 * 24)
       : 999;
@@ -180,6 +199,9 @@ export default function MpkManagement() {
     setTargetStatus(status);
     setStatusDialogOpen(true);
   };
+
+  // Get selected MPK stats
+  const selectedMpkStats = selectedMpk ? getStatsForMpk(selectedMpk.mpk_id) : null;
 
   return (
     <MainLayout>
@@ -302,7 +324,8 @@ export default function MpkManagement() {
                     </TableHeader>
                     <TableBody>
                       {filteredMpks.map(mpk => {
-                        const fulfillmentRate = getFulfillmentRate(mpk);
+                        const stats = getStatsForMpk(mpk.mpk_id);
+                        const fulfillmentRate = getFulfillmentRate(mpk.mpk_id);
                         return (
                           <TableRow
                             key={mpk.id}
@@ -330,14 +353,14 @@ export default function MpkManagement() {
                               {mpk.intake_regions.length > 2 && ` +${mpk.intake_regions.length - 2}`}
                             </TableCell>
                             <TableCell>{getStatusBadge(mpk.status)}</TableCell>
-                            <TableCell className="text-center text-sm">{mpk.total_requests}</TableCell>
+                            <TableCell className="text-center text-sm">{stats.total}</TableCell>
                             <TableCell className="text-right">
                               <span className={`text-sm font-medium ${
                                 fulfillmentRate >= 70 ? 'text-status-confirmed' : 
                                 fulfillmentRate >= 50 ? 'text-status-soft' : 
                                 'text-destructive'
                               }`}>
-                                {fulfillmentRate}%
+                                {stats.total > 0 ? `${fulfillmentRate}%` : '—'}
                               </span>
                             </TableCell>
                           </TableRow>
@@ -417,32 +440,86 @@ export default function MpkManagement() {
 
                   <Separator />
 
-                  {/* Demand Behavior */}
+                  {/* Demand Behavior - Real Stats */}
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Demand Behavior</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-secondary/50 rounded-lg text-center">
-                        <CheckCircle2 className="w-4 h-4 text-status-confirmed mx-auto mb-1" />
-                        <p className="text-lg font-semibold text-foreground">{selectedMpk.fulfilled_requests}</p>
-                        <p className="text-xs text-muted-foreground">Fulfilled</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Pool Request Stats (Live)</p>
+                    {selectedMpkStats && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-status-confirmed-bg/30 rounded-lg text-center">
+                          <CheckCircle2 className="w-4 h-4 text-status-confirmed mx-auto mb-1" />
+                          <p className="text-lg font-semibold text-foreground">{selectedMpkStats.fulfilled}</p>
+                          <p className="text-xs text-muted-foreground">Fulfilled</p>
+                        </div>
+                        <div className="p-3 bg-status-soft-bg/30 rounded-lg text-center">
+                          <FileText className="w-4 h-4 text-status-soft mx-auto mb-1" />
+                          <p className="text-lg font-semibold text-foreground">{selectedMpkStats.partial}</p>
+                          <p className="text-xs text-muted-foreground">Partial</p>
+                        </div>
+                        <div className="p-3 bg-status-forecast-bg/30 rounded-lg text-center">
+                          <Clock className="w-4 h-4 text-status-forecast mx-auto mb-1" />
+                          <p className="text-lg font-semibold text-foreground">{selectedMpkStats.pending}</p>
+                          <p className="text-xs text-muted-foreground">Pending</p>
+                        </div>
+                        <div className="p-3 bg-destructive/10 rounded-lg text-center">
+                          <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
+                          <p className="text-lg font-semibold text-foreground">{selectedMpkStats.cancelled}</p>
+                          <p className="text-xs text-muted-foreground">Cancelled</p>
+                        </div>
                       </div>
-                      <div className="p-3 bg-secondary/50 rounded-lg text-center">
-                        <FileText className="w-4 h-4 text-status-soft mx-auto mb-1" />
-                        <p className="text-lg font-semibold text-foreground">{selectedMpk.partial_requests}</p>
-                        <p className="text-xs text-muted-foreground">Partial</p>
+                    )}
+                    {selectedMpkStats && selectedMpkStats.total > 0 && (
+                      <div className="mt-3 p-2 bg-secondary/30 rounded-lg">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Fulfillment Rate</span>
+                          <span className={`font-medium ${
+                            getFulfillmentRate(selectedMpk.mpk_id) >= 70 ? 'text-status-confirmed' : 
+                            getFulfillmentRate(selectedMpk.mpk_id) >= 50 ? 'text-status-soft' : 
+                            'text-destructive'
+                          }`}>
+                            {getFulfillmentRate(selectedMpk.mpk_id)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden mt-1">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              getFulfillmentRate(selectedMpk.mpk_id) >= 70 ? 'bg-status-confirmed' : 
+                              getFulfillmentRate(selectedMpk.mpk_id) >= 50 ? 'bg-status-soft' : 
+                              'bg-destructive'
+                            }`}
+                            style={{ width: `${getFulfillmentRate(selectedMpk.mpk_id)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="p-3 bg-secondary/50 rounded-lg text-center">
-                        <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
-                        <p className="text-lg font-semibold text-foreground">{selectedMpk.cancelled_requests}</p>
-                        <p className="text-xs text-muted-foreground">Cancelled</p>
-                      </div>
-                      <div className="p-3 bg-secondary/50 rounded-lg text-center">
-                        <RefreshCcw className="w-4 h-4 text-status-forecast mx-auto mb-1" />
-                        <p className="text-lg font-semibold text-foreground">{selectedMpk.request_changes_count}</p>
-                        <p className="text-xs text-muted-foreground">Changes</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
+
+                  {/* Recent Requests */}
+                  {selectedMpkRequests && selectedMpkRequests.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Recent Requests</p>
+                        <div className="space-y-2 max-h-[120px] overflow-auto">
+                          {selectedMpkRequests.slice(0, 5).map((req: any) => (
+                            <div key={req.id} className="flex items-center justify-between p-2 bg-secondary/30 rounded text-xs">
+                              <div>
+                                <span className="font-medium text-foreground">{req.request_number}</span>
+                                <span className="text-muted-foreground ml-2">{req.required_volume} heads</span>
+                              </div>
+                              <Badge variant="outline" className={`text-xs ${
+                                req.status === 'fulfilled' ? 'text-status-confirmed border-status-confirmed' :
+                                req.status === 'partial' ? 'text-status-soft border-status-soft' :
+                                req.status === 'pending' ? 'text-status-forecast border-status-forecast' :
+                                'text-destructive border-destructive'
+                              }`}>
+                                {req.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Warning Alerts */}
                   {hasWarningSignals(selectedMpk) && (
@@ -537,7 +614,7 @@ export default function MpkManagement() {
                     ) : activityLog?.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">No activity recorded</p>
                     ) : (
-                      <div className="space-y-2 max-h-[180px] overflow-auto">
+                      <div className="space-y-2 max-h-[150px] overflow-auto">
                         {activityLog?.map(log => (
                           <div key={log.id} className="p-2 bg-secondary/30 rounded text-xs">
                             <div className="flex items-center justify-between mb-1">

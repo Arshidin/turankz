@@ -259,3 +259,90 @@ export function useUpdateMpkMaxRequests() {
     },
   });
 }
+
+export interface MpkRequestStats {
+  mpk_id: string;
+  total: number;
+  fulfilled: number;
+  partial: number;
+  pending: number;
+  cancelled: number;
+}
+
+export function useMpkRequestStats() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['mpk-request-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .select('mpk_id, status');
+
+      if (error) throw error;
+
+      // Aggregate stats by mpk_id
+      const statsMap = new Map<string, MpkRequestStats>();
+      
+      data?.forEach(request => {
+        const existing = statsMap.get(request.mpk_id) || {
+          mpk_id: request.mpk_id,
+          total: 0,
+          fulfilled: 0,
+          partial: 0,
+          pending: 0,
+          cancelled: 0,
+        };
+        
+        existing.total++;
+        if (request.status === 'fulfilled') existing.fulfilled++;
+        else if (request.status === 'partial') existing.partial++;
+        else if (request.status === 'pending') existing.pending++;
+        else if (request.status === 'cancelled') existing.cancelled++;
+        
+        statsMap.set(request.mpk_id, existing);
+      });
+
+      return Object.fromEntries(statsMap);
+    },
+  });
+
+  // Subscribe to real-time updates on purchase_pool_requests
+  useEffect(() => {
+    const channel = supabase
+      .channel('mpk-request-stats-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'purchase_pool_requests' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['mpk-request-stats'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
+}
+
+export function useMpkPoolRequests(mpkId: string | null) {
+  return useQuery({
+    queryKey: ['mpk-pool-requests', mpkId],
+    queryFn: async () => {
+      if (!mpkId) return [];
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .select('*')
+        .eq('mpk_id', mpkId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!mpkId,
+  });
+}
