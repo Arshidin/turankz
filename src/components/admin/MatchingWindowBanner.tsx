@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock } from 'lucide-react';
@@ -13,6 +14,8 @@ export function MatchingWindowBanner({
   daysRemaining,
   currentPoolPeriod,
 }: MatchingWindowBannerProps) {
+  const { t } = useTranslation();
+  
   const urgencyColor = daysRemaining <= 2 
     ? 'border-red-500/40 bg-red-500/5' 
     : daysRemaining <= 5 
@@ -38,7 +41,7 @@ export function MatchingWindowBanner({
               }`} />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Next Matching Window</p>
+              <p className="text-sm text-muted-foreground">{t('admin.nextMatchingWindow')}</p>
               <p className={`text-xl font-bold ${
                 daysRemaining <= 2 ? 'text-red-600' : daysRemaining <= 5 ? 'text-amber-600' : 'text-foreground'
               }`}>
@@ -50,12 +53,12 @@ export function MatchingWindowBanner({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Current Period:</span>
+              <span className="text-sm text-muted-foreground">{t('admin.currentPeriod')}:</span>
               <span className="text-sm font-medium text-foreground">{currentPoolPeriod}</span>
             </div>
             
             <Badge variant="outline" className={badgeColor}>
-              {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+              {t('admin.daysRemaining', { count: daysRemaining })}
             </Badge>
           </div>
         </div>

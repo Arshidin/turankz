@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, Building2, Boxes, FileText } from 'lucide-react';
 
@@ -14,30 +15,32 @@ export function SystemHealthSummary({
   totalDeclaredVolume,
   activePoolRequests,
 }: SystemHealthProps) {
+  const { t } = useTranslation();
+  
   const metrics = [
     {
-      label: 'Active Farmers',
+      label: t('admin.activeFarmers'),
       value: activeFarmers,
       icon: Users,
-      description: 'Verified suppliers',
+      description: t('admin.verifiedSuppliers'),
     },
     {
-      label: 'Active MPKs',
+      label: t('admin.activeMpks'),
       value: activeMpks,
       icon: Building2,
-      description: 'Processing plants',
+      description: t('admin.processingPlants'),
     },
     {
-      label: 'Declared Volume',
+      label: t('admin.declaredVolume'),
       value: totalDeclaredVolume.toLocaleString(),
       icon: Boxes,
-      description: 'Heads (next 3 months)',
+      description: t('admin.headsNext3Months'),
     },
     {
-      label: 'Active Requests',
+      label: t('admin.activeRequests'),
       value: activePoolRequests,
       icon: FileText,
-      description: 'Pool requests open',
+      description: t('admin.poolRequestsOpen'),
     },
   ];
 
