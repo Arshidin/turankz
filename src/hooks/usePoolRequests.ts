@@ -1,0 +1,161 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
+
+export type PoolRequestStatus = 'pending' | 'partial' | 'fulfilled' | 'cancelled';
+
+export interface PoolRequest {
+  id: string;
+  request_number: string;
+  mpk_id: string;
+  mpk_name: string;
+  target_week: string;
+  required_volume: number;
+  required_grade: string;
+  regions: string[];
+  matched_volume: number;
+  status: PoolRequestStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PoolMatch {
+  id: string;
+  request_id: string;
+  batch_id: string;
+  heads_matched: number;
+  status: string;
+  created_at: string;
+}
+
+export function usePoolRequests() {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['pool-requests'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as PoolRequest[];
+    },
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('pool-requests-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'purchase_pool_requests' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
+}
+
+export function useUpdatePoolRequest() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<PoolRequest> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error updating request',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function usePoolMatches(requestId: string | null) {
+  return useQuery({
+    queryKey: ['pool-matches', requestId],
+    queryFn: async () => {
+      if (!requestId) return [];
+      const { data, error } = await supabase
+        .from('pool_matches')
+        .select('*')
+        .eq('request_id', requestId);
+
+      if (error) throw error;
+      return data as PoolMatch[];
+    },
+    enabled: !!requestId,
+  });
+}
+
+export function useCreatePoolMatch() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (matches: Omit<PoolMatch, 'id' | 'created_at'>[]) => {
+      const { data, error } = await supabase
+        .from('pool_matches')
+        .insert(matches)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pool-matches'] });
+      queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+      toast({
+        title: 'Match proposed',
+        description: 'The match has been proposed successfully.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error creating match',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useAvailableBatchesForMatching() {
+  return useQuery({
+    queryKey: ['batches-for-matching'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('id, batch_number, region, status, grade, heads')
+        .in('status', ['confirmed', 'soft_committed', 'forecast'])
+        .order('status', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}

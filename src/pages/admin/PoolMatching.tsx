@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  usePoolRequests, 
+  useUpdatePoolRequest, 
+  useAvailableBatchesForMatching,
+  useCreatePoolMatch,
+  PoolRequest,
+  PoolRequestStatus
+} from '@/hooks/usePoolRequests';
 import { 
   Clock, 
   Target, 
@@ -16,22 +25,11 @@ import {
   Settings2,
   CheckCheck,
   RotateCcw,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 
-type RequestStatus = 'pending' | 'partial' | 'fulfilled';
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
-
-interface PurchaseRequest {
-  id: string;
-  mpk: string;
-  targetWeek: string;
-  requiredVolume: number;
-  requiredGrade: string;
-  regions: string[];
-  matchedVolume: number;
-  status: RequestStatus;
-}
 
 interface SupplyBlock {
   id: string;
@@ -40,27 +38,9 @@ interface SupplyBlock {
   readiness: 'confirmed' | 'soft_committed' | 'forecast';
   grade: string;
   heads: number;
-  selected: boolean;
 }
 
-const purchaseRequests: PurchaseRequest[] = [
-  { id: 'REQ-091', mpk: 'MPK-04', targetWeek: 'W52', requiredVolume: 80, requiredGrade: 'A', regions: ['Almaty', 'Akmola'], matchedVolume: 45, status: 'partial' },
-  { id: 'REQ-090', mpk: 'MPK-02', targetWeek: 'W52', requiredVolume: 120, requiredGrade: 'A/B', regions: ['Any'], matchedVolume: 0, status: 'pending' },
-  { id: 'REQ-089', mpk: 'MPK-01', targetWeek: 'W51', requiredVolume: 60, requiredGrade: 'B', regions: ['Karaganda'], matchedVolume: 60, status: 'fulfilled' },
-  { id: 'REQ-088', mpk: 'MPK-03', targetWeek: 'W52', requiredVolume: 45, requiredGrade: 'A', regions: ['East Kazakhstan'], matchedVolume: 20, status: 'partial' },
-];
-
-const supplyBlocks: SupplyBlock[] = [
-  { id: '1', batchRef: 'BLK-2851', region: 'Almaty', readiness: 'confirmed', grade: 'A', heads: 25, selected: false },
-  { id: '2', batchRef: 'BLK-2852', region: 'Akmola', readiness: 'confirmed', grade: 'A', heads: 18, selected: false },
-  { id: '3', batchRef: 'BLK-2853', region: 'Almaty', readiness: 'soft_committed', grade: 'A', heads: 32, selected: false },
-  { id: '4', batchRef: 'BLK-2854', region: 'Karaganda', readiness: 'soft_committed', grade: 'B', heads: 28, selected: false },
-  { id: '5', batchRef: 'BLK-2855', region: 'Akmola', readiness: 'forecast', grade: 'A', heads: 40, selected: false },
-  { id: '6', batchRef: 'BLK-2856', region: 'East Kazakhstan', readiness: 'confirmed', grade: 'A', heads: 15, selected: false },
-  { id: '7', batchRef: 'BLK-2857', region: 'Almaty', readiness: 'forecast', grade: 'B', heads: 22, selected: false },
-];
-
-const getStatusBadge = (status: RequestStatus) => {
+const getStatusBadge = (status: PoolRequestStatus) => {
   switch (status) {
     case 'fulfilled':
       return <Badge className="bg-status-confirmed-bg text-status-confirmed border-0">Fulfilled</Badge>;
@@ -68,6 +48,8 @@ const getStatusBadge = (status: RequestStatus) => {
       return <Badge className="bg-status-soft-bg text-status-soft border-0">Partial</Badge>;
     case 'pending':
       return <Badge className="bg-status-forecast-bg text-status-forecast border-0">Pending</Badge>;
+    case 'cancelled':
+      return <Badge variant="outline" className="text-muted-foreground">Cancelled</Badge>;
   }
 };
 
@@ -109,27 +91,46 @@ const getPoolHealthIndicator = (health: PoolHealth) => {
 };
 
 export default function PoolMatching() {
-  const [activeRequestId, setActiveRequestId] = useState<string | null>('REQ-091');
-  const [supply, setSupply] = useState<SupplyBlock[]>(supplyBlocks);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
 
-  const activeRequest = purchaseRequests.find(r => r.id === activeRequestId);
+  const { data: requests, isLoading: requestsLoading } = usePoolRequests();
+  const { data: batches, isLoading: batchesLoading } = useAvailableBatchesForMatching();
+  const updateRequest = useUpdatePoolRequest();
+  const createMatch = useCreatePoolMatch();
+
+  const activeRequest = requests?.find(r => r.id === activeRequestId);
+
+  // Transform batches to supply blocks
+  const supplyBlocks: SupplyBlock[] = useMemo(() => {
+    if (!batches) return [];
+    return batches.map(b => ({
+      id: b.id,
+      batchRef: b.batch_number,
+      region: b.region,
+      readiness: b.status as 'confirmed' | 'soft_committed' | 'forecast',
+      grade: b.grade,
+      heads: b.heads,
+    }));
+  }, [batches]);
 
   // Filter supply based on active request
-  const filteredSupply = activeRequest 
-    ? supply.filter(s => {
-        const gradeMatch = activeRequest.requiredGrade === 'A/B' 
-          ? ['A', 'B'].includes(s.grade)
-          : s.grade === activeRequest.requiredGrade;
-        const regionMatch = activeRequest.regions.includes('Any') || activeRequest.regions.includes(s.region);
-        return gradeMatch && regionMatch;
-      })
-    : [];
+  const filteredSupply = useMemo(() => {
+    if (!activeRequest) return [];
+    return supplyBlocks.filter(s => {
+      const gradeMatch = activeRequest.required_grade === 'A/B' 
+        ? ['A', 'B'].includes(s.grade)
+        : s.grade === activeRequest.required_grade;
+      const regionMatch = activeRequest.regions.includes('Any') || activeRequest.regions.includes(s.region);
+      return gradeMatch && regionMatch;
+    });
+  }, [activeRequest, supplyBlocks]);
 
-  const selectedSupply = filteredSupply.filter(s => s.selected);
+  const selectedSupply = filteredSupply.filter(s => selectedBatchIds.has(s.id));
   const selectedHeads = selectedSupply.reduce((sum, s) => sum + s.heads, 0);
-  const totalMatchedVolume = activeRequest ? activeRequest.matchedVolume + selectedHeads : 0;
-  const remainingVolume = activeRequest ? Math.max(0, activeRequest.requiredVolume - totalMatchedVolume) : 0;
-  const fillPercentage = activeRequest ? Math.min(100, (totalMatchedVolume / activeRequest.requiredVolume) * 100) : 0;
+  const totalMatchedVolume = activeRequest ? activeRequest.matched_volume + selectedHeads : 0;
+  const remainingVolume = activeRequest ? Math.max(0, activeRequest.required_volume - totalMatchedVolume) : 0;
+  const fillPercentage = activeRequest ? Math.min(100, (totalMatchedVolume / activeRequest.required_volume) * 100) : 0;
 
   // Calculate readiness mix
   const readinessMix = {
@@ -140,22 +141,77 @@ export default function PoolMatching() {
 
   // Determine pool health
   const getPoolHealth = (): PoolHealth => {
-    if (fillPercentage >= 90 && readinessMix.forecast / selectedHeads < 0.3) return 'on-track';
+    if (selectedHeads === 0) return 'not-viable';
+    const forecastRatio = readinessMix.forecast / selectedHeads;
+    if (fillPercentage >= 90 && forecastRatio < 0.3) return 'on-track';
     if (fillPercentage >= 50) return 'at-risk';
     return 'not-viable';
   };
 
   const toggleSupplySelection = (id: string) => {
-    setSupply(prev => prev.map(s => s.id === id ? { ...s, selected: !s.selected } : s));
+    setSelectedBatchIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const selectAllFiltered = () => {
-    const filteredIds = new Set(filteredSupply.map(s => s.id));
-    setSupply(prev => prev.map(s => filteredIds.has(s.id) ? { ...s, selected: true } : s));
+    setSelectedBatchIds(new Set(filteredSupply.map(s => s.id)));
   };
 
   const clearSelection = () => {
-    setSupply(prev => prev.map(s => ({ ...s, selected: false })));
+    setSelectedBatchIds(new Set());
+  };
+
+  const handleSelectRequest = (id: string) => {
+    setActiveRequestId(id);
+    clearSelection();
+  };
+
+  const handleProposeMatch = async () => {
+    if (!activeRequest || selectedSupply.length === 0) return;
+
+    const matches = selectedSupply.map(s => ({
+      request_id: activeRequest.id,
+      batch_id: s.id,
+      heads_matched: s.heads,
+      status: 'proposed',
+    }));
+
+    await createMatch.mutateAsync(matches);
+    
+    // Update the request's matched volume
+    const newMatchedVolume = activeRequest.matched_volume + selectedHeads;
+    const newStatus: PoolRequestStatus = newMatchedVolume >= activeRequest.required_volume ? 'fulfilled' : 'partial';
+    
+    await updateRequest.mutateAsync({
+      id: activeRequest.id,
+      matched_volume: newMatchedVolume,
+      status: newStatus,
+    });
+
+    clearSelection();
+  };
+
+  const handleMarkFulfilled = async () => {
+    if (!activeRequest) return;
+    await updateRequest.mutateAsync({
+      id: activeRequest.id,
+      status: 'fulfilled',
+    });
+  };
+
+  const handleReopen = async () => {
+    if (!activeRequest) return;
+    await updateRequest.mutateAsync({
+      id: activeRequest.id,
+      status: activeRequest.matched_volume > 0 ? 'partial' : 'pending',
+    });
   };
 
   return (
@@ -195,48 +251,58 @@ export default function PoolMatching() {
               <CardTitle className="text-sm font-medium">Purchase Requests</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {purchaseRequests.map(request => {
-                const fillRate = Math.round((request.matchedVolume / request.requiredVolume) * 100);
-                const isActive = request.id === activeRequestId;
-                
-                return (
-                  <div
-                    key={request.id}
-                    onClick={() => { setActiveRequestId(request.id); clearSelection(); }}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      isActive 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-border hover:border-primary/50 hover:bg-secondary/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">{request.id}</span>
-                      {getStatusBadge(request.status)}
-                    </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <p><span className="text-foreground">{request.mpk}</span> · {request.targetWeek}</p>
-                      <p>{request.requiredVolume} heads · Grade {request.requiredGrade}</p>
-                      <p className="text-xs">{request.regions.join(', ')}</p>
-                    </div>
-                    <div className="mt-2">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Fill Rate</span>
-                        <span className={fillRate >= 80 ? 'text-status-confirmed' : fillRate >= 50 ? 'text-status-soft' : 'text-status-forecast'}>
-                          {fillRate}%
-                        </span>
+              {requestsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : requests?.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No purchase requests</p>
+              ) : (
+                requests?.map(request => {
+                  const fillRate = Math.round((request.matched_volume / request.required_volume) * 100);
+                  const isActive = request.id === activeRequestId;
+                  
+                  return (
+                    <div
+                      key={request.id}
+                      onClick={() => handleSelectRequest(request.id)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        isActive 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-primary/50 hover:bg-secondary/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-foreground">{request.request_number}</span>
+                        {getStatusBadge(request.status)}
                       </div>
-                      <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all ${
-                            fillRate >= 80 ? 'bg-status-confirmed' : fillRate >= 50 ? 'bg-status-soft' : 'bg-status-forecast'
-                          }`}
-                          style={{ width: `${fillRate}%` }}
-                        />
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <p><span className="text-foreground">{request.mpk_name}</span> · {request.target_week}</p>
+                        <p>{request.required_volume} heads · Grade {request.required_grade}</p>
+                        <p className="text-xs">{request.regions.join(', ')}</p>
+                      </div>
+                      <div className="mt-2">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">Fill Rate</span>
+                          <span className={fillRate >= 80 ? 'text-status-confirmed' : fillRate >= 50 ? 'text-status-soft' : 'text-status-forecast'}>
+                            {fillRate}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              fillRate >= 80 ? 'bg-status-confirmed' : fillRate >= 50 ? 'bg-status-soft' : 'bg-status-forecast'
+                            }`}
+                            style={{ width: `${fillRate}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </div>
@@ -260,12 +326,18 @@ export default function PoolMatching() {
               </div>
               {activeRequest && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Filtered for {activeRequest.id}: Grade {activeRequest.requiredGrade} · {activeRequest.regions.join(', ')}
+                  Filtered for {activeRequest.request_number}: Grade {activeRequest.required_grade} · {activeRequest.regions.join(', ')}
                 </p>
               )}
             </CardHeader>
             <CardContent>
-              {!activeRequest ? (
+              {batchesLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : !activeRequest ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Target className="w-10 h-10 text-muted-foreground/50 mb-3" />
                   <p className="text-sm text-muted-foreground">Select a purchase request to view matching supply</p>
@@ -282,14 +354,14 @@ export default function PoolMatching() {
                     <div 
                       key={block.id}
                       className={`p-3 rounded-lg border transition-colors ${
-                        block.selected 
+                        selectedBatchIds.has(block.id) 
                           ? 'border-primary bg-primary/5' 
                           : 'border-border hover:border-border'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <Checkbox 
-                          checked={block.selected}
+                          checked={selectedBatchIds.has(block.id)}
                           onCheckedChange={() => toggleSupplySelection(block.id)}
                         />
                         <div className="flex-1 min-w-0">
@@ -342,11 +414,11 @@ export default function PoolMatching() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Target Volume</span>
-                      <span className="text-sm font-medium text-foreground">{activeRequest.requiredVolume} heads</span>
+                      <span className="text-sm font-medium text-foreground">{activeRequest.required_volume} heads</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Previously Matched</span>
-                      <span className="text-sm text-foreground">{activeRequest.matchedVolume} heads</span>
+                      <span className="text-sm text-foreground">{activeRequest.matched_volume} heads</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">New Selection</span>
@@ -408,9 +480,14 @@ export default function PoolMatching() {
                   <div className="space-y-2">
                     <Button 
                       className="w-full" 
-                      disabled={selectedHeads === 0}
+                      disabled={selectedHeads === 0 || createMatch.isPending}
+                      onClick={handleProposeMatch}
                     >
-                      <Send className="w-4 h-4 mr-2" />
+                      {createMatch.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4 mr-2" />
+                      )}
                       Propose Match
                     </Button>
                     <div className="grid grid-cols-2 gap-2">
@@ -419,13 +496,23 @@ export default function PoolMatching() {
                         Adjust Request
                       </Button>
                       {activeRequest.status === 'partial' && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleMarkFulfilled}
+                          disabled={updateRequest.isPending}
+                        >
                           <CheckCheck className="w-4 h-4 mr-1" />
                           Mark Fulfilled
                         </Button>
                       )}
                       {activeRequest.status === 'fulfilled' && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleReopen}
+                          disabled={updateRequest.isPending}
+                        >
                           <RotateCcw className="w-4 h-4 mr-1" />
                           Reopen
                         </Button>
