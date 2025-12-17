@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
 import { toast } from '@/hooks/use-toast';
 
 // Map database status to StatusBadge status
@@ -61,6 +62,7 @@ export default function LivestockBatches() {
   
   const [withdrawBatchId, setWithdrawBatchId] = useState<string | null>(null);
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
+  const [newBatchOpen, setNewBatchOpen] = useState(false);
 
   const handleRowClick = (batchNumber: string) => {
     const id = batchNumber.replace('BTH-', '');
@@ -172,7 +174,7 @@ export default function LivestockBatches() {
             <CardTitle className="text-base font-medium">Batch Registry</CardTitle>
             <CardDescription>Manage your declared livestock batches</CardDescription>
           </div>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setNewBatchOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Batch
           </Button>
@@ -292,7 +294,7 @@ export default function LivestockBatches() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="w-10 h-10 text-muted-foreground mb-3" />
               <p className="text-sm text-muted-foreground mb-4">No batches found. Create your first batch to get started.</p>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setNewBatchOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Batch
               </Button>
@@ -349,6 +351,9 @@ export default function LivestockBatches() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* New Batch Dialog */}
+      <NewBatchDialog open={newBatchOpen} onOpenChange={setNewBatchOpen} />
     </MainLayout>
   );
 }
