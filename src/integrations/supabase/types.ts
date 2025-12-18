@@ -754,6 +754,136 @@ export type Database = {
         }
         Relationships: []
       }
+      price_grid_cells: {
+        Row: {
+          age_category: string
+          base_price: number
+          breed_group: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          sex: string
+          updated_at: string
+          version_id: string
+          weight_max: number
+          weight_min: number
+        }
+        Insert: {
+          age_category: string
+          base_price: number
+          breed_group?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sex: string
+          updated_at?: string
+          version_id: string
+          weight_max: number
+          weight_min: number
+        }
+        Update: {
+          age_category?: string
+          base_price?: number
+          breed_group?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sex?: string
+          updated_at?: string
+          version_id?: string
+          weight_max?: number
+          weight_min?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_grid_cells_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "price_grid_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_grid_change_log: {
+        Row: {
+          action_type: string
+          change_reason: string | null
+          changed_by: string
+          created_at: string
+          id: string
+          new_value: string | null
+          previous_value: string | null
+          version_id: string | null
+        }
+        Insert: {
+          action_type: string
+          change_reason?: string | null
+          changed_by: string
+          created_at?: string
+          id?: string
+          new_value?: string | null
+          previous_value?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          change_reason?: string | null
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_value?: string | null
+          previous_value?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_grid_change_log_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "price_grid_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_grid_versions: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          version_name: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          effective_date: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          version_name: string
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          effective_date?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          version_name?: string
+        }
+        Relationships: []
+      }
       purchase_pool_requests: {
         Row: {
           accepted_breeds: string[] | null

@@ -48,6 +48,7 @@ const adminNav: NavItem[] = [
   { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
   { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },
   { labelKey: 'nav.premiumManagement', path: '/admin/premiums', icon: Award },
+  { labelKey: 'nav.priceGridManagement', path: '/admin/price-grid', icon: Grid3X3 },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3 },
   { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
 ];
