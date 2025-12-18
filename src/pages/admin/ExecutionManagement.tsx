@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,6 +35,7 @@ import {
 import { DeliveryPeriodBadge } from '@/components/shared/DeliveryPeriodSelect';
 import { PricingDisclaimer } from '@/components/pricing';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { format, parseISO } from 'date-fns';
 import { 
   Package, 
@@ -45,18 +47,49 @@ import {
   Info,
   Truck,
   FileText,
+  Receipt,
+  ClipboardList,
+  ArrowRight,
+  Eye,
 } from 'lucide-react';
 import type { ExecutionStatus } from '@/lib/execution-lifecycle';
+import { cn } from '@/lib/utils';
 
 const STATUS_TABS: { value: ExecutionStatus | 'all'; label: string; icon: React.ReactNode }[] = [
-  { value: 'all', label: 'All', icon: <Package className="h-4 w-4" /> },
+  { value: 'all', label: 'All', icon: <ClipboardList className="h-4 w-4" /> },
   { value: 'matched', label: 'Matched', icon: <Package className="h-4 w-4" /> },
   { value: 'scheduled', label: 'Scheduled', icon: <Calendar className="h-4 w-4" /> },
   { value: 'delivered', label: 'Delivered', icon: <Truck className="h-4 w-4" /> },
   { value: 'confirmed', label: 'Confirmed', icon: <CheckCircle2 className="h-4 w-4" /> },
-  { value: 'settled', label: 'Settled', icon: <Calculator className="h-4 w-4" /> },
+  { value: 'settled', label: 'Settled', icon: <Receipt className="h-4 w-4" /> },
   { value: 'closed', label: 'Closed', icon: <Lock className="h-4 w-4" /> },
 ];
+
+interface SummaryCardProps {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  variant?: 'default' | 'primary' | 'success' | 'warning';
+}
+
+function SummaryCard({ label, value, icon, variant = 'default' }: SummaryCardProps) {
+  const variantClasses = {
+    default: 'bg-card',
+    primary: 'bg-primary/5 border-primary/20',
+    success: 'bg-emerald-500/5 border-emerald-500/20',
+    warning: 'bg-amber-500/5 border-amber-500/20',
+  };
+
+  return (
+    <div className={cn('summary-card border', variantClasses[variant])}>
+      <div className="flex items-center justify-between">
+        <span className="summary-card-label">{label}</span>
+        <span className="text-muted-foreground/60">{icon}</span>
+      </div>
+      <p className="summary-card-value">{value}</p>
+    </div>
+  );
+}
 
 export default function ExecutionManagement() {
   const [activeTab, setActiveTab] = useState<ExecutionStatus | 'all'>('all');
@@ -64,11 +97,17 @@ export default function ExecutionManagement() {
   const [schedulingDialogOpen, setSchedulingDialogOpen] = useState(false);
   const [settlementDialogOpen, setSettlementDialogOpen] = useState(false);
   
-  const { data: executions, isLoading } = useExecutions(
+  // Fetch all executions for counts, then filter for display
+  const { data: allExecutions, isLoading: allLoading } = useExecutions();
+  const { data: filteredExecutions, isLoading: filteredLoading } = useExecutions(
     activeTab === 'all' ? undefined : { status: activeTab }
   );
+  
   const confirmCompliance = useConfirmCompliance();
   const closeExecution = useCloseExecution();
+
+  const isLoading = activeTab === 'all' ? allLoading : filteredLoading;
+  const executions = activeTab === 'all' ? allExecutions : filteredExecutions;
 
   const handleScheduleDelivery = (execution: ExecutionWithDetails) => {
     setSelectedExecution(execution);
@@ -96,16 +135,41 @@ export default function ExecutionManagement() {
     });
   };
 
+  // Calculate summary counts
   const getStatusCounts = () => {
-    if (!executions) return {};
-    const counts: Record<string, number> = { all: executions.length };
-    executions.forEach(e => {
+    if (!allExecutions) return { total: 0, matched: 0, scheduled: 0, delivered: 0, confirmed: 0, settled: 0, closed: 0 };
+    const counts: Record<string, number> = { 
+      total: allExecutions.length,
+      matched: 0, 
+      scheduled: 0, 
+      delivered: 0, 
+      confirmed: 0, 
+      settled: 0, 
+      closed: 0 
+    };
+    allExecutions.forEach(e => {
       counts[e.status] = (counts[e.status] || 0) + 1;
     });
     return counts;
   };
 
   const statusCounts = getStatusCounts();
+  const pendingActions = statusCounts.matched + statusCounts.delivered + statusCounts.confirmed;
+
+  const getNextAction = (execution: ExecutionWithDetails) => {
+    switch (execution.status) {
+      case 'matched':
+        return { label: 'Schedule Delivery', icon: <Calendar className="h-4 w-4" />, action: () => handleScheduleDelivery(execution) };
+      case 'delivered':
+        return { label: 'Confirm Compliance', icon: <CheckCircle2 className="h-4 w-4" />, action: () => handleConfirmCompliance(execution) };
+      case 'confirmed':
+        return { label: 'Calculate Settlement', icon: <Calculator className="h-4 w-4" />, action: () => handleCalculateSettlement(execution) };
+      case 'settled':
+        return { label: 'Close Execution', icon: <Lock className="h-4 w-4" />, action: () => handleCloseExecution(execution) };
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -114,174 +178,219 @@ export default function ExecutionManagement() {
         description="Manage post-matching execution, delivery confirmation, and settlement"
       />
 
-      <Alert className="border-blue-500/30 bg-blue-500/5">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-sm text-blue-700">
+      {/* Important disclaimer */}
+      <Alert className="border-primary/30 bg-primary/5">
+        <Info className="h-4 w-4 text-primary" />
+        <AlertDescription className="text-sm">
           <strong>Important:</strong> TURAN is not a contracting party and does not handle payments. 
           All prices shown are indicative market references. Final settlement is between parties.
         </AlertDescription>
       </Alert>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <SummaryCard
+          label="Total Executions"
+          value={statusCounts.total}
+          icon={<FileText className="h-5 w-5" />}
+        />
+        <SummaryCard
+          label="Pending Actions"
+          value={pendingActions}
+          icon={<ClipboardList className="h-5 w-5" />}
+          variant={pendingActions > 0 ? 'warning' : 'default'}
+        />
+        <SummaryCard
+          label="Awaiting Delivery"
+          value={statusCounts.scheduled}
+          icon={<Truck className="h-5 w-5" />}
+          variant={statusCounts.scheduled > 0 ? 'primary' : 'default'}
+        />
+        <SummaryCard
+          label="Completed"
+          value={statusCounts.closed}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          variant="success"
+        />
+      </div>
+
+      {/* Tabs and Table */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ExecutionStatus | 'all')}>
-        <TabsList className="flex-wrap h-auto gap-1">
-          {STATUS_TABS.map((tab) => (
-            <TabsTrigger 
-              key={tab.value} 
-              value={tab.value}
-              className="gap-1.5"
-            >
-              {tab.icon}
-              {tab.label}
-              {statusCounts[tab.value] !== undefined && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {statusCounts[tab.value]}
-                </Badge>
-              )}
-            </TabsTrigger>
-          ))}
+        <TabsList className="flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          {STATUS_TABS.map((tab) => {
+            const count = tab.value === 'all' ? statusCounts.total : statusCounts[tab.value] || 0;
+            return (
+              <TabsTrigger 
+                key={tab.value} 
+                value={tab.value}
+                className="gap-1.5 data-[state=active]:bg-background"
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+                {count > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs h-5 min-w-5 flex items-center justify-center">
+                    {count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Execution Records
-              </CardTitle>
-              <CardDescription>
-                Track offtake executions from matching through settlement
-              </CardDescription>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Execution Records
+                  </CardTitle>
+                  <CardDescription>
+                    Track offtake executions from matching through settlement
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex gap-4 items-center">
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-6 w-32" />
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-6 flex-1" />
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  ))}
                 </div>
               ) : !executions?.length ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p>No executions found</p>
-                  <p className="text-sm">Executions are created automatically after matches are finalized</p>
-                </div>
+                <EmptyState
+                  icon={Package}
+                  message="No executions found"
+                  helperText="Executions are created automatically after matches are finalized in the Pool Matching page."
+                  size="md"
+                />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Execution</TableHead>
-                      <TableHead>Batch / Request</TableHead>
-                      <TableHead>Volume</TableHead>
-                      <TableHead>Planning Horizon</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Delivery</TableHead>
-                      <TableHead>Settlement</TableHead>
-                      <TableHead className="w-[60px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {executions.map((execution) => (
-                      <TableRow key={execution.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <ExecutionStatusBadge status={execution.status} />
-                            <p className="text-xs text-muted-foreground">
-                              {format(parseISO(execution.created_at), 'MMM d, yyyy')}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-medium text-sm">
-                              {execution.batch?.batch_number || 'Unknown'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {execution.request?.request_number} • {execution.request?.mpk_name}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">{execution.matched_volume}</span>
-                          <span className="text-muted-foreground text-sm"> heads</span>
-                          {execution.delivered_volume && execution.delivered_volume !== execution.matched_volume && (
-                            <p className="text-xs text-amber-600">
-                              Delivered: {execution.delivered_volume}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DeliveryPeriodBadge period={execution.delivery_period} showMonths={false} />
-                        </TableCell>
-                        <TableCell>
-                          <ExecutionProgress currentStatus={execution.status} />
-                        </TableCell>
-                        <TableCell>
-                          {execution.expected_delivery_start ? (
-                            <div className="text-xs">
-                              <p className="font-medium">
-                                {format(parseISO(execution.expected_delivery_start), 'MMM d')} - {format(parseISO(execution.expected_delivery_end!), 'MMM d')}
-                              </p>
-                              {execution.actual_delivery_date && (
-                                <p className="text-emerald-600">
-                                  Actual: {format(parseISO(execution.actual_delivery_date), 'MMM d')}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[140px]">Status</TableHead>
+                        <TableHead>Batch / Request</TableHead>
+                        <TableHead className="text-right">Volume</TableHead>
+                        <TableHead>Horizon</TableHead>
+                        <TableHead className="w-[180px]">Progress</TableHead>
+                        <TableHead>Delivery</TableHead>
+                        <TableHead className="text-right">Settlement</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {executions.map((execution) => {
+                        const nextAction = getNextAction(execution);
+                        return (
+                          <TableRow key={execution.id} className="group">
+                            <TableCell>
+                              <div className="space-y-1">
+                                <ExecutionStatusBadge status={execution.status} />
+                                <p className="text-[10px] text-muted-foreground tabular-nums">
+                                  {format(parseISO(execution.created_at), 'MMM d, yyyy')}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-0.5">
+                                <p className="font-medium text-sm">
+                                  {execution.batch?.batch_number || 'Unknown Batch'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {execution.request?.request_number} • {execution.request?.mpk_name}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              <span className="font-medium">{execution.matched_volume}</span>
+                              <span className="text-muted-foreground text-xs ml-1">heads</span>
+                              {execution.delivered_volume && execution.delivered_volume !== execution.matched_volume && (
+                                <p className="text-[10px] text-amber-600">
+                                  Delivered: {execution.delivered_volume}
                                 </p>
                               )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Not scheduled</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {execution.settlement_indicative_total ? (
-                            <div className="text-xs">
-                              <p className="font-medium text-emerald-600">
-                                {execution.settlement_indicative_total} ₸/kg
-                              </p>
-                              <p className="text-muted-foreground">
-                                (Ref: {execution.settlement_reference_price} + {execution.settlement_premiums_applied})
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {execution.status === 'matched' && (
-                                <DropdownMenuItem onClick={() => handleScheduleDelivery(execution)}>
-                                  <Calendar className="h-4 w-4 mr-2" />
-                                  Schedule Delivery
-                                </DropdownMenuItem>
+                            </TableCell>
+                            <TableCell>
+                              <DeliveryPeriodBadge period={execution.delivery_period} showMonths={false} />
+                            </TableCell>
+                            <TableCell>
+                              <ExecutionProgress currentStatus={execution.status} size="sm" />
+                            </TableCell>
+                            <TableCell>
+                              {execution.expected_delivery_start ? (
+                                <div className="text-xs space-y-0.5">
+                                  <p className="font-medium tabular-nums">
+                                    {format(parseISO(execution.expected_delivery_start), 'MMM d')} – {format(parseISO(execution.expected_delivery_end!), 'MMM d')}
+                                  </p>
+                                  {execution.actual_delivery_date && (
+                                    <p className="text-emerald-600 flex items-center gap-1">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      {format(parseISO(execution.actual_delivery_date), 'MMM d')}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">Not scheduled</span>
                               )}
-                              {execution.status === 'delivered' && (
-                                <DropdownMenuItem onClick={() => handleConfirmCompliance(execution)}>
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                                  Confirm Compliance
-                                </DropdownMenuItem>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {execution.settlement_indicative_total ? (
+                                <div className="text-xs space-y-0.5">
+                                  <p className="font-semibold text-emerald-600 tabular-nums">
+                                    {execution.settlement_indicative_total.toLocaleString()} ₸/kg
+                                  </p>
+                                  <p className="text-muted-foreground tabular-nums">
+                                    {execution.settlement_reference_price?.toLocaleString()} + {execution.settlement_premiums_applied}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">Pending</span>
                               )}
-                              {execution.status === 'confirmed' && (
-                                <DropdownMenuItem onClick={() => handleCalculateSettlement(execution)}>
-                                  <Calculator className="h-4 w-4 mr-2" />
-                                  Calculate Settlement
-                                </DropdownMenuItem>
-                              )}
-                              {execution.status === 'settled' && (
-                                <DropdownMenuItem onClick={() => handleCloseExecution(execution)}>
-                                  <Lock className="h-4 w-4 mr-2" />
-                                  Close Execution
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 opacity-50 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  {nextAction && (
+                                    <>
+                                      <DropdownMenuItem onClick={nextAction.action} className="gap-2">
+                                        {nextAction.icon}
+                                        {nextAction.label}
+                                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                    </>
+                                  )}
+                                  <DropdownMenuItem className="gap-2">
+                                    <Eye className="h-4 w-4" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
