@@ -47,11 +47,40 @@ const mapStatus = (status: BatchStatus): BatchStatus => {
 };
 
 // Parse target week to get approximate month
+// Supports formats: YYYY-WXX (e.g., 2025-W01) and WXX-YYYY (e.g., W01-2025)
 function getMonthFromTargetWeek(targetWeek: string): Date {
-  // Format: YYYY-WXX
-  const [year, week] = targetWeek.split('-W');
-  const date = new Date(parseInt(year), 0, 1);
-  date.setDate(date.getDate() + (parseInt(week) - 1) * 7);
+  let year: number;
+  let week: number;
+  
+  if (targetWeek.includes('-W')) {
+    // Format: YYYY-WXX (e.g., 2025-W01)
+    const [yearStr, weekStr] = targetWeek.split('-W');
+    year = parseInt(yearStr);
+    week = parseInt(weekStr);
+  } else if (targetWeek.startsWith('W')) {
+    // Format: WXX-YYYY (e.g., W01-2025)
+    const parts = targetWeek.split('-');
+    week = parseInt(parts[0].replace('W', ''));
+    year = parseInt(parts[1]);
+  } else {
+    // Fallback: try to extract any numbers
+    const matches = targetWeek.match(/\d+/g);
+    if (matches && matches.length >= 2) {
+      // Assume first is week, second is year if year > 100
+      if (parseInt(matches[1]) > 100) {
+        week = parseInt(matches[0]);
+        year = parseInt(matches[1]);
+      } else {
+        year = parseInt(matches[0]);
+        week = parseInt(matches[1]);
+      }
+    } else {
+      return startOfMonth(new Date()); // Fallback to current month
+    }
+  }
+  
+  const date = new Date(year, 0, 1);
+  date.setDate(date.getDate() + (week - 1) * 7);
   return startOfMonth(date);
 }
 
