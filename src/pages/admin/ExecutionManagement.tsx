@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -172,8 +173,9 @@ export default function ExecutionManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <MainLayout>
+      <div className="space-y-6">
+        <PageHeader
         title="Contracts & Execution"
         description="Manage post-matching execution, delivery confirmation, and settlement"
       />
@@ -419,6 +421,7 @@ export default function ExecutionManagement() {
           />
         </>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }
