@@ -556,6 +556,7 @@ export type Database = {
       }
       pool_matches: {
         Row: {
+          base_price_per_kg: number | null
           batch_id: string
           cancellation_reason: string | null
           cancelled_at: string | null
@@ -567,10 +568,20 @@ export type Database = {
           matching_date: string
           matching_window_id: string | null
           notes: string | null
+          predictability_premium: number | null
+          premium_breakdown: Json | null
+          premium_locked: boolean | null
+          premium_locked_at: string | null
+          reliability_premium: number | null
           request_id: string
+          standard_premium: number | null
           status: Database["public"]["Enums"]["matching_status"]
+          total_premium: number | null
+          total_price_per_kg: number | null
+          volume_consistency_premium: number | null
         }
         Insert: {
+          base_price_per_kg?: number | null
           batch_id: string
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -582,10 +593,20 @@ export type Database = {
           matching_date?: string
           matching_window_id?: string | null
           notes?: string | null
+          predictability_premium?: number | null
+          premium_breakdown?: Json | null
+          premium_locked?: boolean | null
+          premium_locked_at?: string | null
+          reliability_premium?: number | null
           request_id: string
+          standard_premium?: number | null
           status?: Database["public"]["Enums"]["matching_status"]
+          total_premium?: number | null
+          total_price_per_kg?: number | null
+          volume_consistency_premium?: number | null
         }
         Update: {
+          base_price_per_kg?: number | null
           batch_id?: string
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -597,8 +618,17 @@ export type Database = {
           matching_date?: string
           matching_window_id?: string | null
           notes?: string | null
+          predictability_premium?: number | null
+          premium_breakdown?: Json | null
+          premium_locked?: boolean | null
+          premium_locked_at?: string | null
+          reliability_premium?: number | null
           request_id?: string
+          standard_premium?: number | null
           status?: Database["public"]["Enums"]["matching_status"]
+          total_premium?: number | null
+          total_price_per_kg?: number | null
+          volume_consistency_premium?: number | null
         }
         Relationships: [
           {
