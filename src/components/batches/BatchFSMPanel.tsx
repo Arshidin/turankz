@@ -59,6 +59,12 @@ import {
   requiresTransitionConfirmation,
   getConfirmationDialogLabels,
 } from '@/lib/batch-lifecycle';
+import {
+  validateBatchTransition,
+  formatValidationError,
+  isBlockedByTimeConstraint,
+} from '@/lib/batch-transition-guard';
+import { type MatchingWindow } from '@/lib/matching-window';
 
 interface BatchFSMPanelProps {
   currentStatus: BatchLifecycleStatus;
@@ -67,6 +73,7 @@ interface BatchFSMPanelProps {
   isTransitioning?: boolean;
   isTimeLocked?: boolean;
   timeLockTooltip?: string;
+  matchingWindow?: MatchingWindow | null;
 }
 
 export function BatchFSMPanel({
@@ -76,6 +83,7 @@ export function BatchFSMPanel({
   isTransitioning = false,
   isTimeLocked = false,
   timeLockTooltip = 'Edits are locked due to the Matching Window deadline.',
+  matchingWindow,
 }: BatchFSMPanelProps) {
   const { role } = useRole();
   const { toast } = useToast();
@@ -109,23 +117,28 @@ export function BatchFSMPanel({
   };
 
   /**
-   * MANDATORY PRE-TRANSITION VALIDATION
-   * Re-validates the transition immediately before execution to prevent:
-   * - Race conditions from stale state
-   * - Client-side bypasses
-   * - Unauthorized transitions
+   * UNIFIED TRANSITION GUARD
+   * Re-validates BOTH FSM rules AND time constraints immediately before execution.
+   * This prevents race conditions, stale state, and ensures all constraints are checked.
    */
   const executeValidatedTransition = async (toStatus: BatchLifecycleStatus): Promise<boolean> => {
     const lang = getCurrentLang();
     
-    // Re-run domain validation immediately before mutation
-    const validation = validateTransitionComplete(currentStatus, toStatus, userRole);
+    // UNIFIED VALIDATION: Combines FSM + time-based checks
+    const validation = validateBatchTransition(
+      currentStatus,
+      toStatus,
+      userRole,
+      matchingWindow,
+      lang
+    );
     
-    if (!validation.valid) {
+    if (!validation.allowed) {
+      const errorInfo = formatValidationError(validation, lang);
       toast({
         variant: 'destructive',
-        title: lang === 'ru' ? 'Переход заблокирован' : 'Transition Blocked',
-        description: validation.error || (lang === 'ru' ? 'Этот переход статуса не разрешён.' : 'This status transition is not allowed.'),
+        title: errorInfo.title,
+        description: errorInfo.description,
       });
       return false;
     }
@@ -147,13 +160,21 @@ export function BatchFSMPanel({
   const handleTransitionClick = async (toStatus: BatchLifecycleStatus) => {
     const lang = getCurrentLang();
     
-    // Pre-validate before showing confirmation dialog
-    const preValidation = validateTransitionComplete(currentStatus, toStatus, userRole);
-    if (!preValidation.valid) {
+    // PRE-VALIDATE with unified guard before showing confirmation dialog
+    const preValidation = validateBatchTransition(
+      currentStatus,
+      toStatus,
+      userRole,
+      matchingWindow,
+      lang
+    );
+    
+    if (!preValidation.allowed) {
+      const errorInfo = formatValidationError(preValidation, lang);
       toast({
         variant: 'destructive',
-        title: lang === 'ru' ? 'Действие запрещено' : 'Action Not Allowed',
-        description: preValidation.error || (lang === 'ru' ? 'Этот переход не разрешён.' : 'This transition is not permitted.'),
+        title: errorInfo.title,
+        description: errorInfo.description,
       });
       return;
     }
