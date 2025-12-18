@@ -18,7 +18,9 @@ import {
   AlertCircle,
   MoreHorizontal,
   Pencil,
-  Lock
+  Lock,
+  Target,
+  TrendingUp
 } from 'lucide-react';
 import { usePoolRequests, useCancelPoolRequest, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
 import { useMpks } from '@/hooks/useMpks';
@@ -52,6 +54,10 @@ import {
 import {
   canEditPoolRequest,
   getPoolRequestLockedTooltip,
+  calculateMatchingProgress,
+  getMatchingProgressStatus,
+  getProgressStatusStyle,
+  getMatchingProgressLabel,
   type PoolRequestLifecycleStatus,
   type PoolRequestRole,
 } from '@/lib/pool-request-lifecycle';
@@ -358,30 +364,42 @@ export default function PurchasePoolRequests() {
                       </DropdownMenu>
                     </div>
 
-                    {/* Progress Section */}
-                    <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Fill Rate</span>
-                        <span className={`text-lg font-bold ${
-                          fillRate >= 100 ? 'text-emerald-600' : 
-                          fillRate >= 50 ? 'text-foreground' : 'text-amber-600'
-                        }`}>
-                          {fillRate}%
-                        </span>
-                      </div>
-                      <Progress 
-                        value={fillRate} 
-                        className={`h-3 ${atRisk ? '[&>div]:bg-amber-500' : ''}`}
-                      />
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm text-muted-foreground">
-                          <span className="font-semibold text-foreground">{request.matched_volume}</span> / {request.required_volume} heads matched
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {request.required_volume - request.matched_volume} remaining
-                        </span>
-                      </div>
-                    </div>
+                    {/* Enhanced Progress Section */}
+                    {(() => {
+                      const progress = calculateMatchingProgress(request.required_volume, request.matched_volume);
+                      const progressStatus = getMatchingProgressStatus(progress);
+                      const statusStyle = getProgressStatusStyle(progressStatus);
+                      
+                      return (
+                        <div className={`rounded-lg p-4 mb-4 border ${statusStyle.badgeClass}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {progressStatus === 'fulfilled' && <CheckCircle2 className="w-4 h-4" />}
+                              {progressStatus === 'near-complete' && <TrendingUp className="w-4 h-4" />}
+                              {progressStatus === 'partial' && <Clock className="w-4 h-4" />}
+                              {progressStatus === 'at-risk' && <AlertTriangle className="w-4 h-4" />}
+                              {progressStatus === 'not-started' && <Target className="w-4 h-4" />}
+                              <span className="text-sm font-medium">{getMatchingProgressLabel(progressStatus)}</span>
+                            </div>
+                            <span className={`text-lg font-bold ${statusStyle.textClass}`}>
+                              {progress.fillPercentage}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={progress.fillPercentage} 
+                            className={`h-3 ${statusStyle.progressClass}`}
+                          />
+                          <div className="flex items-center justify-between mt-2 text-sm">
+                            <span>
+                              <span className="font-semibold">{progress.matchedVolume}</span> / {progress.requestedVolume} heads
+                            </span>
+                            <span className="text-xs">
+                              {progress.remainingVolume} remaining
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Request Parameters */}
                     <div className="grid grid-cols-3 gap-4 py-3 border-t">

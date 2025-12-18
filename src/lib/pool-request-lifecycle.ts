@@ -531,3 +531,136 @@ export function getSubmissionStatusMessage(
     showCountdown: true,
   };
 }
+
+// ============================================================================
+// MATCHING PROGRESS TRACKING
+// ============================================================================
+
+export interface MatchingProgress {
+  requestedVolume: number;
+  matchedVolume: number;
+  remainingVolume: number;
+  fillPercentage: number;
+  projectedFillPercentage: number;
+  isComplete: boolean;
+}
+
+export type MatchingProgressStatus = 
+  | 'not-started'
+  | 'at-risk'
+  | 'partial'
+  | 'near-complete'
+  | 'fulfilled';
+
+/**
+ * Calculate matching progress metrics for a pool request
+ */
+export function calculateMatchingProgress(
+  requestedVolume: number,
+  matchedVolume: number,
+  selectedHeads: number = 0
+): MatchingProgress {
+  const remainingVolume = Math.max(0, requestedVolume - matchedVolume);
+  const fillPercentage = requestedVolume > 0 
+    ? Math.min(100, Math.round((matchedVolume / requestedVolume) * 100))
+    : 0;
+  const projectedTotal = matchedVolume + selectedHeads;
+  const projectedFillPercentage = requestedVolume > 0
+    ? Math.min(100, Math.round((projectedTotal / requestedVolume) * 100))
+    : 0;
+
+  return {
+    requestedVolume,
+    matchedVolume,
+    remainingVolume,
+    fillPercentage,
+    projectedFillPercentage,
+    isComplete: matchedVolume >= requestedVolume,
+  };
+}
+
+/**
+ * Determine progress status based on fill percentage
+ */
+export function getMatchingProgressStatus(progress: MatchingProgress): MatchingProgressStatus {
+  if (progress.isComplete) return 'fulfilled';
+  if (progress.fillPercentage >= 80) return 'near-complete';
+  if (progress.fillPercentage >= 50) return 'partial';
+  if (progress.fillPercentage > 0) return 'at-risk';
+  return 'not-started';
+}
+
+/**
+ * Get styling for progress status
+ */
+export function getProgressStatusStyle(status: MatchingProgressStatus): {
+  textClass: string;
+  barClass: string;
+  badgeClass: string;
+  progressClass: string;
+} {
+  switch (status) {
+    case 'fulfilled':
+      return {
+        textClass: 'text-emerald-600',
+        barClass: 'bg-emerald-500',
+        badgeClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+        progressClass: '[&>div]:bg-emerald-500',
+      };
+    case 'near-complete':
+      return {
+        textClass: 'text-blue-600',
+        barClass: 'bg-blue-500',
+        badgeClass: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+        progressClass: '[&>div]:bg-blue-500',
+      };
+    case 'partial':
+      return {
+        textClass: 'text-amber-600',
+        barClass: 'bg-amber-500',
+        badgeClass: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+        progressClass: '[&>div]:bg-amber-500',
+      };
+    case 'at-risk':
+      return {
+        textClass: 'text-orange-600',
+        barClass: 'bg-orange-500',
+        badgeClass: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+        progressClass: '[&>div]:bg-orange-500',
+      };
+    case 'not-started':
+    default:
+      return {
+        textClass: 'text-muted-foreground',
+        barClass: 'bg-muted-foreground',
+        badgeClass: 'bg-muted text-muted-foreground border-border',
+        progressClass: '[&>div]:bg-muted-foreground',
+      };
+  }
+}
+
+/**
+ * Get status label for matching progress
+ */
+export function getMatchingProgressLabel(
+  status: MatchingProgressStatus,
+  lang: 'en' | 'ru' = 'en'
+): string {
+  const labels: Record<MatchingProgressStatus, { en: string; ru: string }> = {
+    fulfilled: { en: 'Fulfilled', ru: 'Выполнено' },
+    'near-complete': { en: 'Near Complete', ru: 'Почти завершено' },
+    partial: { en: 'Partial', ru: 'Частично' },
+    'at-risk': { en: 'At Risk', ru: 'Под угрозой' },
+    'not-started': { en: 'Not Started', ru: 'Не начато' },
+  };
+  return lang === 'ru' ? labels[status].ru : labels[status].en;
+}
+
+/**
+ * Get the appropriate pool request status based on matching progress
+ */
+export function getStatusFromProgress(progress: MatchingProgress): PoolRequestLifecycleStatus {
+  if (progress.isComplete) return 'fulfilled';
+  if (progress.matchedVolume > 0) return 'partial';
+  return 'matching';
+}
