@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export type UserRole = 'admin' | 'farmer' | 'mpk';
 
@@ -17,7 +18,21 @@ const roleNames: Record<UserRole, string> = {
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
+  const { role: authRole, isLoading } = useAuthContext();
   const [role, setRole] = useState<UserRole>('farmer');
+
+  // Keep UI role in sync with authenticated role from backend
+  useEffect(() => {
+    if (authRole) {
+      setRole(authRole);
+      return;
+    }
+
+    // Once auth has finished loading and there is no authenticated role, reset to default.
+    if (!isLoading) {
+      setRole('farmer');
+    }
+  }, [authRole, isLoading]);
 
   return (
     <RoleContext.Provider value={{ role, setRole, roleName: roleNames[role] }}>
