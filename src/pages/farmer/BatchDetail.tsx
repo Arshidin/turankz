@@ -50,7 +50,10 @@ import {
   ArrowDownCircle,
   Lock,
   Info,
-  Clock
+  Clock,
+  ShieldCheck,
+  Unlock,
+
 } from 'lucide-react';
 import { useBatch, useConfirmBatch, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
@@ -78,6 +81,9 @@ import {
 import { useBatchTimeLock } from '@/hooks/useBatchTimeLock';
 import { getTimeLockedTooltip } from '@/lib/batch-time-lock';
 import { validateBatchEdit, formatValidationError } from '@/lib/batch-transition-guard';
+import { useAdminOverride, useBatchAdminUnlockStatus } from '@/hooks/useAdminOverride';
+import { AdminOverrideDialog } from '@/components/admin/AdminOverrideDialog';
+import { AdminOverrideBadge } from '@/components/admin/AdminOverrideBadge';
 
 const REGIONS = [
   'Almaty',
@@ -158,6 +164,8 @@ export default function BatchDetail() {
   const [showQuantityConfirm, setShowQuantityConfirm] = useState(false);
   const [showReadinessDialog, setShowReadinessDialog] = useState(false);
   const [showSoftCommitEditDialog, setShowSoftCommitEditDialog] = useState(false);
+  const [showAdminUnlockDialog, setShowAdminUnlockDialog] = useState(false);
+  const [showAdminRelockDialog, setShowAdminRelockDialog] = useState(false);
   const [pendingQuantityChange, setPendingQuantityChange] = useState<{ old: number; new: number } | null>(null);
   
   const { data: batch, isLoading, error } = useBatch(batchId ? `BTH-${batchId}` : undefined);
@@ -172,11 +180,23 @@ export default function BatchDetail() {
   const statusLockedTooltip = batch ? getLockedFieldTooltip(batch.status) : '';
   const editRules = batch ? getEditRulesForStatus(batch.status) : null;
 
-  // Time-based locking from matching window
-  const { lockStatus: timeLockStatus, canEdit: canEditByTime, canTransition, bannerInfo: timeLockBanner, matchingWindow } = 
-    useBatchTimeLock(batch?.status || 'draft');
+  // Admin override hooks
+  const { data: adminUnlockStatus } = useBatchAdminUnlockStatus(batch?.id || '');
+  const { unlockBatch, relockBatch, isAdmin } = useAdminOverride();
 
-  // Combined lock status: locked by status OR locked by time
+  // Time-based locking from matching window (now with admin unlock support)
+  const { 
+    lockStatus: timeLockStatus, 
+    canEdit: canEditByTime, 
+    canTransition, 
+    bannerInfo: timeLockBanner, 
+    matchingWindow,
+    isAdminUnlocked 
+  } = useBatchTimeLock(batch?.status || 'draft', {
+    adminUnlockInfo: adminUnlockStatus,
+  });
+
+  // Combined lock status: locked by status OR locked by time (unless admin unlocked)
   const isReadOnly = isStatusReadOnly || !canEditByTime;
   const lockedTooltip = !canEditByTime 
     ? getTimeLockedTooltip() 
@@ -216,7 +236,9 @@ export default function BatchDetail() {
     const editValidation = validateBatchEdit(
       batch.status as BatchLifecycleStatus,
       role as 'farmer' | 'admin' | 'mpk',
-      matchingWindow
+      matchingWindow,
+      'en',
+      adminUnlockStatus
     );
     
     if (!editValidation.allowed) {
@@ -364,6 +386,27 @@ export default function BatchDetail() {
     navigate('/farmer/batches');
   };
 
+  // Admin override handlers
+  const handleAdminUnlock = (reason: string) => {
+    if (!batch) return;
+    unlockBatch.mutate({
+      batchId: batch.id,
+      batchNumber: batch.batch_number,
+      reason,
+    });
+    setShowAdminUnlockDialog(false);
+  };
+
+  const handleAdminRelock = (reason: string) => {
+    if (!batch) return;
+    relockBatch.mutate({
+      batchId: batch.id,
+      batchNumber: batch.batch_number,
+      reason,
+    });
+    setShowAdminRelockDialog(false);
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -453,14 +496,48 @@ export default function BatchDetail() {
       </div>
 
       {/* Time-locked Banner */}
-      {timeLockBanner?.show && (
+      {timeLockBanner?.show && !isAdminUnlocked && (
         <Alert className="mb-6 border-amber-500/30 bg-amber-500/5">
           <Lock className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-700">{timeLockBanner.title}</AlertTitle>
           <AlertDescription className="text-muted-foreground">
             {timeLockBanner.description}
           </AlertDescription>
+          {/* Admin unlock button */}
+          {isAdmin && timeLockStatus.canAdminOverride && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-3 gap-2 border-amber-500/50 hover:bg-amber-500/10"
+              onClick={() => setShowAdminUnlockDialog(true)}
+            >
+              <Unlock className="h-4 w-4" />
+              Admin Unlock
+            </Button>
+          )}
         </Alert>
+      )}
+
+      {/* Admin Override Badge - shows when batch is unlocked by admin */}
+      {isAdminUnlocked && adminUnlockStatus && (
+        <div className="mb-6 flex items-center gap-3">
+          <AdminOverrideBadge
+            reason={adminUnlockStatus.unlockReason}
+            unlockedBy={adminUnlockStatus.unlockedBy}
+            unlockedAt={adminUnlockStatus.unlockedAt}
+          />
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2"
+              onClick={() => setShowAdminRelockDialog(true)}
+            >
+              <Lock className="h-4 w-4" />
+              Re-Lock
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Action Alert for Review */}
@@ -943,6 +1020,29 @@ export default function BatchDetail() {
           setIsEditing(true);
         }}
         onCancel={() => setShowSoftCommitEditDialog(false)}
+      />
+
+      {/* Admin Override Dialogs */}
+      <AdminOverrideDialog
+        open={showAdminUnlockDialog}
+        onOpenChange={setShowAdminUnlockDialog}
+        title="Unlock Batch"
+        description="This will temporarily unlock this batch, allowing edits despite the Matching Window deadline."
+        actionType="unlock"
+        targetName={batch?.batch_number || ''}
+        onConfirm={handleAdminUnlock}
+        isLoading={unlockBatch.isPending}
+      />
+
+      <AdminOverrideDialog
+        open={showAdminRelockDialog}
+        onOpenChange={setShowAdminRelockDialog}
+        title="Re-Lock Batch"
+        description="This will remove the admin override and re-lock this batch according to the Matching Window rules."
+        actionType="relock"
+        targetName={batch?.batch_number || ''}
+        onConfirm={handleAdminRelock}
+        isLoading={relockBatch.isPending}
       />
     </MainLayout>
   );

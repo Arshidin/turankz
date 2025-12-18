@@ -3,16 +3,27 @@
  * 
  * Enforces time constraints on batch editing and status transitions
  * based on the active Matching Window's lock_date.
+ * 
+ * Supports admin overrides for exceptional cases.
  */
 
 import { type MatchingWindow } from './matching-window';
 import { type BatchLifecycleStatus } from './batch-lifecycle';
+
+export interface AdminUnlockInfo {
+  isAdminUnlocked: boolean;
+  unlockReason?: string | null;
+  unlockedBy?: string | null;
+  unlockedAt?: string | null;
+}
 
 export interface BatchLockStatus {
   isLocked: boolean;
   lockReason: string;
   lockReasonRu: string;
   canAdminOverride: boolean;
+  isAdminUnlocked: boolean;
+  adminUnlockInfo?: AdminUnlockInfo;
   lockDate?: string;
 }
 
@@ -47,11 +58,13 @@ export function isWindowLocked(matchingWindow: MatchingWindow | null | undefined
 
 /**
  * Determine if a batch is locked based on matching window constraints
+ * Now supports admin unlock overrides
  */
 export function getBatchLockStatus(
   batchStatus: BatchLifecycleStatus,
   matchingWindow: MatchingWindow | null | undefined,
-  role: 'farmer' | 'admin' | 'mpk' = 'farmer'
+  role: 'farmer' | 'admin' | 'mpk' = 'farmer',
+  adminUnlockInfo?: AdminUnlockInfo
 ): BatchLockStatus {
   // If batch is already in a terminal state, use status-based rules (not time-based)
   if (!LOCKABLE_STATUSES.includes(batchStatus)) {
@@ -60,6 +73,7 @@ export function getBatchLockStatus(
       lockReason: '',
       lockReasonRu: '',
       canAdminOverride: false,
+      isAdminUnlocked: false,
     };
   }
 
@@ -70,6 +84,7 @@ export function getBatchLockStatus(
       lockReason: '',
       lockReasonRu: '',
       canAdminOverride: false,
+      isAdminUnlocked: false,
     };
   }
 
@@ -80,13 +95,27 @@ export function getBatchLockStatus(
   const windowLocked = isWindowLocked(matchingWindow);
 
   if (pastLockDate || windowLocked) {
-    // Admin can still override
+    // Check if batch has been admin-unlocked
+    if (adminUnlockInfo?.isAdminUnlocked) {
+      return {
+        isLocked: false,
+        lockReason: 'Unlocked by Admin Override.',
+        lockReasonRu: 'Разблокировано Администратором.',
+        canAdminOverride: true,
+        isAdminUnlocked: true,
+        adminUnlockInfo,
+        lockDate: matchingWindow.lock_date,
+      };
+    }
+
+    // Admin can still override (but batch is not yet unlocked)
     if (role === 'admin') {
       return {
         isLocked: false,
-        lockReason: 'Admin override active - window is locked for other users.',
-        lockReasonRu: 'Админ-режим - окно заблокировано для других пользователей.',
+        lockReason: 'Admin override available - window is locked for other users.',
+        lockReasonRu: 'Админ-режим доступен - окно заблокировано для других пользователей.',
         canAdminOverride: true,
+        isAdminUnlocked: false,
         lockDate: matchingWindow.lock_date,
       };
     }
@@ -96,6 +125,7 @@ export function getBatchLockStatus(
       lockReason: 'Edits are locked due to the Matching Window deadline.',
       lockReasonRu: 'Редактирование заблокировано из-за дедлайна Окна сопоставления.',
       canAdminOverride: true,
+      isAdminUnlocked: false,
       lockDate: matchingWindow.lock_date,
     };
   }
@@ -105,6 +135,7 @@ export function getBatchLockStatus(
     lockReason: '',
     lockReasonRu: '',
     canAdminOverride: false,
+    isAdminUnlocked: false,
     lockDate: matchingWindow.lock_date,
   };
 }
