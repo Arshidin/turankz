@@ -555,6 +555,56 @@ export type Database = {
           },
         ]
       }
+      pool_request_activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          is_admin_override: boolean
+          metadata: Json | null
+          new_value: string | null
+          note: string | null
+          override_reason: string | null
+          performed_by: string
+          previous_value: string | null
+          request_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          is_admin_override?: boolean
+          metadata?: Json | null
+          new_value?: string | null
+          note?: string | null
+          override_reason?: string | null
+          performed_by: string
+          previous_value?: string | null
+          request_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          is_admin_override?: boolean
+          metadata?: Json | null
+          new_value?: string | null
+          note?: string | null
+          override_reason?: string | null
+          performed_by?: string
+          previous_value?: string | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pool_request_activity_log_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_pool_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       premium_change_log: {
         Row: {
           change_reason: string | null
@@ -639,6 +689,10 @@ export type Database = {
         Row: {
           accepted_breeds: string[] | null
           accepted_genders: string[] | null
+          admin_modification_reason: string | null
+          admin_modified: boolean
+          admin_modified_at: string | null
+          admin_modified_by: string | null
           age_range_max: number | null
           age_range_min: number | null
           created_at: string
@@ -660,6 +714,10 @@ export type Database = {
         Insert: {
           accepted_breeds?: string[] | null
           accepted_genders?: string[] | null
+          admin_modification_reason?: string | null
+          admin_modified?: boolean
+          admin_modified_at?: string | null
+          admin_modified_by?: string | null
           age_range_max?: number | null
           age_range_min?: number | null
           created_at?: string
@@ -681,6 +739,10 @@ export type Database = {
         Update: {
           accepted_breeds?: string[] | null
           accepted_genders?: string[] | null
+          admin_modification_reason?: string | null
+          admin_modified?: boolean
+          admin_modified_at?: string | null
+          admin_modified_by?: string | null
           age_range_max?: number | null
           age_range_min?: number | null
           created_at?: string

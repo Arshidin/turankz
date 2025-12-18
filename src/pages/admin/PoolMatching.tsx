@@ -15,6 +15,13 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   usePoolRequests, 
   useUpdatePoolRequest, 
@@ -34,6 +41,9 @@ import {
   getProgressStatusStyle,
   getStatusFromProgress,
 } from '@/lib/pool-request-lifecycle';
+import { PoolRequestOverrideDialog } from '@/components/admin/PoolRequestOverrideDialog';
+import { PoolRequestAuditHistory } from '@/components/admin/PoolRequestAuditHistory';
+import { PoolRequestAdminOverrideBadge } from '@/components/admin/PoolRequestAdminOverrideBadge';
 import { 
   Clock, 
   Target, 
@@ -49,7 +59,11 @@ import {
   Filter,
   Award,
   Wand2,
-  TrendingUp
+  TrendingUp,
+  ShieldAlert,
+  MoreVertical,
+  Edit,
+  History
 } from 'lucide-react';
 
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
@@ -145,6 +159,12 @@ export default function PoolMatching() {
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
   const [showOnlyMatching, setShowOnlyMatching] = useState(false);
+  const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [overrideDialog, setOverrideDialog] = useState<{ 
+    open: boolean; 
+    request: PoolRequest | null;
+    mode: 'edit' | 'status';
+  }>({ open: false, request: null, mode: 'edit' });
 
   const { data: requests, isLoading: requestsLoading } = usePoolRequests();
   const { data: batches, isLoading: batchesLoading } = useAvailableBatchesForMatching();
@@ -412,8 +432,54 @@ export default function PoolMatching() {
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-foreground">{request.request_number}</span>
-                        {getStatusBadge(request.status)}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">{request.request_number}</span>
+                          {(request as any).admin_modified && (
+                            <PoolRequestAdminOverrideBadge
+                              isModified={true}
+                              modifiedBy={(request as any).admin_modified_by}
+                              modifiedAt={(request as any).admin_modified_at}
+                              reason={(request as any).admin_modification_reason}
+                              size="sm"
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {getStatusBadge(request.status)}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={() => setOverrideDialog({ 
+                                open: true, 
+                                request, 
+                                mode: 'edit' 
+                              })}>
+                                <Edit className="h-3 w-3 mr-2" />
+                                Override: Edit Fields
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setOverrideDialog({ 
+                                open: true, 
+                                request, 
+                                mode: 'status' 
+                              })}>
+                                <ShieldAlert className="h-3 w-3 mr-2" />
+                                Override: Change Status
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => {
+                                setActiveRequestId(request.id);
+                                setShowAuditHistory(true);
+                              }}>
+                                <History className="h-3 w-3 mr-2" />
+                                View Audit History
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <p><span className="text-foreground">{request.mpk_name}</span> · {request.target_week}</p>
@@ -833,7 +899,32 @@ export default function PoolMatching() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Audit History Side Panel */}
+        {showAuditHistory && activeRequestId && (
+          <div className="lg:col-span-3">
+            <div className="sticky top-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium">Audit History</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowAuditHistory(false)}>
+                  Close
+                </Button>
+              </div>
+              <PoolRequestAuditHistory requestId={activeRequestId} compact />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Admin Override Dialog */}
+      {overrideDialog.request && (
+        <PoolRequestOverrideDialog
+          open={overrideDialog.open}
+          onOpenChange={(open) => setOverrideDialog({ ...overrideDialog, open })}
+          request={overrideDialog.request}
+          mode={overrideDialog.mode}
+        />
+      )}
     </MainLayout>
   );
 }
