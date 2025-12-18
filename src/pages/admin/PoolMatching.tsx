@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import { 
   Select, 
   SelectContent, 
@@ -28,6 +29,12 @@ import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
 import { PremiumBadge } from '@/components/premium';
 import { checkBatchMatch, formatCriteriaDisplay, type MatchLevel } from '@/lib/livestock-criteria';
 import { 
+  calculateMatchingProgress,
+  getMatchingProgressStatus,
+  getProgressStatusStyle,
+  getStatusFromProgress,
+} from '@/lib/pool-request-lifecycle';
+import { 
   Clock, 
   Target, 
   CheckCircle2, 
@@ -41,7 +48,8 @@ import {
   Loader2,
   Filter,
   Award,
-  Wand2
+  Wand2,
+  TrendingUp
 } from 'lucide-react';
 
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
@@ -304,9 +312,10 @@ export default function PoolMatching() {
 
     await createMatch.mutateAsync(matches);
     
-    // Update the request's matched volume
+    // Calculate new progress and determine appropriate status
     const newMatchedVolume = activeRequest.matched_volume + selectedHeads;
-    const newStatus: PoolRequestStatus = newMatchedVolume >= activeRequest.required_volume ? 'fulfilled' : 'partial';
+    const newProgress = calculateMatchingProgress(activeRequest.required_volume, newMatchedVolume);
+    const newStatus = getStatusFromProgress(newProgress);
     
     await updateRequest.mutateAsync({
       id: activeRequest.id,
@@ -385,7 +394,9 @@ export default function PoolMatching() {
                 </div>
               ) : (
                 requests?.map(request => {
-                  const fillRate = Math.round((request.matched_volume / request.required_volume) * 100);
+                  const progress = calculateMatchingProgress(request.required_volume, request.matched_volume);
+                  const progressStatus = getMatchingProgressStatus(progress);
+                  const statusStyle = getProgressStatusStyle(progressStatus);
                   const isActive = request.id === activeRequestId;
                   const reqCriteria = getAcceptanceCriteria(request);
                   const hasCrit = formatCriteriaDisplay(reqCriteria).length > 0;
@@ -415,21 +426,33 @@ export default function PoolMatching() {
                           <span className="text-xs text-muted-foreground">Has acceptance criteria</span>
                         </div>
                       )}
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-muted-foreground">Fill Rate</span>
-                          <span className={fillRate >= 80 ? 'text-status-confirmed' : fillRate >= 50 ? 'text-status-soft' : 'text-status-forecast'}>
-                            {fillRate}%
+                      
+                      {/* Enhanced Progress Display */}
+                      <div className="mt-3 pt-2 border-t border-border/50">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            {progressStatus === 'fulfilled' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                            {progressStatus === 'near-complete' && <TrendingUp className="w-3 h-3 text-blue-600" />}
+                            {progressStatus === 'partial' && <Clock className="w-3 h-3 text-amber-600" />}
+                            {progressStatus === 'at-risk' && <AlertTriangle className="w-3 h-3 text-orange-600" />}
+                            {progressStatus === 'not-started' && <Target className="w-3 h-3 text-muted-foreground" />}
+                            <span className="text-xs text-muted-foreground">
+                              {progress.matchedVolume} / {progress.requestedVolume}
+                            </span>
+                          </div>
+                          <span className={`text-xs font-semibold ${statusStyle.textClass}`}>
+                            {progress.fillPercentage}%
                           </span>
                         </div>
-                        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all ${
-                              fillRate >= 80 ? 'bg-status-confirmed' : fillRate >= 50 ? 'bg-status-soft' : 'bg-status-forecast'
-                            }`}
-                            style={{ width: `${fillRate}%` }}
-                          />
-                        </div>
+                        <Progress 
+                          value={progress.fillPercentage} 
+                          className={`h-1.5 ${statusStyle.progressClass}`}
+                        />
+                        {progress.remainingVolume > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {progress.remainingVolume} heads remaining
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -634,56 +657,108 @@ export default function PoolMatching() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Pool Health Status */}
-                  <div className="p-4 bg-secondary/50 rounded-lg">
-                    {selectedHeads > 0 ? getPoolHealthIndicator(getPoolHealth()) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Target className="w-5 h-5" />
-                        <span className="font-medium">No Selection</span>
-                      </div>
-                    )}
-                  </div>
+                  {/* Current Status */}
+                  {(() => {
+                    const currentProgress = calculateMatchingProgress(
+                      activeRequest.required_volume, 
+                      activeRequest.matched_volume, 
+                      selectedHeads
+                    );
+                    const currentStatus = getMatchingProgressStatus(currentProgress);
+                    const currentStyle = getProgressStatusStyle(currentStatus);
+                    
+                    return (
+                      <>
+                        {/* Status Indicator */}
+                        <div className={`p-4 rounded-lg border ${currentStyle.badgeClass}`}>
+                          <div className="flex items-center gap-2">
+                            {currentStatus === 'fulfilled' && <CheckCircle2 className="w-5 h-5" />}
+                            {currentStatus === 'near-complete' && <TrendingUp className="w-5 h-5" />}
+                            {currentStatus === 'partial' && <Clock className="w-5 h-5" />}
+                            {currentStatus === 'at-risk' && <AlertTriangle className="w-5 h-5" />}
+                            {currentStatus === 'not-started' && <Target className="w-5 h-5" />}
+                            <div>
+                              <span className="font-medium">
+                                {currentStatus === 'fulfilled' && 'Fulfilled'}
+                                {currentStatus === 'near-complete' && 'Near Complete'}
+                                {currentStatus === 'partial' && 'Partial Fill'}
+                                {currentStatus === 'at-risk' && 'At Risk'}
+                                {currentStatus === 'not-started' && 'Not Started'}
+                              </span>
+                              <p className="text-xs opacity-80">
+                                {currentProgress.fillPercentage}% matched
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
-                  {/* Volume Summary */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Target Volume</span>
-                      <span className="text-sm font-medium text-foreground">{activeRequest.required_volume} heads</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Previously Matched</span>
-                      <span className="text-sm text-foreground">{activeRequest.matched_volume} heads</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Selected</span>
-                      <span className="text-sm font-medium text-primary">+{selectedHeads} heads</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Remaining</span>
-                      <span className={`text-sm font-medium ${remainingVolume === 0 ? 'text-status-confirmed' : 'text-foreground'}`}>
-                        {remainingVolume} heads
-                      </span>
-                    </div>
-                  </div>
+                        {/* Volume Metrics Grid */}
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-3 bg-muted/50 rounded-lg">
+                            <p className="text-lg font-semibold text-foreground">
+                              {activeRequest.required_volume}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Requested</p>
+                          </div>
+                          <div className={`p-3 rounded-lg ${currentStyle.badgeClass}`}>
+                            <p className="text-lg font-semibold">
+                              {activeRequest.matched_volume}
+                            </p>
+                            <p className="text-xs opacity-80">Matched</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg">
+                            <p className={`text-lg font-semibold ${remainingVolume === 0 ? 'text-emerald-600' : 'text-foreground'}`}>
+                              {remainingVolume}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Remaining</p>
+                          </div>
+                        </div>
 
-                  {/* Fill Progress */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Fill Progress</span>
-                      <span className={fillPercentage >= 100 ? 'text-status-confirmed' : 'text-foreground'}>
-                        {Math.round(fillPercentage)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all ${
-                          fillPercentage >= 100 ? 'bg-status-confirmed' : fillPercentage >= 50 ? 'bg-status-soft' : 'bg-status-forecast'
-                        }`}
-                        style={{ width: `${fillPercentage}%` }}
-                      />
-                    </div>
-                  </div>
+                        {/* Fill Progress Bar */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Fill Progress</span>
+                            <span className={currentStyle.textClass}>
+                              {currentProgress.fillPercentage}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={currentProgress.fillPercentage} 
+                            className={`h-2.5 ${currentStyle.progressClass}`}
+                          />
+                        </div>
+
+                        {/* Selection Preview */}
+                        {selectedHeads > 0 && (
+                          <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
+                            <p className="text-xs font-medium text-primary">With Current Selection</p>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Adding</span>
+                              <span className="font-medium text-primary">+{selectedHeads} heads</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">New Total</span>
+                              <span className="font-medium">{totalMatchedVolume} heads</span>
+                            </div>
+                            <Progress 
+                              value={currentProgress.projectedFillPercentage} 
+                              className={`h-2 ${
+                                currentProgress.projectedFillPercentage >= 100 
+                                  ? '[&>div]:bg-emerald-500' 
+                                  : '[&>div]:bg-primary'
+                              }`}
+                            />
+                            <p className="text-xs text-right text-muted-foreground">
+                              Projected: {currentProgress.projectedFillPercentage}%
+                              {currentProgress.projectedFillPercentage >= 100 && (
+                                <span className="ml-1 text-emerald-600">✓ Will fulfill</span>
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {/* Readiness Mix */}
                   {selectedHeads > 0 && (
