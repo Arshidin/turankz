@@ -329,9 +329,9 @@ export function printSettlementPDF(
             <th>Grade</th>
             <th class="text-right">Heads</th>
             <th class="text-right">Est. kg</th>
-            <th class="text-right">Base (₸/kg)</th>
+            <th class="text-right">Reference (₸/kg)</th>
             <th class="text-right">Premiums (₸/kg)</th>
-            <th class="text-right">Final (₸/kg)</th>
+            <th class="text-right">Indicative (₸/kg)</th>
             <th class="text-right">Amount (₸)</th>
           </tr>
         </thead>
@@ -368,10 +368,10 @@ export function printSettlementPDF(
       </table>
 
       <div style="margin-top: 30px; padding: 16px; background: #f0f9f4; border-radius: 6px;">
-        <h3 style="font-size: 12px; color: #0f4c3a; margin-bottom: 10px;">Payment Breakdown</h3>
+        <h3 style="font-size: 12px; color: #0f4c3a; margin-bottom: 10px;">Indicative Settlement Breakdown</h3>
         <table style="margin: 0; border: none;">
           <tr style="background: transparent;">
-            <td style="border: none; padding: 4px 0;">Base Amount (${summary.totalEstimatedKg.toLocaleString()} kg)</td>
+            <td style="border: none; padding: 4px 0;">Reference Amount (${summary.totalEstimatedKg.toLocaleString()} kg)</td>
             <td style="border: none; padding: 4px 0; text-align: right;">${formatCurrency(summary.totalBaseAmount)}</td>
           </tr>
           <tr style="background: transparent;">
@@ -379,10 +379,14 @@ export function printSettlementPDF(
             <td style="border: none; padding: 4px 0; text-align: right; color: #166534;">${formatCurrency(summary.totalPremiumAmount)}</td>
           </tr>
           <tr style="background: transparent; font-size: 14px; font-weight: 600;">
-            <td style="border: none; border-top: 2px solid #0f4c3a; padding: 8px 0;">Total Payable Amount</td>
+            <td style="border: none; border-top: 2px solid #0f4c3a; padding: 8px 0;">Total Indicative Amount</td>
             <td style="border: none; border-top: 2px solid #0f4c3a; padding: 8px 0; text-align: right;">${formatCurrency(summary.totalAmount)}</td>
           </tr>
         </table>
+      </div>
+
+      <div style="margin-top: 20px; padding: 12px; background: #fffbeb; border: 1px solid #fbbf24; border-radius: 6px; font-size: 10px; color: #92400e;">
+        <strong>Important Notice:</strong> Reference prices are indicative market benchmarks. Final settlement prices are determined at delivery based on market conditions. TURAN does not set, enforce, or guarantee transaction prices. Participation is voluntary.
       </div>
 
       <div class="signature-section">

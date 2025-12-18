@@ -97,11 +97,11 @@ function usePriceGridVersions() {
 }
 
 const ACTION_TYPE_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-  version_created: { label: 'Version Created', variant: 'default' },
-  version_activated: { label: 'Version Activated', variant: 'default' },
-  version_duplicated: { label: 'Version Duplicated', variant: 'secondary' },
-  cell_updated: { label: 'Cell Updated', variant: 'secondary' },
-  cell_deleted: { label: 'Cell Deleted', variant: 'outline' },
+  version_created: { label: 'Reference Grid Created', variant: 'default' },
+  version_activated: { label: 'Reference Grid Activated', variant: 'default' },
+  version_duplicated: { label: 'Reference Grid Duplicated', variant: 'secondary' },
+  cell_updated: { label: 'Reference Cell Updated', variant: 'secondary' },
+  cell_deleted: { label: 'Reference Cell Deleted', variant: 'outline' },
 };
 
 export function PricingGovernanceAudit() {
@@ -143,10 +143,10 @@ export function PricingGovernanceAudit() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5" />
-          Pricing Governance Audit
+          Reference Pricing Governance Audit
         </CardTitle>
         <CardDescription>
-          Complete audit trail of all pricing and premium changes
+          Complete audit trail of all reference pricing and premium changes. All prices are indicative market benchmarks.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -158,7 +158,7 @@ export function PricingGovernanceAudit() {
             </TabsTrigger>
             <TabsTrigger value="price-grid" className="gap-2">
               <Grid3X3 className="h-4 w-4" />
-              Price Grid
+              Reference Grid
             </TabsTrigger>
             <TabsTrigger value="premiums" className="gap-2">
               <Award className="h-4 w-4" />
@@ -193,7 +193,7 @@ export function PricingGovernanceAudit() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={log.source === 'price_grid' ? 'default' : 'secondary'} className="text-xs">
-                          {log.source === 'price_grid' ? 'Price Grid' : 'Premium'}
+                          {log.source === 'price_grid' ? 'Reference Grid' : 'Premium'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -232,7 +232,7 @@ export function PricingGovernanceAudit() {
               <Skeleton className="h-48" />
             ) : !priceGridLogs?.length ? (
               <p className="text-center py-8 text-muted-foreground text-sm">
-                No price grid changes recorded yet
+                No reference grid changes recorded yet
               </p>
             ) : (
               <Table>
