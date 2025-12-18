@@ -53,6 +53,7 @@ export const ru = {
     watchlist: 'Отслеживание',
     purchasePoolRequests: 'Заявки на закупку',
     poolMatching: 'Сопоставление пулов',
+    offtakeRegistry: 'Реестр офтейков',
     farmerManagement: 'Управление фермерами',
     mpkManagement: 'Управление МПК',
     premiumManagement: 'Управление премиями',

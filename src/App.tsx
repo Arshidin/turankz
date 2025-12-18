@@ -20,6 +20,7 @@ import FarmersManagement from "./pages/admin/FarmersManagement";
 import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
 import PoolMatching from "./pages/admin/PoolMatching";
+import OfftakeRegistry from "./pages/admin/OfftakeRegistry";
 import ActivityLog from "./pages/admin/ActivityLog";
 import PremiumManagement from "./pages/admin/PremiumManagement";
 import PriceGrid from "./pages/PriceGrid";
@@ -120,6 +121,11 @@ const App = () => (
               <Route path="/admin/matching" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <PoolMatching />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/offtake" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <OfftakeRegistry />
                 </ProtectedRoute>
               } />
               <Route path="/admin/premiums" element={
