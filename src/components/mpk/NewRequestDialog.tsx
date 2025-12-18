@@ -38,6 +38,7 @@ import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE, type Acce
 import { canSubmitPoolRequest } from '@/lib/pool-request-lifecycle';
 import { calculateCountdown } from '@/lib/matching-window';
 import { format, parseISO } from 'date-fns';
+import { DeliveryPeriodSelect, type DeliveryPeriod } from '@/components/shared/DeliveryPeriodSelect';
 
 const REGIONS = [
   'Almaty',
@@ -77,6 +78,7 @@ const formSchema = z.object({
   required_grade: z.string().min(1, 'Grade is required'),
   regions: z.array(z.string()).min(1, 'Select at least one region'),
   target_week: z.string().min(1, 'Target week is required'),
+  target_delivery_period: z.enum(['short_term', 'mid_term', 'long_term']).default('short_term'),
   notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
   // Acceptance criteria
   accepted_breeds: z.array(z.string()),
@@ -115,6 +117,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
       required_grade: '',
       regions: [],
       target_week: matchingWindow?.target_week || '',
+      target_delivery_period: 'short_term' as DeliveryPeriod,
       notes: '',
       accepted_breeds: defaultCriteria?.accepted_breeds || [],
       accepted_genders: defaultCriteria?.accepted_genders || [],
@@ -145,6 +148,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
       required_grade: data.required_grade,
       regions: data.regions,
       target_week: data.target_week,
+      target_delivery_period: data.target_delivery_period,
       notes: data.notes || null,
       // Acceptance criteria
       accepted_breeds: data.accepted_breeds,
@@ -269,6 +273,18 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="target_delivery_period"
+              render={({ field }) => (
+                <DeliveryPeriodSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  description="Your target capacity planning horizon"
+                />
               )}
             />
 

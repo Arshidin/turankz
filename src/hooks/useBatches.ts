@@ -23,6 +23,7 @@ export interface Batch {
   region: string;
   status: BatchStatus;
   target_week: string;
+  delivery_period: 'short_term' | 'mid_term' | 'long_term' | null;
   notes: string | null;
   mpk_interest: string | null;
   requires_action: boolean;
