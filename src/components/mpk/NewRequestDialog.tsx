@@ -33,7 +33,8 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCreatePoolRequest } from '@/hooks/usePoolRequests';
 import { useCurrentMatchingWindow } from '@/hooks/useMatchingWindows';
-import { Loader2, Info, AlertTriangle, Clock } from 'lucide-react';
+import { useCanCreateRequests } from '@/hooks/useCurrentMpk';
+import { Loader2, Info, AlertTriangle, Clock, Ban } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE, type AcceptanceCriteria } from '@/lib/livestock-criteria';
 import { canSubmitPoolRequest } from '@/lib/pool-request-lifecycle';
 import { calculateCountdown } from '@/lib/matching-window';
@@ -102,6 +103,7 @@ interface NewRequestDialogProps {
 export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCriteria }: NewRequestDialogProps) {
   const createRequest = useCreatePoolRequest();
   const { data: matchingWindow } = useCurrentMatchingWindow();
+  const canCreateRequests = useCanCreateRequests();
   const weekOptions = getTargetWeekOptions();
   
   // Check submission validation based on matching window
@@ -109,6 +111,9 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
   const countdown = matchingWindow?.lock_date 
     ? calculateCountdown(matchingWindow.lock_date) 
     : null;
+  
+  // Combined can submit check (window validation + MPK restriction)
+  const canSubmit = submissionValidation.canSubmit && canCreateRequests;
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -137,7 +142,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
 
   const onSubmit = async (data: FormData) => {
     // Double-check submission is still allowed
-    if (!submissionValidation.canSubmit) {
+    if (!canSubmit) {
       return;
     }
     
@@ -177,15 +182,25 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
           </DialogDescription>
         </DialogHeader>
 
+        {/* MPK Restriction Alert */}
+        {!canCreateRequests && (
+          <Alert variant="destructive">
+            <Ban className="h-4 w-4" />
+            <AlertDescription>
+              Your account is currently restricted from creating new requests. Contact admin for assistance.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Submission Status Alert */}
-        {!submissionValidation.canSubmit ? (
+        {canCreateRequests && !submissionValidation.canSubmit ? (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               {submissionValidation.reason}
             </AlertDescription>
           </Alert>
-        ) : countdown && !countdown.isExpired && (
+        ) : canCreateRequests && countdown && !countdown.isExpired && (
           <Alert className={countdown.days === 0 ? 'border-amber-500/50 bg-amber-500/5' : ''}>
             <Clock className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
@@ -551,10 +566,10 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
               </Button>
               <Button 
                 type="submit" 
-                disabled={createRequest.isPending || !submissionValidation.canSubmit}
+                disabled={createRequest.isPending || !canSubmit}
               >
                 {createRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {submissionValidation.canSubmit ? 'Create Request' : 'Submissions Closed'}
+                {!canCreateRequests ? 'Account Restricted' : (submissionValidation.canSubmit ? 'Create Request' : 'Submissions Closed')}
               </Button>
             </div>
           </form>
