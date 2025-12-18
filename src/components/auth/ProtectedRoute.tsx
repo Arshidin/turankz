@@ -49,9 +49,13 @@ export function ProtectedRoute({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Check if user is pending registration (for non-admin roles)
+  // If registration is still pending, allow read-only routes (dashboard + price grid)
+  // and redirect everything else to the Pending page.
   if (role !== 'admin' && registrationStatus === 'pending') {
-    return <Navigate to="/pending" replace />;
+    const readOnlyAllowedPaths = new Set<string>(['/', '/price-grid', '/pending']);
+    if (!readOnlyAllowedPaths.has(location.pathname)) {
+      return <Navigate to="/pending" replace />;
+    }
   }
 
   // Check role authorization
