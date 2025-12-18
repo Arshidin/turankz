@@ -25,6 +25,17 @@ export type PoolRequestLifecycleStatus =
   | 'closed'
   | 'cancelled';
 
+// All possible statuses as an array for iteration
+export const POOL_REQUEST_STATUSES: PoolRequestLifecycleStatus[] = [
+  'draft',
+  'submitted', 
+  'matching',
+  'partial',
+  'fulfilled',
+  'closed',
+  'cancelled',
+];
+
 // Role types that can perform transitions
 export type PoolRequestRole = 'mpk' | 'admin';
 
