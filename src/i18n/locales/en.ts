@@ -59,6 +59,7 @@ export const en = {
     premiumManagement: 'Premium Management',
     priceGridManagement: 'Reference Price Grid Management',
     activityLog: 'Activity Log',
+    executions: 'Contracts & Execution',
   },
   
   roles: {

@@ -189,6 +189,56 @@ export type Database = {
         }
         Relationships: []
       }
+      execution_activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          execution_id: string
+          id: string
+          metadata: Json | null
+          new_status: Database["public"]["Enums"]["execution_status"] | null
+          notes: string | null
+          performed_by: string
+          previous_status:
+            | Database["public"]["Enums"]["execution_status"]
+            | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          execution_id: string
+          id?: string
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["execution_status"] | null
+          notes?: string | null
+          performed_by: string
+          previous_status?:
+            | Database["public"]["Enums"]["execution_status"]
+            | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          execution_id?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["execution_status"] | null
+          notes?: string | null
+          performed_by?: string
+          previous_status?:
+            | Database["public"]["Enums"]["execution_status"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_activity_log_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "offtake_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farmer_activity_log: {
         Row: {
           action_type: string
@@ -569,6 +619,139 @@ export type Database = {
           user_role?: string
         }
         Relationships: []
+      }
+      offtake_executions: {
+        Row: {
+          actual_delivery_date: string | null
+          admin_compliance_notes: string | null
+          admin_confirmed_at: string | null
+          admin_confirmed_by: string | null
+          batch_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closure_notes: string | null
+          created_at: string
+          delivered_volume: number | null
+          delivery_condition: string | null
+          delivery_location: string | null
+          delivery_period: Database["public"]["Enums"]["delivery_period"]
+          expected_delivery_end: string | null
+          expected_delivery_start: string | null
+          id: string
+          match_id: string
+          matched_volume: number
+          mpk_confirmed_at: string | null
+          mpk_confirmed_by: string | null
+          mpk_delivery_notes: string | null
+          pricing_formula_reference: string | null
+          reference_price_at_match: number | null
+          request_id: string
+          scheduled_at: string | null
+          scheduled_by: string | null
+          scheduling_notes: string | null
+          settlement_calculated_at: string | null
+          settlement_indicative_total: number | null
+          settlement_notes: string | null
+          settlement_premiums_applied: number | null
+          settlement_reference_price: number | null
+          status: Database["public"]["Enums"]["execution_status"]
+          updated_at: string
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          admin_compliance_notes?: string | null
+          admin_confirmed_at?: string | null
+          admin_confirmed_by?: string | null
+          batch_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_notes?: string | null
+          created_at?: string
+          delivered_volume?: number | null
+          delivery_condition?: string | null
+          delivery_location?: string | null
+          delivery_period?: Database["public"]["Enums"]["delivery_period"]
+          expected_delivery_end?: string | null
+          expected_delivery_start?: string | null
+          id?: string
+          match_id: string
+          matched_volume: number
+          mpk_confirmed_at?: string | null
+          mpk_confirmed_by?: string | null
+          mpk_delivery_notes?: string | null
+          pricing_formula_reference?: string | null
+          reference_price_at_match?: number | null
+          request_id: string
+          scheduled_at?: string | null
+          scheduled_by?: string | null
+          scheduling_notes?: string | null
+          settlement_calculated_at?: string | null
+          settlement_indicative_total?: number | null
+          settlement_notes?: string | null
+          settlement_premiums_applied?: number | null
+          settlement_reference_price?: number | null
+          status?: Database["public"]["Enums"]["execution_status"]
+          updated_at?: string
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          admin_compliance_notes?: string | null
+          admin_confirmed_at?: string | null
+          admin_confirmed_by?: string | null
+          batch_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_notes?: string | null
+          created_at?: string
+          delivered_volume?: number | null
+          delivery_condition?: string | null
+          delivery_location?: string | null
+          delivery_period?: Database["public"]["Enums"]["delivery_period"]
+          expected_delivery_end?: string | null
+          expected_delivery_start?: string | null
+          id?: string
+          match_id?: string
+          matched_volume?: number
+          mpk_confirmed_at?: string | null
+          mpk_confirmed_by?: string | null
+          mpk_delivery_notes?: string | null
+          pricing_formula_reference?: string | null
+          reference_price_at_match?: number | null
+          request_id?: string
+          scheduled_at?: string | null
+          scheduled_by?: string | null
+          scheduling_notes?: string | null
+          settlement_calculated_at?: string | null
+          settlement_indicative_total?: number | null
+          settlement_notes?: string | null
+          settlement_premiums_applied?: number | null
+          settlement_reference_price?: number | null
+          status?: Database["public"]["Enums"]["execution_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offtake_executions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offtake_executions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "pool_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offtake_executions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_pool_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pool_matches: {
         Row: {
@@ -1106,6 +1289,13 @@ export type Database = {
         | "closed"
         | "delivered"
       delivery_period: "short_term" | "mid_term" | "long_term"
+      execution_status:
+        | "matched"
+        | "scheduled"
+        | "delivered"
+        | "confirmed"
+        | "settled"
+        | "closed"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
       matching_status: "active" | "finalized" | "cancelled"
@@ -1289,6 +1479,14 @@ export const Constants = {
         "delivered",
       ],
       delivery_period: ["short_term", "mid_term", "long_term"],
+      execution_status: [
+        "matched",
+        "scheduled",
+        "delivered",
+        "confirmed",
+        "settled",
+        "closed",
+      ],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
       matching_status: ["active", "finalized", "cancelled"],
