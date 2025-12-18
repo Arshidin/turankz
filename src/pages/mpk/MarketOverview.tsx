@@ -15,10 +15,8 @@ import { type Batch, type BatchStatus } from '@/hooks/useBatches';
 import { format, parseISO } from 'date-fns';
 
 // Map database status to display status
-const mapStatus = (status: BatchStatus): 'forecast' | 'soft-committed' | 'confirmed' => {
-  if (status === 'soft_committed') return 'soft-committed';
-  if (status === 'confirmed' || status === 'delivered') return 'confirmed';
-  return 'forecast';
+const mapStatus = (status: BatchStatus): BatchStatus => {
+  return status;
 };
 
 const statusDescriptions = {

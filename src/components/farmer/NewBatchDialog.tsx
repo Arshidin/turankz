@@ -128,10 +128,11 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
       grade: data.grade,
       target_week: data.target_week,
       notes: data.notes || null,
-      status: 'forecast' as const,
+      status: 'draft' as const, // New batches start as draft
       requires_action: false,
       action_type: null,
       mpk_interest: null,
+      standard_status: 'non_standard',
       // Livestock criteria
       breed: data.breed || null,
       gender: data.gender || null,
@@ -156,7 +157,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
           <DialogTitle>Declare New Batch</DialogTitle>
           <DialogDescription>
             Add a new livestock batch to signal availability for pool matching.
-            New batches start as Forecast status.
+            New batches start as Draft status — publish to market when ready.
           </DialogDescription>
         </DialogHeader>
 

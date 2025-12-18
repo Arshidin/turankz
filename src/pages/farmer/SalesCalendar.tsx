@@ -42,10 +42,8 @@ import {
 import { toast } from '@/hooks/use-toast';
 
 // Map database status to display status
-const mapStatus = (status: BatchStatus): 'forecast' | 'soft-committed' | 'confirmed' => {
-  if (status === 'soft_committed') return 'soft-committed';
-  if (status === 'confirmed' || status === 'delivered') return 'confirmed';
-  return 'forecast';
+const mapStatus = (status: BatchStatus): BatchStatus => {
+  return status;
 };
 
 // Parse target week to get approximate month
@@ -117,9 +115,9 @@ export default function SalesCalendar() {
         return isSameMonth(batchMonth, month);
       });
 
-      const forecast = monthBatches.filter(b => b.status === 'forecast');
+      const forecast = monthBatches.filter(b => b.status === 'forecast' || b.status === 'draft');
       const softCommitted = monthBatches.filter(b => b.status === 'soft_committed');
-      const confirmed = monthBatches.filter(b => b.status === 'confirmed' || b.status === 'delivered');
+      const confirmed = monthBatches.filter(b => b.status === 'confirmed' || b.status === 'matched' || b.status === 'closed');
 
       return {
         month,

@@ -39,10 +39,8 @@ import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
 import { toast } from '@/hooks/use-toast';
 
 // Map database status to StatusBadge status
-const mapStatus = (status: BatchStatus): 'forecast' | 'soft-committed' | 'confirmed' => {
-  if (status === 'soft_committed') return 'soft-committed';
-  if (status === 'confirmed' || status === 'delivered') return 'confirmed';
-  return 'forecast';
+const mapStatus = (status: BatchStatus): BatchStatus => {
+  return status;
 };
 
 // Check if batch needs attention (not updated in 14+ days)
@@ -52,7 +50,7 @@ const isStale = (updatedAt: string): boolean => {
 
 // Check if batch is approaching target week without confirmation
 const isApproachingDeadline = (targetWeek: string, status: BatchStatus): boolean => {
-  if (status === 'confirmed' || status === 'delivered') return false;
+  if (status === 'confirmed' || status === 'matched' || status === 'closed') return false;
   // Simple check - if target week contains current or next month
   const currentMonth = new Date().getMonth();
   const targetMonth = parseInt(targetWeek.split('-')[1] || '0', 10) - 1;

@@ -1,23 +1,41 @@
 import { cn } from '@/lib/utils';
+import { 
+  type BatchLifecycleStatus, 
+  BATCH_STATUS_LABELS, 
+  BATCH_STATUS_LABELS_RU 
+} from '@/lib/batch-lifecycle';
 
 /* ===========================================
-   READINESS STATUS BADGE
+   BATCH LIFECYCLE STATUS BADGE
    Primary status indicator across platform
    =========================================== */
 
 // Accept both database format (underscore) and display format (hyphen)
-export type ReadinessStatus = 'forecast' | 'soft_committed' | 'soft-committed' | 'confirmed' | 'delivered';
+// Also includes legacy 'delivered' for backwards compatibility
+export type ReadinessStatus = BatchLifecycleStatus | 'soft-committed' | 'delivered';
 
-const normalizeStatus = (status: ReadinessStatus): string => {
+const normalizeStatus = (status: ReadinessStatus): BatchLifecycleStatus => {
   // Normalize to underscore format for class lookup
-  return status.replace('-', '_');
+  const normalized = status.replace('-', '_') as string;
+  // Map legacy 'delivered' to 'closed'
+  if (normalized === 'delivered') return 'closed';
+  return normalized as BatchLifecycleStatus;
 };
 
-const readinessLabels: Record<string, string> = {
-  forecast: 'Forecast',
-  soft_committed: 'Soft Committed',
-  confirmed: 'Confirmed',
-  delivered: 'Delivered',
+// Get current language from localStorage or default to 'ru'
+const getCurrentLanguage = (): string => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('i18nextLng') || 'ru';
+  }
+  return 'ru';
+};
+
+const getStatusLabel = (status: BatchLifecycleStatus): string => {
+  const lang = getCurrentLanguage();
+  if (lang === 'ru') {
+    return BATCH_STATUS_LABELS_RU[status] || status;
+  }
+  return BATCH_STATUS_LABELS[status] || status;
 };
 
 interface StatusBadgeProps {
@@ -30,11 +48,13 @@ export function StatusBadge({ status, className, size = 'md' }: StatusBadgeProps
   const normalizedStatus = normalizeStatus(status);
   
   const statusClass = {
+    draft: 'status-draft',
     forecast: 'status-forecast',
     soft_committed: 'status-soft',
     confirmed: 'status-confirmed',
-    delivered: 'status-delivered',
-  }[normalizedStatus] || 'status-forecast';
+    matched: 'status-matched',
+    closed: 'status-closed',
+  }[normalizedStatus] || 'status-draft';
 
   return (
     <span
@@ -45,7 +65,7 @@ export function StatusBadge({ status, className, size = 'md' }: StatusBadgeProps
         className
       )}
     >
-      {readinessLabels[normalizedStatus] || status}
+      {getStatusLabel(normalizedStatus)}
     </span>
   );
 }

@@ -100,18 +100,20 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 // Map database status to StatusBadge status
-const mapStatus = (status: string): 'forecast' | 'soft-committed' | 'confirmed' => {
-  if (status === 'soft_committed') return 'soft-committed';
-  if (status === 'confirmed' || status === 'delivered') return 'confirmed';
-  return 'forecast';
+const mapStatus = (status: string): BatchStatus => {
+  if (status === 'soft_committed') return 'soft_committed';
+  if (status === 'delivered') return 'closed'; // legacy mapping
+  return status as BatchStatus;
 };
 
 const getStatusLabel = (status: BatchStatus): string => {
   switch (status) {
+    case 'draft': return 'Draft';
     case 'forecast': return 'Forecast';
     case 'soft_committed': return 'Soft Committed';
     case 'confirmed': return 'Confirmed';
-    case 'delivered': return 'Delivered';
+    case 'matched': return 'Matched';
+    case 'closed': return 'Closed';
     default: return status;
   }
 };
