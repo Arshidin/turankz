@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'admin' | 'farmer' | 'mpk';
 
@@ -18,21 +18,40 @@ const roleNames: Record<UserRole, string> = {
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const { role: authRole, isLoading } = useAuthContext();
   const [role, setRole] = useState<UserRole>('farmer');
 
-  // Keep UI role in sync with authenticated role from backend
+  // Sync role from database on mount and when auth state changes
   useEffect(() => {
-    if (authRole) {
-      setRole(authRole);
-      return;
-    }
+    const fetchRole = async (userId: string) => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (data?.role) {
+        setRole(data.role as UserRole);
+      }
+    };
 
-    // Once auth has finished loading and there is no authenticated role, reset to default.
-    if (!isLoading) {
-      setRole('farmer');
-    }
-  }, [authRole, isLoading]);
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchRole(session.user.id);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        fetchRole(session.user.id);
+      } else {
+        setRole('farmer');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <RoleContext.Provider value={{ role, setRole, roleName: roleNames[role] }}>
