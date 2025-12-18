@@ -724,7 +724,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      aggregated_demand: {
+        Row: {
+          age_max: number | null
+          age_min: number | null
+          regions: string[] | null
+          request_count: number | null
+          required_grade: string | null
+          target_week: string | null
+          total_matched: number | null
+          total_volume: number | null
+          weight_max: number | null
+          weight_min: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
