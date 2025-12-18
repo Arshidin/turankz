@@ -3,12 +3,17 @@
  * 
  * Renders navigation based on role AND account status.
  * Components are NOT mounted if access is not allowed.
+ * 
+ * Contracts & Execution visibility:
+ * - Admin: always visible
+ * - Farmer/MPK: only visible if they have at least one execution record
  */
 
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useRole } from '@/contexts/RoleContext';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
+import { useHasExecutions } from '@/hooks/useHasExecutions';
 import { 
   Home, 
   User, 
@@ -25,7 +30,6 @@ import {
   Award,
   ClipboardList,
   CalendarClock,
-  HelpCircle,
   Eye,
   Lock
 } from 'lucide-react';
@@ -40,13 +44,14 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   requiredStatus?: AccountStatus[];
   readOnly?: boolean;
+  requiresExecutions?: boolean;
 }
 
 // FARMER navigation - filtered by account status
 const farmerNavItems: NavItem[] = [
   { labelKey: 'nav.overview', path: '/', icon: Home, requiredStatus: ['observer', 'active'] },
   { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
-  { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'] },
+  { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
   { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
   { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['active'] },
@@ -56,7 +61,7 @@ const farmerNavItems: NavItem[] = [
 const mpkNavItems: NavItem[] = [
   { labelKey: 'nav.marketOverview', path: '/mpk/market', icon: BarChart3, requiredStatus: ['observer', 'active'] },
   { labelKey: 'nav.purchasePoolRequests', path: '/mpk/requests', icon: ShoppingCart, requiredStatus: ['active'] },
-  { labelKey: 'nav.contractsExecution', path: '/mpk/executions', icon: ClipboardList, requiredStatus: ['active'] },
+  { labelKey: 'nav.contractsExecution', path: '/mpk/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
   { labelKey: 'nav.watchlist', path: '/mpk/watchlist', icon: BookmarkCheck, requiredStatus: ['active'] },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
   { labelKey: 'nav.profile', path: '/mpk/profile', icon: User, requiredStatus: ['active'] },
@@ -79,6 +84,7 @@ export function Sidebar() {
   const { t } = useTranslation();
   const { role } = useRole();
   const { accountStatus, isLoading, isObserver, isSuspended } = useAccountStatus();
+  const { data: hasExecutions = false } = useHasExecutions();
   const location = useLocation();
 
   // Get navigation items based on role
@@ -95,17 +101,26 @@ export function Sidebar() {
     }
   };
 
-  // Filter nav items by account status
+  // Filter nav items by account status and execution availability
   const getFilteredNavItems = (): NavItem[] => {
     const items = getNavItems();
     
     // Admin always has full access
     if (role === 'admin') return items;
     
-    // Filter items based on required status
+    // Filter items based on required status and execution availability
     return items.filter(item => {
-      if (!item.requiredStatus) return true;
-      return item.requiredStatus.includes(accountStatus);
+      // Check status requirement
+      if (item.requiredStatus && !item.requiredStatus.includes(accountStatus)) {
+        return false;
+      }
+      
+      // Check execution requirement - only show if user has executions
+      if (item.requiresExecutions && !hasExecutions) {
+        return false;
+      }
+      
+      return true;
     });
   };
 
@@ -164,7 +179,6 @@ export function Sidebar() {
           )}
         </div>
       </div>
-
 
       {/* Suspended Mode Banner */}
       {isSuspended && (
