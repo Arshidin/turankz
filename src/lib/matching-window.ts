@@ -14,6 +14,8 @@ export const MATCHING_WINDOW_STATUSES = [
 
 export type MatchingWindowStatus = typeof MATCHING_WINDOW_STATUSES[number];
 
+export type DeliveryPeriod = 'short_term' | 'mid_term' | 'long_term';
+
 export interface MatchingWindow {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface MatchingWindow {
   close_date: string;
   target_week: string;
   notes: string | null;
+  eligible_delivery_periods?: DeliveryPeriod[] | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

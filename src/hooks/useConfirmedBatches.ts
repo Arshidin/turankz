@@ -19,6 +19,13 @@ export interface ConfirmedBatch {
   weight_max: number | null;
   standard_status: string | null;
   delivery_period: 'short_term' | 'mid_term' | 'long_term' | null;
+  created_at: string;
+  updated_at: string;
+  // Farmer info (admin-only)
+  farmer_name: string | null;
+  farmer_id_display: string | null;
+  farmer_grading: string | null;
+  farmer_reliability: string | null;
   // Calculated fields
   matched_heads: number;
   available_heads: number;
@@ -44,11 +51,30 @@ export function useConfirmedBatches(filters?: ConfirmedBatchFilters) {
       // Fetch confirmed batches
       const { data: batches, error: batchError } = await supabase
         .from('batches')
-        .select('id, batch_number, user_id, heads, grade, region, status, target_week, breed, gender, age_min, age_max, weight_min, weight_max, standard_status, delivery_period')
+        .select('id, batch_number, user_id, heads, grade, region, status, target_week, breed, gender, age_min, age_max, weight_min, weight_max, standard_status, delivery_period, created_at, updated_at')
         .eq('status', 'confirmed')
         .order('batch_number', { ascending: true });
 
       if (batchError) throw batchError;
+
+      // Fetch farmer info for admin view
+      const userIds = [...new Set((batches || []).map(b => b.user_id))];
+      const { data: farmers } = await supabase
+        .from('farmers')
+        .select('user_id, name, farmer_id, grading, reliability')
+        .in('user_id', userIds);
+
+      const farmerByUserId = new Map<string, { name: string; farmer_id: string; grading: string; reliability: string }>();
+      for (const f of farmers || []) {
+        if (f.user_id) {
+          farmerByUserId.set(f.user_id, {
+            name: f.name,
+            farmer_id: f.farmer_id,
+            grading: f.grading,
+            reliability: f.reliability,
+          });
+        }
+      }
 
       // Fetch all active/finalized matchings to calculate used volume
       const { data: matchings, error: matchError } = await supabase
@@ -65,11 +91,16 @@ export function useConfirmedBatches(filters?: ConfirmedBatchFilters) {
         matchedByBatch.set(m.batch_id, current + m.heads_matched);
       }
 
-      // Build result with available volume
+      // Build result with available volume and farmer info
       const result: ConfirmedBatch[] = (batches || []).map(b => {
         const matchedHeads = matchedByBatch.get(b.id) || 0;
+        const farmer = farmerByUserId.get(b.user_id);
         return {
           ...b,
+          farmer_name: farmer?.name || null,
+          farmer_id_display: farmer?.farmer_id || null,
+          farmer_grading: farmer?.grading || null,
+          farmer_reliability: farmer?.reliability || null,
           matched_heads: matchedHeads,
           available_heads: Math.max(0, b.heads - matchedHeads),
         };
