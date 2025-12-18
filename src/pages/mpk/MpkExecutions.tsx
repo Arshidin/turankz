@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useExecutions } from '@/hooks/useExecutions';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { ClipboardList, Calendar, CheckCircle2, Clock, Truck } from 'lucide-react';
+import { useHasExecutions } from '@/hooks/useHasExecutions';
+import { useRole } from '@/contexts/RoleContext';
+import { ClipboardList, Calendar, CheckCircle2, Clock, Truck, GitMerge } from 'lucide-react';
 import { format } from 'date-fns';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; icon: React.ComponentType<{ className?: string }> }> = {
@@ -20,11 +21,31 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 
 export default function MpkExecutions() {
   const { t } = useTranslation();
-  const { user } = useAuthContext();
-  const { data: allExecutions = [], isLoading } = useExecutions();
+  const { role } = useRole();
+  const { data: hasExecutions, isLoading: checkingExecutions } = useHasExecutions();
+  const { data: allExecutions = [], isLoading: loadingExecutions } = useExecutions();
 
-  // For now show all executions - in production filter by MPK's requests
+  const isLoading = checkingExecutions || loadingExecutions;
+
+  // For MPK, show all executions (in production would filter by their requests)
   const mpkExecutions = allExecutions;
+
+  // Route protection: block access if no executions (except admin)
+  if (!isLoading && !hasExecutions && role !== 'admin') {
+    return (
+      <MainLayout>
+        <PageHeader 
+          title={t('nav.contractsExecution')} 
+          description="View your matched contracts and delivery status"
+        />
+        <EmptyState
+          icon={GitMerge}
+          message="Contracts & Execution becomes available after successful matching"
+          helperText="When your purchase requests are matched with farmer batches, your contracts will appear here."
+        />
+      </MainLayout>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -56,8 +77,8 @@ export default function MpkExecutions() {
       {mpkExecutions.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          message="No contracts yet"
-          helperText="When your requests are matched with farmer batches, they will appear here."
+          message="No active contracts"
+          helperText="Your matched contracts will appear here once matching is complete."
         />
       ) : (
         <div className="space-y-4">
