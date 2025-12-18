@@ -298,6 +298,131 @@ export function getTransitionActionLabelRu(toStatus: BatchLifecycleStatus): stri
 }
 
 /**
+ * CONFIRMATION DIALOG CONFIGURATION
+ * Centralized confirmation messages for critical status transitions.
+ */
+export interface TransitionConfirmation {
+  title: string;
+  message: string;
+  warning: string;
+  requiresConfirmation: boolean;
+}
+
+/**
+ * Get confirmation dialog configuration for a transition
+ */
+export function getTransitionConfirmation(
+  fromStatus: BatchLifecycleStatus,
+  toStatus: BatchLifecycleStatus,
+  lang: 'en' | 'ru' = 'en'
+): TransitionConfirmation {
+  // Soft Committed → Confirmed
+  if (fromStatus === 'soft_committed' && toStatus === 'confirmed') {
+    return lang === 'ru' ? {
+      title: 'Подтвердить доступность партии',
+      message: 'Вы принимаете твёрдое обязательство. Данные партии будут заблокированы и недоступны для изменения после этого действия.',
+      warning: 'Это действие необратимо. Убедитесь, что все данные партии корректны перед подтверждением.',
+      requiresConfirmation: true,
+    } : {
+      title: 'Confirm Batch Availability',
+      message: 'You are making a firm commitment. Batch data will be locked and cannot be modified after this action.',
+      warning: 'This action is irreversible. Ensure all batch details are correct before confirming.',
+      requiresConfirmation: true,
+    };
+  }
+
+  // Confirmed → Matched (Admin only)
+  if (fromStatus === 'confirmed' && toStatus === 'matched') {
+    return lang === 'ru' ? {
+      title: 'Отметить партию как сопоставленную',
+      message: 'Партия будет отмечена как сопоставленная с заявкой на покупку.',
+      warning: 'Продолжайте только если партия успешно сопоставлена в системе пула.',
+      requiresConfirmation: true,
+    } : {
+      title: 'Mark Batch as Matched',
+      message: 'This will mark the batch as matched to a purchase pool request.',
+      warning: 'Only proceed if the batch has been successfully matched in the pool system.',
+      requiresConfirmation: true,
+    };
+  }
+
+  // Confirmed → Closed (Admin only)
+  if (fromStatus === 'confirmed' && toStatus === 'closed') {
+    return lang === 'ru' ? {
+      title: 'Закрыть партию',
+      message: 'Партия будет закрыта без сопоставления.',
+      warning: 'Это действие необратимо.',
+      requiresConfirmation: true,
+    } : {
+      title: 'Close Batch',
+      message: 'This will close the batch without matching.',
+      warning: 'This action is irreversible.',
+      requiresConfirmation: true,
+    };
+  }
+
+  // Matched → Closed
+  if (fromStatus === 'matched' && toStatus === 'closed') {
+    return lang === 'ru' ? {
+      title: 'Завершить партию',
+      message: 'Партия будет закрыта после успешного сопоставления.',
+      warning: 'Это действие необратимо.',
+      requiresConfirmation: true,
+    } : {
+      title: 'Complete Batch',
+      message: 'This will close the batch after successful matching.',
+      warning: 'This action is irreversible.',
+      requiresConfirmation: true,
+    };
+  }
+
+  // Forecast → Soft Committed (optional confirmation)
+  if (fromStatus === 'forecast' && toStatus === 'soft_committed') {
+    return lang === 'ru' ? {
+      title: 'Предварительное подтверждение',
+      message: 'Предварительное подтверждение сигнализирует о намерении продать, но не гарантирует включение в пул.',
+      warning: 'Вы сможете вносить изменения, но они будут логироваться.',
+      requiresConfirmation: false,
+    } : {
+      title: 'Soft Commitment',
+      message: 'Soft Commitment signals intent to sell but does not guarantee pool inclusion.',
+      warning: 'You can still make changes, but they will be logged.',
+      requiresConfirmation: false,
+    };
+  }
+
+  // Default: no confirmation required
+  return {
+    title: lang === 'ru' ? 'Изменить статус' : 'Change Status',
+    message: lang === 'ru' ? 'Вы уверены, что хотите изменить статус партии?' : 'Are you sure you want to change the batch status?',
+    warning: '',
+    requiresConfirmation: false,
+  };
+}
+
+/**
+ * Check if a transition requires confirmation dialog
+ */
+export function requiresTransitionConfirmation(
+  fromStatus: BatchLifecycleStatus,
+  toStatus: BatchLifecycleStatus
+): boolean {
+  return getTransitionConfirmation(fromStatus, toStatus).requiresConfirmation;
+}
+
+/**
+ * Get localized confirmation dialog button labels
+ */
+export function getConfirmationDialogLabels(lang: 'en' | 'ru' = 'en'): {
+  cancel: string;
+  confirm: string;
+} {
+  return lang === 'ru' 
+    ? { cancel: 'Отмена', confirm: 'Подтвердить переход' }
+    : { cancel: 'Cancel', confirm: 'Confirm Transition' };
+}
+
+/**
  * Get tooltip message for disabled transition button
  */
 export function getDisabledTransitionTooltip(

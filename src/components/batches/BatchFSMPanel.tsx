@@ -55,6 +55,9 @@ import {
   getLockedFieldTooltip,
   validateTransitionComplete,
   getStatusIndex,
+  getTransitionConfirmation,
+  requiresTransitionConfirmation,
+  getConfirmationDialogLabels,
 } from '@/lib/batch-lifecycle';
 
 interface BatchFSMPanelProps {
@@ -92,6 +95,15 @@ export function BatchFSMPanel({
   // Get all allowed transitions for current user (array-based, no linear assumptions)
   const allowedTransitions = getAllowedTransitions(currentStatus, userRole);
 
+  // Get current language
+  const getCurrentLang = (): 'en' | 'ru' => {
+    if (typeof window !== 'undefined') {
+      const lang = localStorage.getItem('i18nextLng') || 'ru';
+      return lang.startsWith('ru') ? 'ru' : 'en';
+    }
+    return 'ru';
+  };
+
   /**
    * MANDATORY PRE-TRANSITION VALIDATION
    * Re-validates the transition immediately before execution to prevent:
@@ -100,14 +112,16 @@ export function BatchFSMPanel({
    * - Unauthorized transitions
    */
   const executeValidatedTransition = async (toStatus: BatchLifecycleStatus): Promise<boolean> => {
+    const lang = getCurrentLang();
+    
     // Re-run domain validation immediately before mutation
     const validation = validateTransitionComplete(currentStatus, toStatus, userRole);
     
     if (!validation.valid) {
       toast({
         variant: 'destructive',
-        title: 'Transition Blocked',
-        description: validation.error || 'This status transition is not allowed.',
+        title: lang === 'ru' ? 'Переход заблокирован' : 'Transition Blocked',
+        description: validation.error || (lang === 'ru' ? 'Этот переход статуса не разрешён.' : 'This status transition is not allowed.'),
       });
       return false;
     }
@@ -118,8 +132,8 @@ export function BatchFSMPanel({
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Transition Failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
+        title: lang === 'ru' ? 'Ошибка перехода' : 'Transition Failed',
+        description: error instanceof Error ? error.message : (lang === 'ru' ? 'Произошла непредвиденная ошибка.' : 'An unexpected error occurred.'),
       });
       return false;
     }
@@ -127,49 +141,29 @@ export function BatchFSMPanel({
 
   // Handle transition with confirmation for critical ones
   const handleTransitionClick = async (toStatus: BatchLifecycleStatus) => {
+    const lang = getCurrentLang();
+    
     // Pre-validate before showing confirmation dialog
     const preValidation = validateTransitionComplete(currentStatus, toStatus, userRole);
     if (!preValidation.valid) {
       toast({
         variant: 'destructive',
-        title: 'Action Not Allowed',
-        description: preValidation.error || 'This transition is not permitted.',
+        title: lang === 'ru' ? 'Действие запрещено' : 'Action Not Allowed',
+        description: preValidation.error || (lang === 'ru' ? 'Этот переход не разрешён.' : 'This transition is not permitted.'),
       });
       return;
     }
 
-    // Soft Committed → Confirmed requires confirmation
-    if (currentStatus === 'soft_committed' && toStatus === 'confirmed') {
+    // Check if transition requires confirmation (from domain layer)
+    const confirmation = getTransitionConfirmation(currentStatus, toStatus, lang);
+    
+    if (requiresTransitionConfirmation(currentStatus, toStatus)) {
       setConfirmDialog({
         open: true,
         toStatus,
-        title: 'Confirm Batch Availability',
-        message: 'You are making a firm commitment. Batch data will be locked and cannot be modified after this action.',
-        warning: 'This action is irreversible. Ensure all batch details are correct before confirming.',
-      });
-      return;
-    }
-
-    // Confirmed → Matched (Admin only)
-    if (currentStatus === 'confirmed' && toStatus === 'matched') {
-      setConfirmDialog({
-        open: true,
-        toStatus,
-        title: 'Mark Batch as Matched',
-        message: 'This will mark the batch as matched to a purchase pool request.',
-        warning: 'Only proceed if the batch has been successfully matched in the pool system.',
-      });
-      return;
-    }
-
-    // Confirmed → Closed (Admin only)
-    if (currentStatus === 'confirmed' && toStatus === 'closed') {
-      setConfirmDialog({
-        open: true,
-        toStatus,
-        title: 'Close Batch',
-        message: 'This will close the batch without matching.',
-        warning: 'This action is irreversible.',
+        title: confirmation.title,
+        message: confirmation.message,
+        warning: confirmation.warning,
       });
       return;
     }
@@ -447,7 +441,9 @@ export function BatchFSMPanel({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="left" className="max-w-[250px]">
-                        <p className="font-medium text-destructive">Action Unavailable</p>
+                        <p className="font-medium text-destructive">
+                          {getCurrentLang() === 'ru' ? 'Действие недоступно' : 'Action Unavailable'}
+                        </p>
                         <p className="text-xs">{actionStatus.reason}</p>
                       </TooltipContent>
                     </Tooltip>
@@ -490,9 +486,9 @@ export function BatchFSMPanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{getConfirmationDialogLabels(getCurrentLang()).cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmTransition}>
-              Confirm Transition
+              {getConfirmationDialogLabels(getCurrentLang()).confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
