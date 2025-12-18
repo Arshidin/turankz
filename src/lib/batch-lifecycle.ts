@@ -382,3 +382,121 @@ export function validateTransition(
   
   return { valid: true };
 }
+
+/**
+ * GUARDRAIL: Explicitly check for invalid direct transitions
+ * This provides a hard block for transitions that should never happen
+ */
+export function isInvalidDirectTransition(
+  fromStatus: BatchLifecycleStatus,
+  toStatus: BatchLifecycleStatus
+): { invalid: boolean; reason?: string } {
+  // Block: Draft → Confirmed (must go through Forecast and Soft Committed)
+  if (fromStatus === 'draft' && toStatus === 'confirmed') {
+    return { 
+      invalid: true, 
+      reason: 'Cannot confirm directly from Draft. Must progress through Forecast and Soft Committed first.' 
+    };
+  }
+  
+  // Block: Forecast → Confirmed (must go through Soft Committed)
+  if (fromStatus === 'forecast' && toStatus === 'confirmed') {
+    return { 
+      invalid: true, 
+      reason: 'Cannot confirm directly from Forecast. Must Soft Commit first.' 
+    };
+  }
+  
+  // Block: Any status → Draft (no reverting)
+  if (toStatus === 'draft' && fromStatus !== 'draft') {
+    return { 
+      invalid: true, 
+      reason: 'Cannot revert to Draft. Batch lifecycle is irreversible.' 
+    };
+  }
+  
+  // Block: Confirmed/Matched/Closed → Any earlier status
+  if (isBatchReadOnly(fromStatus) && getStatusIndex(toStatus) < getStatusIndex(fromStatus)) {
+    return { 
+      invalid: true, 
+      reason: 'Cannot revert from a locked status. Batch data is final.' 
+    };
+  }
+  
+  // Block: Skipping to Matched or Closed without being Confirmed first
+  if ((toStatus === 'matched' || toStatus === 'closed') && fromStatus !== 'confirmed' && fromStatus !== 'matched') {
+    return { 
+      invalid: true, 
+      reason: 'Cannot skip to Matched or Closed. Batch must be Confirmed first.' 
+    };
+  }
+  
+  return { invalid: false };
+}
+
+/**
+ * Combined validation: checks both role permissions and FSM rules
+ */
+export function validateTransitionComplete(
+  fromStatus: BatchLifecycleStatus,
+  toStatus: BatchLifecycleStatus,
+  role: 'farmer' | 'admin' | 'mpk'
+): { valid: boolean; error?: string; errorType?: 'permission' | 'fsm_rule' | 'invalid' } {
+  // First check FSM rules
+  const fsmCheck = isInvalidDirectTransition(fromStatus, toStatus);
+  if (fsmCheck.invalid) {
+    return { valid: false, error: fsmCheck.reason, errorType: 'fsm_rule' };
+  }
+  
+  // Then check role permissions
+  const permissionCheck = validateTransition(fromStatus, toStatus, role);
+  if (!permissionCheck.valid) {
+    return { valid: false, error: permissionCheck.error, errorType: 'permission' };
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * Get a list of all blocked actions with explanations
+ * Useful for displaying in the FSM panel
+ */
+export function getBlockedTransitions(
+  currentStatus: BatchLifecycleStatus,
+  role: 'farmer' | 'admin' | 'mpk'
+): Array<{ 
+  toStatus: BatchLifecycleStatus; 
+  reason: string; 
+  type: 'admin_only' | 'blocked' | 'invalid' | 'revert' 
+}> {
+  const blocked: Array<{ toStatus: BatchLifecycleStatus; reason: string; type: 'admin_only' | 'blocked' | 'invalid' | 'revert' }> = [];
+  
+  for (const status of BATCH_STATUSES) {
+    if (status === currentStatus) continue;
+    
+    const validation = validateTransitionComplete(currentStatus, status, role);
+    if (!validation.valid) {
+      let type: 'admin_only' | 'blocked' | 'invalid' | 'revert' = 'blocked';
+      
+      // Determine type
+      const statusIndex = getStatusIndex(status);
+      const currentIndex = getStatusIndex(currentStatus);
+      
+      if (statusIndex < currentIndex) {
+        type = 'revert';
+      } else if (validation.errorType === 'fsm_rule') {
+        type = 'invalid';
+      } else if (validation.error?.includes('Admin')) {
+        type = 'admin_only';
+      }
+      
+      blocked.push({
+        toStatus: status,
+        reason: validation.error || 'Transition not allowed',
+        type,
+      });
+    }
+  }
+  
+  return blocked;
+}
