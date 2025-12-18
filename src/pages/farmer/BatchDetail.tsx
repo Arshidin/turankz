@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Form,
   FormControl,
@@ -49,7 +49,8 @@ import {
   Loader2,
   ArrowDownCircle,
   Lock,
-  Info
+  Info,
+  Clock
 } from 'lucide-react';
 import { useBatch, useConfirmBatch, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
@@ -73,6 +74,8 @@ import {
   getEditRulesForStatus,
   type BatchLifecycleStatus,
 } from '@/lib/batch-lifecycle';
+import { useBatchTimeLock } from '@/hooks/useBatchTimeLock';
+import { getTimeLockedTooltip } from '@/lib/batch-time-lock';
 
 const REGIONS = [
   'Almaty',
@@ -161,10 +164,20 @@ export default function BatchDetail() {
   const { trackBatchQuantityChange, trackReadinessChange, trackMonthChange } = useChangeTracking();
 
   // Check edit rules based on status
-  const isReadOnly = batch ? isBatchReadOnly(batch.status) : false;
+  const isStatusReadOnly = batch ? isBatchReadOnly(batch.status) : false;
   const needsConfirmation = batch ? requiresEditConfirmation(batch.status) : false;
-  const lockedTooltip = batch ? getLockedFieldTooltip(batch.status) : '';
+  const statusLockedTooltip = batch ? getLockedFieldTooltip(batch.status) : '';
   const editRules = batch ? getEditRulesForStatus(batch.status) : null;
+
+  // Time-based locking from matching window
+  const { lockStatus: timeLockStatus, canEdit: canEditByTime, canTransition, bannerInfo: timeLockBanner } = 
+    useBatchTimeLock(batch?.status || 'draft');
+
+  // Combined lock status: locked by status OR locked by time
+  const isReadOnly = isStatusReadOnly || !canEditByTime;
+  const lockedTooltip = !canEditByTime 
+    ? getTimeLockedTooltip() 
+    : statusLockedTooltip;
 
   const weekOptions = getTargetWeekOptions();
 
@@ -418,6 +431,17 @@ export default function BatchDetail() {
       <div className="mb-6">
         <CurrentMatchingWindowBanner compact />
       </div>
+
+      {/* Time-locked Banner */}
+      {timeLockBanner?.show && (
+        <Alert className="mb-6 border-amber-500/30 bg-amber-500/5">
+          <Lock className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-700">{timeLockBanner.title}</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            {timeLockBanner.description}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Action Alert for Review */}
       {action === 'review' && batch.mpk_interest && (
@@ -812,6 +836,8 @@ export default function BatchDetail() {
             batchId={batch.batch_number}
             onTransition={handleFSMTransition}
             isTransitioning={updateBatch.isPending || confirmBatch.isPending}
+            isTimeLocked={!canTransition}
+            timeLockTooltip={timeLockStatus.lockReason || getTimeLockedTooltip()}
           />
 
           {/* Quick Actions */}

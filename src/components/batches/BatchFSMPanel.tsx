@@ -65,6 +65,8 @@ interface BatchFSMPanelProps {
   batchId: string;
   onTransition: (toStatus: BatchLifecycleStatus) => Promise<void>;
   isTransitioning?: boolean;
+  isTimeLocked?: boolean;
+  timeLockTooltip?: string;
 }
 
 export function BatchFSMPanel({
@@ -72,6 +74,8 @@ export function BatchFSMPanel({
   batchId,
   onTransition,
   isTransitioning = false,
+  isTimeLocked = false,
+  timeLockTooltip = 'Edits are locked due to the Matching Window deadline.',
 }: BatchFSMPanelProps) {
   const { role } = useRole();
   const { toast } = useToast();
@@ -350,8 +354,18 @@ export function BatchFSMPanel({
             </p>
           </div>
 
+          {/* Time-Locked Message */}
+          {isTimeLocked && (
+            <Alert className="border-amber-500/30 bg-amber-500/5">
+              <Lock className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-sm text-amber-700">
+                {timeLockTooltip}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Read-Only Lock Message */}
-          {isReadOnly && (
+          {isReadOnly && !isTimeLocked && (
             <Alert className="border-amber-500/30 bg-amber-500/5">
               <Lock className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-700">
@@ -366,7 +380,14 @@ export function BatchFSMPanel({
               Available Actions
             </p>
             
-            {allowedTransitions.length > 0 ? (
+            {isTimeLocked ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Lock className="w-5 h-5 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">
+                  Status transitions are locked due to the Matching Window deadline.
+                </p>
+              </div>
+            ) : allowedTransitions.length > 0 ? (
               <div className="space-y-2">
                 {allowedTransitions.map((toStatus) => (
                   <Button
