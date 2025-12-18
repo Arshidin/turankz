@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 export type FarmerGrading = 'observer' | 'declared_supplier' | 'standard_supplier';
 export type FarmerReliability = 'high' | 'medium' | 'low';
+export type RegistrationStatus = 'pending' | 'active' | 'rejected' | 'clarification_needed';
 
 export interface Farmer {
   id: string;
@@ -27,6 +28,8 @@ export interface Farmer {
   missed_updates: number;
   created_at: string;
   updated_at: string;
+  registration_status: RegistrationStatus;
+  admin_notes: string | null;
 }
 
 export interface FarmerActivityLog {
@@ -325,6 +328,82 @@ export function useUpdateFarmerProfile() {
         description: error.message,
         variant: 'destructive',
       });
+    },
+  });
+}
+
+// Update farmer registration status (Admin activation)
+export function useUpdateFarmerRegistration() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      farmerId,
+      newStatus,
+      previousStatus,
+      note,
+      adminNotes,
+    }: {
+      farmerId: string;
+      newStatus: RegistrationStatus;
+      previousStatus: RegistrationStatus;
+      note: string;
+      adminNotes?: string;
+    }) => {
+      const updates: Record<string, unknown> = { 
+        registration_status: newStatus,
+        admin_notes: adminNotes || null,
+      };
+      
+      // If activating, also promote from observer to declared_supplier
+      if (newStatus === 'active') {
+        updates.grading = 'declared_supplier';
+      }
+
+      const { error: updateError } = await supabase
+        .from('farmers')
+        .update(updates)
+        .eq('id', farmerId);
+
+      if (updateError) throw updateError;
+
+      const { error: logError } = await supabase
+        .from('farmer_activity_log')
+        .insert({
+          farmer_id: farmerId,
+          action_type: 'registration_status_change',
+          previous_value: previousStatus,
+          new_value: newStatus,
+          note,
+          performed_by: 'Admin',
+        });
+
+      if (logError) throw logError;
+    },
+    onSuccess: (_, { newStatus }) => {
+      queryClient.invalidateQueries({ queryKey: ['farmers'] });
+      queryClient.invalidateQueries({ queryKey: ['farmer-activity-log'] });
+      
+      const messages: Record<RegistrationStatus, string> = {
+        active: 'Farmer has been activated.',
+        pending: 'Status set to pending.',
+        rejected: 'Registration has been rejected.',
+        clarification_needed: 'Clarification requested from farmer.',
+      };
+      
+      toast({
+        title: 'Registration updated',
+        description: messages[newStatus],
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update registration. Please try again.',
+        variant: 'destructive',
+      });
+      console.error('Registration update error:', error);
     },
   });
 }

@@ -39,10 +39,12 @@ import {
   useUpdateMpkMaxRequests,
   useMpkRequestStats,
   useMpkPoolRequests,
+  useUpdateMpkRegistration,
   Mpk,
   MpkStatus,
   MpkRequestStats,
 } from '@/hooks/useMpks';
+import { PendingApplicationsCard } from '@/components/admin/PendingApplicationsCard';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   Search,
@@ -97,6 +99,7 @@ export default function MpkManagement() {
   const updateStatus = useUpdateMpkStatus();
   const toggleRestriction = useToggleMpkRequestRestriction();
   const updateMaxRequests = useUpdateMpkMaxRequests();
+  const updateRegistration = useUpdateMpkRegistration();
 
   const selectedMpk = mpks?.find(m => m.id === selectedMpkId);
   const { data: selectedMpkRequests } = useMpkPoolRequests(selectedMpk?.mpk_id || null);
@@ -248,6 +251,42 @@ export default function MpkManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Applications Section */}
+      <PendingApplicationsCard
+        title="Pending MPK Applications"
+        applications={(mpks || []).map(m => ({
+          id: m.id,
+          display_id: m.mpk_id,
+          name: m.name,
+          region: m.intake_regions.join(', '),
+          email: null,
+          created_at: m.created_at,
+          registration_status: m.registration_status,
+        }))}
+        isLoading={mpksLoading}
+        onActivate={async (id, note) => {
+          const mpk = mpks?.find(m => m.id === id);
+          if (!mpk) return;
+          await updateRegistration.mutateAsync({
+            mpkId: id,
+            newStatus: 'active',
+            previousStatus: mpk.registration_status,
+            note,
+          });
+        }}
+        onReject={async (id, note) => {
+          const mpk = mpks?.find(m => m.id === id);
+          if (!mpk) return;
+          await updateRegistration.mutateAsync({
+            mpkId: id,
+            newStatus: 'rejected',
+            previousStatus: mpk.registration_status,
+            note,
+          });
+        }}
+        isPending={updateRegistration.isPending}
+      />
 
       {/* Helper Text */}
       <div className="mb-6 p-3 bg-secondary/50 rounded-lg">
