@@ -16,12 +16,10 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { useCreateMatching } from '@/hooks/useMatchings';
 import { useCurrentMatchingWindow } from '@/hooks/useMatchingWindows';
-import { useUpdatePoolRequest } from '@/hooks/usePoolRequests';
 import { canCreateMatching } from '@/lib/matching-lifecycle';
-import { calculateMatchingProgress, getStatusFromProgress } from '@/lib/pool-request-lifecycle';
 import type { ConfirmedBatch } from '@/hooks/useConfirmedBatches';
 import type { MatchingPoolRequest } from '@/hooks/useMatchingRequests';
-import { Link2, AlertTriangle, Package, Target, CheckCircle2, Loader2 } from 'lucide-react';
+import { Link2, AlertTriangle, Package, Target, CheckCircle2, Loader2, Info } from 'lucide-react';
 
 interface CreateMatchingDialogProps {
   open: boolean;
@@ -40,7 +38,6 @@ export function CreateMatchingDialog({
 }: CreateMatchingDialogProps) {
   const { data: matchingWindow } = useCurrentMatchingWindow();
   const createMatching = useCreateMatching();
-  const updateRequest = useUpdatePoolRequest();
 
   const [matchedVolume, setMatchedVolume] = useState<number>(0);
   const [notes, setNotes] = useState('');
@@ -91,6 +88,7 @@ export function CreateMatchingDialog({
     if (!isValid || !selectedBatch || !selectedRequest) return;
 
     try {
+      // Create matching - status updates are handled automatically by the hook
       await createMatching.mutateAsync({
         matches: [
           {
@@ -103,17 +101,6 @@ export function CreateMatchingDialog({
         notes: notes.trim() || undefined,
       });
 
-      // Update request matched_volume and status
-      const newMatchedVolume = selectedRequest.matched_volume + matchedVolume;
-      const newProgress = calculateMatchingProgress(selectedRequest.required_volume, newMatchedVolume);
-      const newStatus = getStatusFromProgress(newProgress);
-
-      await updateRequest.mutateAsync({
-        id: selectedRequest.id,
-        matched_volume: newMatchedVolume,
-        status: newStatus,
-      });
-
       // Reset form
       setMatchedVolume(0);
       setNotes('');
@@ -124,7 +111,7 @@ export function CreateMatchingDialog({
     }
   };
 
-  const isPending = createMatching.isPending || updateRequest.isPending;
+  const isPending = createMatching.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -250,6 +237,14 @@ export function CreateMatchingDialog({
               className="h-20"
             />
           </div>
+
+          {/* Automatic Updates Info */}
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Status updates are automatic: Batch → Matched, Request → Partial/Fulfilled based on volumes.
+            </AlertDescription>
+          </Alert>
 
           {/* Validation Errors */}
           {validationErrors.length > 0 && selectedBatch && selectedRequest && (
