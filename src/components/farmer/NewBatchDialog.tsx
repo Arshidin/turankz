@@ -32,7 +32,8 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCreateBatch } from '@/hooks/useBatches';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { Loader2, Info } from 'lucide-react';
+import { useCanCreateBatches } from '@/hooks/useCurrentFarmer';
+import { Loader2, Info, AlertTriangle } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE } from '@/lib/livestock-criteria';
 import { INITIAL_BATCH_STATUS, getBatchCreationInfo, BATCH_STATUS_LABELS } from '@/lib/batch-lifecycle';
 import { DeliveryPeriodSelect, type DeliveryPeriod } from '@/components/shared/DeliveryPeriodSelect';
@@ -103,6 +104,7 @@ function generateBatchNumber() {
 export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   const createBatch = useCreateBatch();
   const { user } = useAuthContext();
+  const canCreateBatches = useCanCreateBatches();
   const weekOptions = getTargetWeekOptions();
   
   // Get current language
@@ -184,6 +186,17 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
             Add a new livestock batch to signal availability for pool matching.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Observer Restriction Alert */}
+        {!canCreateBatches && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <span className="font-medium">Access Restricted:</span>{' '}
+              You must be a Declared or Standard Supplier to create batches. Contact admin for grading upgrade.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Lifecycle Info Alert */}
         <Alert className="border-primary/30 bg-primary/5">
@@ -502,7 +515,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createBatch.isPending}>
+              <Button type="submit" disabled={createBatch.isPending || !canCreateBatches}>
                 {createBatch.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Batch
               </Button>

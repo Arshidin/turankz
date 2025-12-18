@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useExecutions } from '@/hooks/useExecutions';
+import { useExecutions, type ExecutionWithDetails } from '@/hooks/useExecutions';
 import { useHasExecutions } from '@/hooks/useHasExecutions';
 import { useRole } from '@/contexts/RoleContext';
+import { useCurrentMpk } from '@/hooks/useCurrentMpk';
+import { DeliveryConfirmationDialog } from '@/components/execution/DeliveryConfirmationDialog';
 import { ClipboardList, Calendar, CheckCircle2, Clock, Truck, GitMerge } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -21,14 +25,29 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 
 export default function MpkExecutions() {
   const { t } = useTranslation();
-  const { role } = useRole();
+  const { role, roleName } = useRole();
   const { data: hasExecutions, isLoading: checkingExecutions } = useHasExecutions();
   const { data: allExecutions = [], isLoading: loadingExecutions } = useExecutions();
+  const { data: currentMpk } = useCurrentMpk();
+  
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [selectedExecution, setSelectedExecution] = useState<ExecutionWithDetails | null>(null);
 
   const isLoading = checkingExecutions || loadingExecutions;
 
   // For MPK, show all executions (in production would filter by their requests)
   const mpkExecutions = allExecutions;
+
+  // Check if MPK can confirm delivery for a specific execution
+  const canConfirmDelivery = (execution: ExecutionWithDetails): boolean => {
+    // Only 'scheduled' status can be confirmed as delivered
+    return execution.status === 'scheduled';
+  };
+
+  const handleConfirmDelivery = (execution: ExecutionWithDetails) => {
+    setSelectedExecution(execution);
+    setConfirmDialogOpen(true);
+  };
 
   // Route protection: block access if no executions (except admin)
   if (!isLoading && !hasExecutions && role !== 'admin') {
@@ -85,6 +104,7 @@ export default function MpkExecutions() {
           {mpkExecutions.map(execution => {
             const config = statusConfig[execution.status] || statusConfig.matched;
             const StatusIcon = config.icon;
+            const showConfirmButton = canConfirmDelivery(execution);
             
             return (
               <Card key={execution.id}>
@@ -93,10 +113,21 @@ export default function MpkExecutions() {
                     <CardTitle className="text-base font-medium">
                       Request #{execution.request?.request_number}
                     </CardTitle>
-                    <Badge variant={config.variant} className="gap-1">
-                      <StatusIcon className="w-3 h-3" />
-                      {config.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={config.variant} className="gap-1">
+                        <StatusIcon className="w-3 h-3" />
+                        {config.label}
+                      </Badge>
+                      {showConfirmButton && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleConfirmDelivery(execution)}
+                        >
+                          <Truck className="w-4 h-4 mr-1" />
+                          Confirm Delivery
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -135,6 +166,17 @@ export default function MpkExecutions() {
             );
           })}
         </div>
+      )}
+
+      {/* Delivery Confirmation Dialog */}
+      {selectedExecution && (
+        <DeliveryConfirmationDialog
+          open={confirmDialogOpen}
+          onOpenChange={setConfirmDialogOpen}
+          executionId={selectedExecution.id}
+          matchedVolume={selectedExecution.matched_volume}
+          confirmedBy={currentMpk?.name || roleName}
+        />
       )}
     </MainLayout>
   );
