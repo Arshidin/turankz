@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCreateBatch } from '@/hooks/useBatches';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, Info } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE } from '@/lib/livestock-criteria';
 import { INITIAL_BATCH_STATUS, getBatchCreationInfo, BATCH_STATUS_LABELS } from '@/lib/batch-lifecycle';
@@ -101,6 +102,7 @@ function generateBatchNumber() {
 
 export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   const createBatch = useCreateBatch();
+  const { user } = useAuthContext();
   const weekOptions = getTargetWeekOptions();
   
   // Get current language
@@ -134,11 +136,16 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   });
 
   const onSubmit = async (data: FormData) => {
+    if (!user?.id) {
+      console.error('No authenticated user');
+      return;
+    }
+    
     // Status is enforced by useCreateBatch - always starts as Draft
     // Any status value here will be ignored by the hook
     const batch = {
       batch_number: generateBatchNumber(),
-      user_id: crypto.randomUUID(), // Placeholder - should be auth.uid() when auth is implemented
+      user_id: user.id, // Use authenticated user's ID for RLS compliance
       region: data.region,
       heads: data.heads,
       avg_weight: data.avg_weight || null,
