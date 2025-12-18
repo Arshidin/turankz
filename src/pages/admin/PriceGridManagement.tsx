@@ -56,6 +56,7 @@ import {
   type PriceGridVersion,
   type PriceGridCell,
 } from '@/hooks/usePriceGrid';
+import { PricingGovernanceAudit } from '@/components/admin/PricingGovernanceAudit';
 import { format, parseISO } from 'date-fns';
 import {
   Plus,
@@ -66,6 +67,7 @@ import {
   Grid3X3,
   Calendar,
   Power,
+  ShieldCheck,
 } from 'lucide-react';
 
 function VersionCard({
@@ -228,11 +230,12 @@ function CellEditor({
   const [breedGroup, setBreedGroup] = useState(cell?.breed_group || '');
   const [basePrice, setBasePrice] = useState(cell?.base_price?.toString() || '');
   const [notes, setNotes] = useState(cell?.notes || '');
+  const [changeReason, setChangeReason] = useState('');
 
   const upsertCell = useUpsertPriceGridCell();
 
   const handleSubmit = () => {
-    if (!ageCategory || !sex || !weightMin || !weightMax || !basePrice) return;
+    if (!ageCategory || !sex || !weightMin || !weightMax || !basePrice || !changeReason.trim()) return;
 
     upsertCell.mutate(
       {
@@ -246,6 +249,8 @@ function CellEditor({
           base_price: parseInt(basePrice, 10),
           notes: notes || null,
         },
+        changeReason: changeReason.trim(),
+        previousPrice: cell?.base_price,
       },
       { onSuccess: onClose }
     );
@@ -347,6 +352,16 @@ function CellEditor({
               placeholder="Optional notes..."
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Reason for Change *</Label>
+            <Textarea
+              value={changeReason}
+              onChange={(e) => setChangeReason(e.target.value)}
+              placeholder="Explain why this price is being set or changed..."
+              rows={2}
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -360,6 +375,7 @@ function CellEditor({
               !weightMin ||
               !weightMax ||
               !basePrice ||
+              !changeReason.trim() ||
               upsertCell.isPending
             }
           >
@@ -372,6 +388,7 @@ function CellEditor({
 }
 
 export default function PriceGridManagement() {
+  const [activeTab, setActiveTab] = useState<'grid' | 'governance'>('grid');
   const { data: versions, isLoading: loadingVersions } = usePriceGridVersions();
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const { data: cells, isLoading: loadingCells } = usePriceGridCells(selectedVersionId);
@@ -380,6 +397,7 @@ export default function PriceGridManagement() {
   const [editingCell, setEditingCell] = useState<PriceGridCell | null>(null);
   const [showAddCell, setShowAddCell] = useState(false);
   const [activateConfirm, setActivateConfirm] = useState<string | null>(null);
+  const [activationReason, setActivationReason] = useState('');
   const [duplicateVersion, setDuplicateVersion] = useState<PriceGridVersion | null>(null);
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateDate, setDuplicateDate] = useState(new Date().toISOString().split('T')[0]);
@@ -391,9 +409,16 @@ export default function PriceGridManagement() {
   const selectedVersion = versions?.find((v) => v.id === selectedVersionId);
 
   const handleActivate = () => {
-    if (!activateConfirm) return;
-    activateVersion.mutate({ versionId: activateConfirm });
-    setActivateConfirm(null);
+    if (!activateConfirm || !activationReason.trim()) return;
+    activateVersion.mutate(
+      { versionId: activateConfirm, activationReason: activationReason.trim() },
+      {
+        onSuccess: () => {
+          setActivateConfirm(null);
+          setActivationReason('');
+        },
+      }
+    );
   };
 
   const handleDuplicate = () => {
@@ -435,7 +460,20 @@ export default function PriceGridManagement() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'grid' | 'governance')} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="grid" className="gap-2">
+            <Grid3X3 className="h-4 w-4" />
+            Price Grid
+          </TabsTrigger>
+          <TabsTrigger value="governance" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Governance & Audit
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="grid">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Versions List */}
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-muted-foreground">Versions</h3>
@@ -568,9 +606,13 @@ export default function PriceGridManagement() {
             </Card>
           )}
         </div>
-      </div>
+        </div>
+        </TabsContent>
 
-      {/* Create Version Dialog */}
+        <TabsContent value="governance">
+          <PricingGovernanceAudit />
+        </TabsContent>
+      </Tabs>
       <CreateVersionDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} />
 
       {/* Add/Edit Cell Dialog */}
@@ -586,23 +628,45 @@ export default function PriceGridManagement() {
       )}
 
       {/* Activate Confirmation */}
-      <AlertDialog open={!!activateConfirm} onOpenChange={() => setActivateConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Activate This Version?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog 
+        open={!!activateConfirm} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setActivateConfirm(null);
+            setActivationReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate This Version?</DialogTitle>
+            <DialogDescription>
               This will deactivate any currently active price grid and make this version the
               active one visible to all users.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleActivate}>
-              {activateVersion.isPending ? 'Activating...' : 'Activate'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label>Reason for Activation *</Label>
+            <Textarea
+              value={activationReason}
+              onChange={(e) => setActivationReason(e.target.value)}
+              placeholder="Explain why this version is being activated..."
+              rows={2}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivateConfirm(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleActivate}
+              disabled={!activationReason.trim() || activateVersion.isPending}
+            >
+              {activateVersion.isPending ? 'Activating...' : 'Activate Version'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Duplicate Dialog */}
       <Dialog open={!!duplicateVersion} onOpenChange={() => setDuplicateVersion(null)}>
