@@ -54,13 +54,12 @@ export const en = {
     purchasePoolRequests: 'Purchase Pool Requests',
     poolMatching: 'Pool Matching',
     matchingWindows: 'Matching Windows',
-    offtakeRegistry: 'Offtake Registry',
+    contractsExecution: 'Contracts & Execution',
     farmerManagement: 'Farmer Management',
     mpkManagement: 'MPK Management',
-    premiumManagement: 'Premium Management',
     priceGridManagement: 'Reference Price Grid Management',
+    premiumRulesIncentives: 'Premium Rules & Incentives',
     activityLog: 'Activity Log',
-    executions: 'Contracts & Execution',
   },
   
   roles: {

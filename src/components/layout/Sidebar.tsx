@@ -15,7 +15,6 @@ import {
   Activity,
   Grid3X3,
   Award,
-  FileCheck,
   ClipboardList,
   CalendarClock
 } from 'lucide-react';
@@ -47,13 +46,11 @@ const adminNav: NavItem[] = [
   { labelKey: 'nav.platformOverview', path: '/', icon: Home },
   { labelKey: 'nav.matchingWindows', path: '/admin/windows', icon: CalendarClock },
   { labelKey: 'nav.poolMatching', path: '/admin/matching', icon: GitMerge },
-  { labelKey: 'nav.executions', path: '/admin/executions', icon: ClipboardList },
-  { labelKey: 'nav.offtakeRegistry', path: '/admin/offtake', icon: FileCheck },
+  { labelKey: 'nav.contractsExecution', path: '/admin/executions', icon: ClipboardList },
   { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
   { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },
-  { labelKey: 'nav.premiumManagement', path: '/admin/premiums', icon: Award },
   { labelKey: 'nav.priceGridManagement', path: '/admin/price-grid', icon: Grid3X3 },
-  { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3 },
+  { labelKey: 'nav.premiumRulesIncentives', path: '/admin/premiums', icon: Award },
   { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
 ];
 
