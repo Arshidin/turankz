@@ -146,6 +146,35 @@ export function useAuditLog() {
     });
   }, [logAction]);
   
+  const logMatchingWindowChange = useCallback(async ({
+    windowName,
+    action,
+    details,
+  }: {
+    windowName: string;
+    action: 'created' | 'updated' | 'status_changed' | 'deleted';
+    details: string;
+  }) => {
+    // Log to activity_log table for governance tracking
+    try {
+      await supabase
+        .from('activity_log')
+        .insert({
+          event_type: 'pool_request_updated' as any, // Using closest matching type
+          actor_role: 'admin',
+          actor_name: 'Admin',
+          target_type: 'matching_window',
+          target_name: windowName,
+          description: `Matching Window ${action}: ${details}`,
+        });
+      
+      return { success: true };
+    } catch (error) {
+      console.error('[Audit] Failed to log matching window change:', error);
+      return { success: false, error };
+    }
+  }, []);
+  
   return {
     logAction,
     logGradingChange,
@@ -153,5 +182,6 @@ export function useAuditLog() {
     logRestrictionRemoved,
     logStatusChange,
     logPoolMatch,
+    logMatchingWindowChange,
   };
 }

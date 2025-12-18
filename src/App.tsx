@@ -25,6 +25,7 @@ import PriceGridManagement from "./pages/admin/PriceGridManagement";
 import ActivityLog from "./pages/admin/ActivityLog";
 import PremiumManagement from "./pages/admin/PremiumManagement";
 import ExecutionManagement from "./pages/admin/ExecutionManagement";
+import MatchingWindowsManagement from "./pages/admin/MatchingWindowsManagement";
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 
@@ -148,6 +149,11 @@ const App = () => (
               <Route path="/admin/executions" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <ExecutionManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/windows" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <MatchingWindowsManagement />
                 </ProtectedRoute>
               } />
               
