@@ -292,35 +292,68 @@ export function BatchFSMPanel({
             </p>
           </div>
 
-          {/* Lifecycle Progress */}
+          {/* Lifecycle Progress (Read-Only Visualization) */}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
               Lifecycle Progress
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {BATCH_STATUSES.map((status, index) => (
-                <TooltipProvider key={status}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${getStatusStyle(status, index)}`}>
-                        {getStatusIcon(status, index)}
-                        <span>{BATCH_STATUS_LABELS[status]}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p className="font-medium">{BATCH_STATUS_LABELS[status]}</p>
-                      <p className="text-xs text-muted-foreground">{BATCH_STATUS_DESCRIPTIONS[status]}</p>
-                      {index < currentIndex && (
-                        <p className="text-xs text-emerald-500 mt-1">✓ Completed</p>
-                      )}
-                      {status === currentStatus && (
-                        <p className="text-xs text-primary mt-1">● Current</p>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+              {BATCH_STATUSES.map((status, index) => {
+                const isPast = index < currentIndex;
+                const isCurrent = status === currentStatus;
+                const isFuture = index > currentIndex;
+                const isLocked = isBatchReadOnly(status);
+                const isAdminOnly = status === 'matched' || status === 'closed';
+                
+                // Determine tooltip content based on stage state
+                const getTooltipInfo = () => {
+                  if (isPast) {
+                    return { label: '✓ Completed', className: 'text-emerald-500' };
+                  }
+                  if (isCurrent) {
+                    return { label: '● Current Stage', className: 'text-primary' };
+                  }
+                  if (isAdminOnly) {
+                    return { label: '🔒 Admin Only', className: 'text-amber-500' };
+                  }
+                  if (isLocked) {
+                    return { label: '🔒 Locked Stage', className: 'text-muted-foreground' };
+                  }
+                  return { label: '○ Pending', className: 'text-muted-foreground' };
+                };
+                
+                const tooltipInfo = getTooltipInfo();
+                
+                return (
+                  <TooltipProvider key={status}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium cursor-default select-none ${getStatusStyle(status, index)}`}
+                          aria-label={`${BATCH_STATUS_LABELS[status]} - ${tooltipInfo.label}`}
+                        >
+                          {getStatusIcon(status, index)}
+                          <span>{BATCH_STATUS_LABELS[status]}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[200px]">
+                        <p className="font-medium">{BATCH_STATUS_LABELS[status]}</p>
+                        <p className="text-xs text-muted-foreground">{BATCH_STATUS_DESCRIPTIONS[status]}</p>
+                        <p className={`text-xs mt-1 ${tooltipInfo.className}`}>{tooltipInfo.label}</p>
+                        {isFuture && !isCurrent && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">
+                            Transitions are managed via the Actions panel below.
+                          </p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-2 italic">
+              Timeline is read-only. Use Available Actions below to transition.
+            </p>
           </div>
 
           {/* Read-Only Lock Message */}
