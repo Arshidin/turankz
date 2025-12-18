@@ -46,6 +46,7 @@ import { PoolRequestOverrideDialog } from '@/components/admin/PoolRequestOverrid
 import { PoolRequestAuditHistory } from '@/components/admin/PoolRequestAuditHistory';
 import { PoolRequestAdminOverrideBadge } from '@/components/admin/PoolRequestAdminOverrideBadge';
 import { MatchingListPanel } from '@/components/admin/MatchingListPanel';
+import { PoolRequestsListView } from '@/components/admin/PoolRequestsListView';
 import { MatchingWindowLockBanner } from '@/components/admin/MatchingWindowLockBanner';
 import { MatchingWorkspace } from '@/components/admin/MatchingWorkspace';
 import { 
@@ -66,6 +67,7 @@ import {
   TrendingUp,
   ShieldAlert,
   MoreVertical,
+  List,
   Edit,
   History,
   Link2,
@@ -374,8 +376,12 @@ export default function PoolMatching() {
         description="Coordinate supply and demand to form matched pools" 
       />
 
-      <Tabs defaultValue="workspace" className="space-y-4">
+      <Tabs defaultValue="requests" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="requests" className="gap-2">
+            <List className="h-4 w-4" />
+            Pool Requests
+          </TabsTrigger>
           <TabsTrigger value="workspace" className="gap-2">
             <Link2 className="h-4 w-4" />
             Matching Workspace
@@ -385,6 +391,10 @@ export default function PoolMatching() {
             Pool Overview
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="requests">
+          <PoolRequestsListView />
+        </TabsContent>
 
         <TabsContent value="workspace">
           <MatchingWorkspace />
