@@ -17,11 +17,14 @@ import {
   CalendarClock,
   XCircle,
   AlertCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  Pencil,
+  Lock
 } from 'lucide-react';
-import { usePoolRequests, useCancelPoolRequest, useUpdatePoolRequest, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
+import { usePoolRequests, useCancelPoolRequest, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
 import { useMpks } from '@/hooks/useMpks';
 import { NewRequestDialog } from '@/components/mpk/NewRequestDialog';
+import { EditRequestDialog } from '@/components/mpk/EditRequestDialog';
 import { format, parseISO } from 'date-fns';
 import {
   DropdownMenu,
@@ -40,7 +43,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+import {
+  canEditPoolRequest,
+  getPoolRequestLockedTooltip,
+  type PoolRequestLifecycleStatus,
+  type PoolRequestRole,
+} from '@/lib/pool-request-lifecycle';
 
 const statusConfig: Record<PoolRequestStatus, {
   label: string;
@@ -100,14 +115,17 @@ function isAtRisk(request: PoolRequest): boolean {
   return fillRate < 0.5;
 }
 
+// MPK role for edit permissions
+const USER_ROLE: PoolRequestRole = 'mpk';
+
 export default function PurchasePoolRequests() {
   const { data: requests, isLoading, error } = usePoolRequests();
   const { data: mpks } = useMpks();
   const cancelRequest = useCancelPoolRequest();
-  const updateRequest = useUpdatePoolRequest();
   
   const [newRequestOpen, setNewRequestOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState<string | null>(null);
+  const [editRequest, setEditRequest] = useState<PoolRequest | null>(null);
 
   // For demo, use first MPK or default values
   const currentMpk = mpks?.[0] || { id: 'demo', mpk_id: 'MPK-001', name: 'Demo MPK' };
@@ -137,37 +155,6 @@ export default function PurchasePoolRequests() {
     if (!cancelDialogOpen) return;
     await cancelRequest.mutateAsync(cancelDialogOpen);
     setCancelDialogOpen(null);
-  };
-
-  const handleExpandRegions = async (request: PoolRequest) => {
-    // Add all regions
-    const allRegions = ['Almaty', 'Astana', 'Shymkent', 'Aktobe', 'Karaganda', 'Pavlodar', 'Kostanay', 'East Kazakhstan', 'West Kazakhstan', 'North Kazakhstan'];
-    await updateRequest.mutateAsync({
-      id: request.id,
-      regions: allRegions,
-    });
-    toast({
-      title: 'Regions expanded',
-      description: 'Request now accepts supply from all regions.',
-    });
-  };
-
-  const handleLowerGrade = async (request: PoolRequest) => {
-    const gradeProgression: Record<string, string> = {
-      'A': 'A/B',
-      'A/B': 'B',
-      'B': 'B/C',
-      'B/C': 'C',
-    };
-    const newGrade = gradeProgression[request.required_grade] || 'Any';
-    await updateRequest.mutateAsync({
-      id: request.id,
-      required_grade: newGrade,
-    });
-    toast({
-      title: 'Grade requirement lowered',
-      description: `Request now accepts Grade ${newGrade}.`,
-    });
   };
 
   if (isLoading) {
@@ -287,18 +274,43 @@ export default function PurchasePoolRequests() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleExpandRegions(request)}>
-                            <MapPin className="w-4 h-4 mr-2" />
-                            Expand Regions
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleLowerGrade(request)}>
-                            <Medal className="w-4 h-4 mr-2" />
-                            Lower Grade Requirement
-                          </DropdownMenuItem>
+                          {(() => {
+                            const canEdit = canEditPoolRequest(request.status as PoolRequestLifecycleStatus, USER_ROLE);
+                            const lockTooltip = getPoolRequestLockedTooltip(request.status as PoolRequestLifecycleStatus, USER_ROLE);
+                            
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div>
+                                      <DropdownMenuItem 
+                                        onClick={() => setEditRequest(request)}
+                                        disabled={!canEdit}
+                                        className={!canEdit ? 'opacity-50 cursor-not-allowed' : ''}
+                                      >
+                                        {canEdit ? (
+                                          <Pencil className="w-4 h-4 mr-2" />
+                                        ) : (
+                                          <Lock className="w-4 h-4 mr-2" />
+                                        )}
+                                        Edit Request
+                                      </DropdownMenuItem>
+                                    </div>
+                                  </TooltipTrigger>
+                                  {!canEdit && lockTooltip && (
+                                    <TooltipContent side="left">
+                                      <p>{lockTooltip}</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => setCancelDialogOpen(request.id)}
+                            disabled={request.status === 'closed' || request.status === 'fulfilled'}
                           >
                             <XCircle className="w-4 h-4 mr-2" />
                             Cancel Request
@@ -362,29 +374,32 @@ export default function PurchasePoolRequests() {
                       </div>
                     </div>
 
-                    {/* Quick Actions for At-Risk Requests */}
-                    {isActionable && atRisk && (
+                    {/* Quick Actions for At-Risk Requests - Only in draft status */}
+                    {request.status === 'draft' && atRisk && (
                       <div className="pt-3 mt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">Optimization options:</p>
+                        <p className="text-xs text-muted-foreground mb-2">Quick actions:</p>
                         <div className="flex flex-wrap gap-2">
                           <Button 
                             variant="outline" 
                             size="sm" 
                             className="text-xs"
-                            onClick={() => handleExpandRegions(request)}
+                            onClick={() => setEditRequest(request)}
                           >
-                            <MapPin className="w-3 h-3 mr-1" />
-                            Expand Regions
+                            <Pencil className="w-3 h-3 mr-1" />
+                            Edit Request
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-xs"
-                            onClick={() => handleLowerGrade(request)}
-                          >
-                            <Medal className="w-3 h-3 mr-1" />
-                            Lower Grade
-                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Locked status indicator */}
+                    {request.status !== 'draft' && request.status !== 'cancelled' && request.status !== 'closed' && (
+                      <div className="pt-3 mt-3 border-t">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Lock className="w-3 h-3" />
+                          <span>
+                            {getPoolRequestLockedTooltip(request.status as PoolRequestLifecycleStatus, USER_ROLE)}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -440,6 +455,16 @@ export default function PurchasePoolRequests() {
         mpkId={currentMpk.id}
         mpkName={currentMpk.name}
       />
+
+      {/* Edit Request Dialog */}
+      {editRequest && (
+        <EditRequestDialog
+          open={!!editRequest}
+          onOpenChange={(open) => !open && setEditRequest(null)}
+          request={editRequest}
+          userRole={USER_ROLE}
+        />
+      )}
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={!!cancelDialogOpen} onOpenChange={() => setCancelDialogOpen(null)}>
