@@ -15,7 +15,8 @@ import {
   Activity,
   Grid3X3,
   Award,
-  FileCheck
+  FileCheck,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +45,7 @@ const mpkNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { labelKey: 'nav.platformOverview', path: '/', icon: Home },
   { labelKey: 'nav.poolMatching', path: '/admin/matching', icon: GitMerge },
+  { labelKey: 'nav.executions', path: '/admin/executions', icon: ClipboardList },
   { labelKey: 'nav.offtakeRegistry', path: '/admin/offtake', icon: FileCheck },
   { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
   { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },

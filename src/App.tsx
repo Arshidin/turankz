@@ -24,6 +24,7 @@ import OfftakeRegistry from "./pages/admin/OfftakeRegistry";
 import PriceGridManagement from "./pages/admin/PriceGridManagement";
 import ActivityLog from "./pages/admin/ActivityLog";
 import PremiumManagement from "./pages/admin/PremiumManagement";
+import ExecutionManagement from "./pages/admin/ExecutionManagement";
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 
@@ -142,6 +143,11 @@ const App = () => (
               <Route path="/admin/activity" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <ActivityLog />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/executions" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ExecutionManagement />
                 </ProtectedRoute>
               } />
               
