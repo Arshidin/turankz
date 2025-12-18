@@ -108,6 +108,7 @@ export type Database = {
           batch_number: string
           breed: string | null
           created_at: string
+          delivery_period: Database["public"]["Enums"]["delivery_period"] | null
           gender: string | null
           grade: string
           heads: number
@@ -136,6 +137,9 @@ export type Database = {
           batch_number: string
           breed?: string | null
           created_at?: string
+          delivery_period?:
+            | Database["public"]["Enums"]["delivery_period"]
+            | null
           gender?: string | null
           grade: string
           heads: number
@@ -164,6 +168,9 @@ export type Database = {
           batch_number?: string
           breed?: string | null
           created_at?: string
+          delivery_period?:
+            | Database["public"]["Enums"]["delivery_period"]
+            | null
           gender?: string | null
           grade?: string
           heads?: number
@@ -344,6 +351,9 @@ export type Database = {
           close_date: string
           created_at: string
           created_by: string | null
+          eligible_delivery_periods:
+            | Database["public"]["Enums"]["delivery_period"][]
+            | null
           id: string
           lock_date: string
           name: string
@@ -357,6 +367,9 @@ export type Database = {
           close_date: string
           created_at?: string
           created_by?: string | null
+          eligible_delivery_periods?:
+            | Database["public"]["Enums"]["delivery_period"][]
+            | null
           id?: string
           lock_date: string
           name: string
@@ -370,6 +383,9 @@ export type Database = {
           close_date?: string
           created_at?: string
           created_by?: string | null
+          eligible_delivery_periods?:
+            | Database["public"]["Enums"]["delivery_period"][]
+            | null
           id?: string
           lock_date?: string
           name?: string
@@ -562,6 +578,8 @@ export type Database = {
           cancelled_at: string | null
           created_at: string
           created_by: string | null
+          expected_delivery_end: string | null
+          expected_delivery_start: string | null
           finalized_at: string | null
           heads_matched: number
           id: string
@@ -587,6 +605,8 @@ export type Database = {
           cancelled_at?: string | null
           created_at?: string
           created_by?: string | null
+          expected_delivery_end?: string | null
+          expected_delivery_start?: string | null
           finalized_at?: string | null
           heads_matched: number
           id?: string
@@ -612,6 +632,8 @@ export type Database = {
           cancelled_at?: string | null
           created_at?: string
           created_by?: string | null
+          expected_delivery_end?: string | null
+          expected_delivery_start?: string | null
           finalized_at?: string | null
           heads_matched?: number
           id?: string
@@ -935,6 +957,9 @@ export type Database = {
           required_grade: string
           required_volume: number
           status: Database["public"]["Enums"]["pool_request_status"]
+          target_delivery_period:
+            | Database["public"]["Enums"]["delivery_period"]
+            | null
           target_week: string
           updated_at: string
           weight_range_max: number | null
@@ -960,6 +985,9 @@ export type Database = {
           required_grade: string
           required_volume: number
           status?: Database["public"]["Enums"]["pool_request_status"]
+          target_delivery_period?:
+            | Database["public"]["Enums"]["delivery_period"]
+            | null
           target_week: string
           updated_at?: string
           weight_range_max?: number | null
@@ -985,6 +1013,9 @@ export type Database = {
           required_grade?: string
           required_volume?: number
           status?: Database["public"]["Enums"]["pool_request_status"]
+          target_delivery_period?:
+            | Database["public"]["Enums"]["delivery_period"]
+            | null
           target_week?: string
           updated_at?: string
           weight_range_max?: number | null
@@ -1074,6 +1105,7 @@ export type Database = {
         | "matched"
         | "closed"
         | "delivered"
+      delivery_period: "short_term" | "mid_term" | "long_term"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
       matching_status: "active" | "finalized" | "cancelled"
@@ -1256,6 +1288,7 @@ export const Constants = {
         "closed",
         "delivered",
       ],
+      delivery_period: ["short_term", "mid_term", "long_term"],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
       matching_status: ["active", "finalized", "cancelled"],

@@ -18,6 +18,7 @@ export interface PoolRequest {
   mpk_id: string;
   mpk_name: string;
   target_week: string;
+  target_delivery_period: 'short_term' | 'mid_term' | 'long_term' | null;
   required_volume: number;
   required_grade: string;
   regions: string[];
@@ -216,6 +217,7 @@ export function useCreatePoolRequest() {
       required_grade: string;
       regions: string[];
       target_week: string;
+      target_delivery_period?: 'short_term' | 'mid_term' | 'long_term';
       notes: string | null;
       // Acceptance criteria
       accepted_breeds?: string[];
@@ -232,6 +234,7 @@ export function useCreatePoolRequest() {
           request_number: generateRequestNumber(),
           matched_volume: 0,
           status: 'submitted' as PoolRequestStatus, // New requests start as 'submitted' (skip draft for now)
+          target_delivery_period: request.target_delivery_period || 'short_term',
           accepted_breeds: request.accepted_breeds || [],
           accepted_genders: request.accepted_genders || [],
           age_range_min: request.age_range_min ?? null,

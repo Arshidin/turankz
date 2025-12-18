@@ -34,6 +34,7 @@ import { useCreateBatch } from '@/hooks/useBatches';
 import { Loader2, Info } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE } from '@/lib/livestock-criteria';
 import { INITIAL_BATCH_STATUS, getBatchCreationInfo, BATCH_STATUS_LABELS } from '@/lib/batch-lifecycle';
+import { DeliveryPeriodSelect, type DeliveryPeriod } from '@/components/shared/DeliveryPeriodSelect';
 
 const REGIONS = [
   'Almaty',
@@ -56,6 +57,7 @@ const formSchema = z.object({
   avg_weight: z.coerce.number().min(100, 'Minimum weight is 100 kg').max(1000, 'Maximum weight is 1000 kg').optional(),
   grade: z.string().min(1, 'Grade is required'),
   target_week: z.string().min(1, 'Target week is required'),
+  delivery_period: z.enum(['short_term', 'mid_term', 'long_term']).default('short_term'),
   notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
   // Livestock criteria
   breed: z.string().optional(),
@@ -120,6 +122,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
       avg_weight: undefined,
       grade: '',
       target_week: '',
+      delivery_period: 'short_term' as DeliveryPeriod,
       notes: '',
       breed: '',
       gender: '',
@@ -141,6 +144,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
       avg_weight: data.avg_weight || null,
       grade: data.grade,
       target_week: data.target_week,
+      delivery_period: data.delivery_period,
       notes: data.notes || null,
       status: INITIAL_BATCH_STATUS, // Enforced at domain layer - cannot be overridden
       requires_action: false,
@@ -304,6 +308,18 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="delivery_period"
+              render={({ field }) => (
+                <DeliveryPeriodSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  description="Indicates your expected readiness timeframe for planning purposes"
+                />
               )}
             />
 
