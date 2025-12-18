@@ -12,10 +12,12 @@ import FarmerProfile from "./pages/farmer/FarmerProfile";
 import LivestockBatches from "./pages/farmer/LivestockBatches";
 import BatchDetail from "./pages/farmer/BatchDetail";
 import SalesCalendar from "./pages/farmer/SalesCalendar";
+import FarmerExecutions from "./pages/farmer/FarmerExecutions";
 import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
 import PurchasePoolRequests from "./pages/mpk/PurchasePoolRequests";
 import MpkProfile from "./pages/mpk/MpkProfile";
+import MpkExecutions from "./pages/mpk/MpkExecutions";
 import FarmersManagement from "./pages/admin/FarmersManagement";
 import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
@@ -84,6 +86,11 @@ const App = () => (
                   <SalesCalendar />
                 </ProtectedRoute>
               } />
+              <Route path="/farmer/executions" element={
+                <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                  <FarmerExecutions />
+                </ProtectedRoute>
+              } />
               
               {/* MPK Routes */}
               <Route path="/mpk/profile" element={
@@ -104,6 +111,11 @@ const App = () => (
               <Route path="/mpk/requests" element={
                 <ProtectedRoute allowedRoles={['mpk', 'admin']}>
                   <PurchasePoolRequests />
+                </ProtectedRoute>
+              } />
+              <Route path="/mpk/executions" element={
+                <ProtectedRoute allowedRoles={['mpk', 'admin']}>
+                  <MpkExecutions />
                 </ProtectedRoute>
               } />
               

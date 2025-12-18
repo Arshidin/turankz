@@ -46,6 +46,7 @@ interface NavItem {
 const farmerNavItems: NavItem[] = [
   { labelKey: 'nav.overview', path: '/', icon: Home, requiredStatus: ['observer', 'active'] },
   { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
+  { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'] },
   { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
   { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['active'] },
@@ -55,6 +56,7 @@ const farmerNavItems: NavItem[] = [
 const mpkNavItems: NavItem[] = [
   { labelKey: 'nav.marketOverview', path: '/mpk/market', icon: BarChart3, requiredStatus: ['observer', 'active'] },
   { labelKey: 'nav.purchasePoolRequests', path: '/mpk/requests', icon: ShoppingCart, requiredStatus: ['active'] },
+  { labelKey: 'nav.contractsExecution', path: '/mpk/executions', icon: ClipboardList, requiredStatus: ['active'] },
   { labelKey: 'nav.watchlist', path: '/mpk/watchlist', icon: BookmarkCheck, requiredStatus: ['active'] },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
   { labelKey: 'nav.profile', path: '/mpk/profile', icon: User, requiredStatus: ['active'] },
