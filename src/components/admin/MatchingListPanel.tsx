@@ -48,7 +48,13 @@ import {
   MATCHING_STATUS_LABELS,
   type MatchingLifecycleStatus,
 } from '@/lib/matching-lifecycle';
+import {
+  prepareSettlementData,
+  exportSettlementCSV,
+  printSettlementPDF,
+} from '@/lib/settlement-export';
 import { format, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 import {
   Link2,
   CheckCircle2,
@@ -60,11 +66,14 @@ import {
   History,
   Calculator,
   Lock,
+  Download,
+  FileText,
 } from 'lucide-react';
 
 interface MatchingListPanelProps {
   requestId?: string;
   compact?: boolean;
+  requestInfo?: { requestNumber: string; mpkName: string; targetWeek: string };
 }
 
 const getStatusBadge = (status: MatchingLifecycleStatus) => {
@@ -93,7 +102,7 @@ const getStatusBadge = (status: MatchingLifecycleStatus) => {
   }
 };
 
-export function MatchingListPanel({ requestId, compact = false }: MatchingListPanelProps) {
+export function MatchingListPanel({ requestId, compact = false, requestInfo }: MatchingListPanelProps) {
   const { data: matchings, isLoading } = useMatchingsWithDetails(requestId);
   const finalizeMatching = useFinalizeMatching();
   const cancelMatching = useCancelMatching();
@@ -134,6 +143,27 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
     });
     setCancelDialog({ open: false, matchId: null });
     setCancelReason('');
+  };
+
+  const handleExportCSV = () => {
+    if (!matchings) return;
+    const { items, summary } = prepareSettlementData(matchings);
+    if (items.length === 0) {
+      toast.error('No finalized matchings to export');
+      return;
+    }
+    exportSettlementCSV(items, summary, requestInfo?.requestNumber);
+    toast.success('Settlement CSV exported');
+  };
+
+  const handlePrintPDF = () => {
+    if (!matchings) return;
+    const { items, summary } = prepareSettlementData(matchings);
+    if (items.length === 0) {
+      toast.error('No finalized matchings to print');
+      return;
+    }
+    printSettlementPDF(items, summary, requestInfo);
   };
 
   if (isLoading) {
@@ -190,10 +220,46 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
                 {matchings.length}
               </Badge>
             </CardTitle>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="text-blue-600">{activeCount} active</span>
-              <span>·</span>
-              <span className="text-emerald-600">{finalizedCount} finalized</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="text-blue-600">{activeCount} active</span>
+                <span>·</span>
+                <span className="text-emerald-600">{finalizedCount} finalized</span>
+              </div>
+              {finalizedCount > 0 && (
+                <div className="flex items-center gap-1 border-l pl-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={handleExportCSV}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Export Settlement CSV</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={handlePrintPDF}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Print Settlement PDF</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>

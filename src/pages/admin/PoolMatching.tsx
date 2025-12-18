@@ -905,9 +905,17 @@ export default function PoolMatching() {
         </div>
 
         {/* Matchings Side Panel */}
-        {activeRequestId && !showAuditHistory && (
+        {activeRequestId && !showAuditHistory && activeRequest && (
           <div className="lg:col-span-3">
-            <MatchingListPanel requestId={activeRequestId} compact />
+            <MatchingListPanel 
+              requestId={activeRequestId} 
+              compact 
+              requestInfo={{
+                requestNumber: activeRequest.request_number,
+                mpkName: activeRequest.mpk_name,
+                targetWeek: activeRequest.target_week,
+              }}
+            />
           </div>
         )}
 
