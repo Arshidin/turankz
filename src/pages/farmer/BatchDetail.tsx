@@ -63,6 +63,7 @@ import {
   SoftCommitEditDialog,
 } from '@/components/data-integrity';
 import { BatchFSMPanel } from '@/components/batches';
+import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { useChangeTracking } from '@/hooks/useChangeTracking';
 import { DEFAULT_CONSTRAINTS, requiresReadinessConfirmation } from '@/lib/change-constraints';
 import {
@@ -411,6 +412,11 @@ export default function BatchDetail() {
             </Tooltip>
           </TooltipProvider>
         )}
+      </div>
+
+      {/* Current Matching Window Banner */}
+      <div className="mb-6">
+        <CurrentMatchingWindowBanner compact />
       </div>
 
       {/* Action Alert for Review */}

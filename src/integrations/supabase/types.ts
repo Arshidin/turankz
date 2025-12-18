@@ -244,6 +244,48 @@ export type Database = {
         }
         Relationships: []
       }
+      matching_windows: {
+        Row: {
+          close_date: string
+          created_at: string
+          created_by: string | null
+          id: string
+          lock_date: string
+          name: string
+          notes: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["matching_window_status"]
+          target_week: string
+          updated_at: string
+        }
+        Insert: {
+          close_date: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lock_date: string
+          name: string
+          notes?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["matching_window_status"]
+          target_week: string
+          updated_at?: string
+        }
+        Update: {
+          close_date?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lock_date?: string
+          name?: string
+          notes?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["matching_window_status"]
+          target_week?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mpk_activity_log: {
         Row: {
           action_type: string
@@ -674,6 +716,7 @@ export type Database = {
         | "delivered"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
+      matching_window_status: "upcoming" | "active" | "locked" | "closed"
       mpk_status: "active" | "restricted" | "inactive"
       notification_type:
         | "pool_invitation"
@@ -847,6 +890,7 @@ export const Constants = {
       ],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
+      matching_window_status: ["upcoming", "active", "locked", "closed"],
       mpk_status: ["active", "restricted", "inactive"],
       notification_type: [
         "pool_invitation",
