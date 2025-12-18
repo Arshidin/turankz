@@ -84,6 +84,9 @@ import { validateBatchEdit, formatValidationError } from '@/lib/batch-transition
 import { useAdminOverride, useBatchAdminUnlockStatus } from '@/hooks/useAdminOverride';
 import { AdminOverrideDialog } from '@/components/admin/AdminOverrideDialog';
 import { AdminOverrideBadge } from '@/components/admin/AdminOverrideBadge';
+import { RoleAwarePremiumBreakdown } from '@/components/premium/RoleAwarePremiumBreakdown';
+import { useCalculatePremiumEligibility } from '@/hooks/usePremiumEligibility';
+import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
 
 const REGIONS = [
   'Almaty',
@@ -173,6 +176,14 @@ export default function BatchDetail() {
   const updateBatch = useUpdateBatch();
   const { trackBatchQuantityChange, trackReadinessChange, trackMonthChange } = useChangeTracking();
   const { role } = useRole();
+  const { data: currentFarmer } = useCurrentFarmer();
+
+  // Premium eligibility calculation for matched/confirmed batches
+  const showPremiumBreakdown = batch && ['confirmed', 'matched', 'closed'].includes(batch.status);
+  const { data: premiumBreakdown, isLoading: loadingPremiums } = useCalculatePremiumEligibility(
+    showPremiumBreakdown ? batch?.id : null,
+    showPremiumBreakdown ? currentFarmer?.id : null
+  );
 
   // Check edit rules based on status
   const isStatusReadOnly = batch ? isBatchReadOnly(batch.status) : false;
@@ -937,6 +948,14 @@ export default function BatchDetail() {
             timeLockTooltip={timeLockStatus.lockReason || getTimeLockedTooltip()}
             matchingWindow={matchingWindow}
           />
+
+          {/* Price Breakdown - for confirmed/matched batches */}
+          {showPremiumBreakdown && premiumBreakdown && (
+            <RoleAwarePremiumBreakdown
+              breakdown={premiumBreakdown}
+              isLocked={batch.status === 'matched' || batch.status === 'closed'}
+            />
+          )}
 
           {/* Quick Actions */}
           {!isEditing && (

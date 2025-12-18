@@ -9,10 +9,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO } from 'date-fns';
-import { Link2, CheckCircle2, Clock, Truck } from 'lucide-react';
+import { Link2, CheckCircle2, Clock, Truck, Lock, Info } from 'lucide-react';
 
 interface MpkMatchingViewProps {
   requestId?: string;
@@ -27,6 +33,11 @@ interface MpkMatchingData {
   batch_region: string;
   batch_grade: string;
   target_week: string;
+  // Pricing - aggregated for MPK (hides farmer-specific scoring)
+  total_price_per_kg: number | null;
+  base_price_per_kg: number | null;
+  total_premium: number | null;
+  premium_locked: boolean;
 }
 
 /**
@@ -44,6 +55,10 @@ export function MpkMatchingView({ requestId }: MpkMatchingViewProps) {
           matching_date,
           status,
           finalized_at,
+          total_price_per_kg,
+          base_price_per_kg,
+          total_premium,
+          premium_locked,
           batches:batch_id (
             region,
             grade,
@@ -69,6 +84,10 @@ export function MpkMatchingView({ requestId }: MpkMatchingViewProps) {
         batch_region: (item.batches as any)?.region || '',
         batch_grade: (item.batches as any)?.grade || '',
         target_week: (item.batches as any)?.target_week || '',
+        total_price_per_kg: item.total_price_per_kg,
+        base_price_per_kg: item.base_price_per_kg,
+        total_premium: item.total_premium,
+        premium_locked: item.premium_locked || false,
       })) as MpkMatchingData[];
     },
   });
@@ -134,16 +153,17 @@ export function MpkMatchingView({ requestId }: MpkMatchingViewProps) {
       </CardHeader>
       <CardContent className="pt-0">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">Region</TableHead>
-              <TableHead className="text-xs">Grade</TableHead>
-              <TableHead className="text-xs">Target Week</TableHead>
-              <TableHead className="text-xs">Heads</TableHead>
-              <TableHead className="text-xs">Match Date</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-            </TableRow>
-          </TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Region</TableHead>
+                <TableHead className="text-xs">Grade</TableHead>
+                <TableHead className="text-xs">Target Week</TableHead>
+                <TableHead className="text-xs">Heads</TableHead>
+                <TableHead className="text-xs">Price</TableHead>
+                <TableHead className="text-xs">Match Date</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {matchings.map(matching => (
               <TableRow key={matching.id}>
@@ -160,6 +180,39 @@ export function MpkMatchingView({ requestId }: MpkMatchingViewProps) {
                 </TableCell>
                 <TableCell className="py-2 font-medium">
                   {matching.heads_matched}
+                </TableCell>
+                <TableCell className="py-2">
+                  {matching.premium_locked && matching.total_price_per_kg ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="default" className="text-xs">
+                              {matching.total_price_per_kg} ₸/kg
+                            </Badge>
+                            {matching.total_premium && matching.total_premium > 0 && (
+                              <Badge variant="secondary" className="text-xs text-emerald-600">
+                                +{matching.total_premium}
+                              </Badge>
+                            )}
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-xs space-y-1">
+                            <p>Base: {matching.base_price_per_kg} ₸/kg</p>
+                            <p>Premiums: +{matching.total_premium} ₸/kg</p>
+                            <p className="text-muted-foreground">Price locked at finalization</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Pending
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="py-2 text-sm text-muted-foreground">
                   {format(parseISO(matching.matching_date), 'MMM d')}
