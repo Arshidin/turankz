@@ -5,7 +5,19 @@ import {
   type MatchingWindow, 
   type MatchingWindowStatus,
   isWindowTransitionAllowed,
+  getEffectiveWindowStatus,
 } from '@/lib/matching-window';
+
+/**
+ * Enhance a matching window with its computed effective status based on real dates
+ */
+function withEffectiveStatus(window: MatchingWindow): MatchingWindow {
+  const effectiveStatus = getEffectiveWindowStatus(window);
+  return {
+    ...window,
+    status: effectiveStatus,
+  };
+}
 
 /**
  * Fetch all matching windows
@@ -20,50 +32,45 @@ export const useMatchingWindows = () => {
         .order('start_date', { ascending: false });
 
       if (error) throw error;
-      return data as MatchingWindow[];
+      // Apply effective status computation to each window
+      return (data as MatchingWindow[]).map(withEffectiveStatus);
     },
   });
 };
 
 /**
- * Fetch the current active or upcoming matching window
+ * Fetch the current active or upcoming matching window (computed from real dates)
  */
 export const useCurrentMatchingWindow = () => {
   return useQuery({
     queryKey: ['matching-windows', 'current'],
     queryFn: async () => {
-      // First try to get active window
-      const { data: activeWindow, error: activeError } = await supabase
+      // Get all non-closed windows ordered by start date
+      const { data: windows, error } = await supabase
         .from('matching_windows')
         .select('*')
-        .eq('status', 'active')
-        .maybeSingle();
+        .order('start_date', { ascending: true });
 
-      if (activeError) throw activeError;
-      if (activeWindow) return activeWindow as MatchingWindow;
+      if (error) throw error;
+      if (!windows || windows.length === 0) return null;
 
-      // If no active window, get locked window
-      const { data: lockedWindow, error: lockedError } = await supabase
-        .from('matching_windows')
-        .select('*')
-        .eq('status', 'locked')
-        .maybeSingle();
+      // Compute effective status for each window and find the most relevant one
+      const windowsWithStatus = (windows as MatchingWindow[]).map(withEffectiveStatus);
+      
+      // Priority: active > locked > upcoming (closest one)
+      const activeWindow = windowsWithStatus.find(w => w.status === 'active');
+      if (activeWindow) return activeWindow;
 
-      if (lockedError) throw lockedError;
-      if (lockedWindow) return lockedWindow as MatchingWindow;
+      const lockedWindow = windowsWithStatus.find(w => w.status === 'locked');
+      if (lockedWindow) return lockedWindow;
 
-      // If no active or locked, get upcoming window
-      const { data: upcomingWindow, error: upcomingError } = await supabase
-        .from('matching_windows')
-        .select('*')
-        .eq('status', 'upcoming')
-        .order('start_date', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      const upcomingWindow = windowsWithStatus.find(w => w.status === 'upcoming');
+      if (upcomingWindow) return upcomingWindow;
 
-      if (upcomingError) throw upcomingError;
-      return upcomingWindow as MatchingWindow | null;
+      return null;
     },
+    // Refetch every minute to keep status current with real time
+    refetchInterval: 60000,
   });
 };
 
