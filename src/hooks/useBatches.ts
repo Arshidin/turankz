@@ -2,8 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { 
+  type BatchLifecycleStatus, 
+  isTransitionAllowed, 
+  validateTransition 
+} from '@/lib/batch-lifecycle';
 
-export type BatchStatus = 'forecast' | 'soft_committed' | 'confirmed' | 'delivered';
+// Use the strict lifecycle status type
+export type BatchStatus = BatchLifecycleStatus;
 
 export interface Batch {
   id: string;
@@ -21,6 +27,7 @@ export interface Batch {
   action_type: 'confirm' | 'review' | 'update' | null;
   created_at: string;
   updated_at: string;
+  standard_status: string | null;
   // Livestock criteria
   breed: string | null;
   gender: string | null;

@@ -664,7 +664,14 @@ export type Database = {
         | "invitation_accepted"
         | "invitation_declined"
       app_role: "admin" | "farmer" | "mpk"
-      batch_status: "forecast" | "soft_committed" | "confirmed" | "delivered"
+      batch_status:
+        | "draft"
+        | "forecast"
+        | "soft_committed"
+        | "confirmed"
+        | "matched"
+        | "closed"
+        | "delivered"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
       mpk_status: "active" | "restricted" | "inactive"
@@ -829,7 +836,15 @@ export const Constants = {
         "invitation_declined",
       ],
       app_role: ["admin", "farmer", "mpk"],
-      batch_status: ["forecast", "soft_committed", "confirmed", "delivered"],
+      batch_status: [
+        "draft",
+        "forecast",
+        "soft_committed",
+        "confirmed",
+        "matched",
+        "closed",
+        "delivered",
+      ],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
       mpk_status: ["active", "restricted", "inactive"],

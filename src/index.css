@@ -37,9 +37,13 @@
     --radius: 0.375rem;
 
     /* ===========================================
-       READINESS STATUS COLORS
+       BATCH LIFECYCLE STATUS COLORS
        Consistent visual treatment across platform
        =========================================== */
+    
+    /* Draft - Subtle/Dotted (not yet active) */
+    --status-draft: 215 15% 55%;
+    --status-draft-bg: 215 15% 97%;
     
     /* Forecast - Neutral/Light Gray (not urgent) */
     --status-forecast: 215 15% 45%;
@@ -53,7 +57,15 @@
     --status-confirmed: 150 50% 38%;
     --status-confirmed-bg: 150 50% 95%;
 
-    /* Delivered - Muted success (final state) */
+    /* Matched - Blue (in pool) */
+    --status-matched: 200 65% 45%;
+    --status-matched-bg: 200 65% 95%;
+
+    /* Closed - Muted/Gray (final state) */
+    --status-closed: 175 35% 40%;
+    --status-closed-bg: 175 35% 94%;
+
+    /* Delivered - Legacy alias for closed */
     --status-delivered: 175 35% 40%;
     --status-delivered-bg: 175 35% 94%;
 
@@ -166,6 +178,9 @@
     --ring: 175 40% 50%;
 
     /* Dark mode status colors */
+    --status-draft: 215 15% 65%;
+    --status-draft-bg: 215 15% 18%;
+    
     --status-forecast: 215 15% 60%;
     --status-forecast-bg: 215 15% 20%;
     
@@ -174,6 +189,12 @@
     
     --status-confirmed: 150 45% 50%;
     --status-confirmed-bg: 150 45% 15%;
+
+    --status-matched: 200 60% 55%;
+    --status-matched-bg: 200 60% 15%;
+
+    --status-closed: 175 35% 50%;
+    --status-closed-bg: 175 35% 15%;
 
     --status-delivered: 175 35% 50%;
     --status-delivered-bg: 175 35% 15%;
@@ -253,6 +274,12 @@
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
   }
 
+  .status-draft {
+    background-color: hsl(var(--status-draft-bg));
+    color: hsl(var(--status-draft));
+    border: 1px dashed hsl(var(--status-draft) / 0.4);
+  }
+
   .status-forecast {
     background-color: hsl(var(--status-forecast-bg));
     color: hsl(var(--status-forecast));
@@ -269,6 +296,18 @@
     background-color: hsl(var(--status-confirmed-bg));
     color: hsl(var(--status-confirmed));
     border: 1px solid hsl(var(--status-confirmed) / 0.25);
+  }
+
+  .status-matched {
+    background-color: hsl(var(--status-matched-bg));
+    color: hsl(var(--status-matched));
+    border: 1px solid hsl(var(--status-matched) / 0.25);
+  }
+
+  .status-closed {
+    background-color: hsl(var(--status-closed-bg));
+    color: hsl(var(--status-closed));
+    border: 1px solid hsl(var(--status-closed) / 0.2);
   }
 
   .status-delivered {

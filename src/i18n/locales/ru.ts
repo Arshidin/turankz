@@ -200,9 +200,13 @@ export const ru = {
     heads: 'Голов',
     avgWeight: 'Средний вес',
     status: 'Статус',
+    // Lifecycle statuses
+    draft: 'Черновик',
     forecast: 'Прогноз',
     softCommitted: 'Предварительно',
     confirmed: 'Подтверждено',
+    matched: 'Сопоставлено',
+    closed: 'Закрыто',
     delivered: 'Доставлено',
     standardStatus: 'Стандарт',
     standard: 'Стандарт',
@@ -241,6 +245,30 @@ export const ru = {
     statusChangedTo: 'Статус партии изменён на {{status}}.',
     batchWithdrawn: 'Партия отозвана',
     batchWithdrawnDescription: 'Партия исключена из рассмотрения для пулов.',
+  },
+  
+  batchLifecycle: {
+    title: 'Жизненный цикл партии',
+    currentStatus: 'Текущий статус',
+    nextAction: 'Следующее действие',
+    statusDisabled: 'Это действие недоступно при текущем статусе партии.',
+    adminOnly: 'Это действие требует прав Администратора.',
+    cannotRevert: 'Невозможно вернуться к предыдущему статусу. Жизненный цикл партии необратим.',
+    cannotSkip: 'Невозможно пропустить этапы. Сначала перейдите к следующему статусу.',
+    // Status descriptions
+    draftDescription: 'Начальная запись, ещё не видна в пуле',
+    forecastDescription: 'Заявленная доступность, видна в обзоре рынка',
+    softCommittedDescription: 'Предварительное обязательство на продажу',
+    confirmedDescription: 'Твёрдое обязательство, готово к сопоставлению',
+    matchedDescription: 'Сопоставлено с заявкой на покупку',
+    closedDescription: 'Сделка завершена или партия закрыта',
+    // Transition actions
+    publishToMarket: 'Опубликовать',
+    commitPreliminarily: 'Предварительно подтвердить',
+    confirmAvailability: 'Подтвердить доступность',
+    markAsMatched: 'Отметить как сопоставлено',
+    closeBatch: 'Закрыть партию',
+    updateStatus: 'Обновить статус',
   },
   
   calendar: {

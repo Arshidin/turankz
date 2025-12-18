@@ -82,7 +82,7 @@ export function aggregateByRegion(batches: Batch[]): RegionSupply[] {
     
     existing.total += batch.heads;
     
-    if (batch.status === 'confirmed' || batch.status === 'delivered') {
+    if (batch.status === 'confirmed' || batch.status === 'matched' || batch.status === 'closed') {
       existing.confirmed += batch.heads;
     } else if (batch.status === 'soft_committed') {
       existing.softCommitted += batch.heads;
@@ -101,7 +101,7 @@ export function calculateMarketSummary(batches: Batch[]): MarketSummary {
   return batches.reduce(
     (acc, batch) => {
       acc.total += batch.heads;
-      if (batch.status === 'confirmed' || batch.status === 'delivered') {
+      if (batch.status === 'confirmed' || batch.status === 'matched' || batch.status === 'closed') {
         acc.confirmed += batch.heads;
       } else if (batch.status === 'soft_committed') {
         acc.softCommitted += batch.heads;
