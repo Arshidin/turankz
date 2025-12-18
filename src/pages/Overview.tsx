@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRole } from '@/contexts/RoleContext';
-import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Calendar, Shield, Info } from 'lucide-react';
+import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Calendar, Shield, Info, Lock, Eye } from 'lucide-react';
 import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
 import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
 import { AttentionRequired } from '@/components/admin/AttentionRequired';
@@ -17,6 +19,7 @@ import { useFarmers } from '@/hooks/useFarmers';
 import { useMpks } from '@/hooks/useMpks';
 import { useBatches } from '@/hooks/useBatches';
 import { usePoolRequests } from '@/hooks/usePoolRequests';
+import { useCurrentFarmer, useIsObserver } from '@/hooks/useCurrentFarmer';
 
 const nextMatchingWindow = {
   date: '20 декабря 2025',
@@ -37,16 +40,57 @@ const stats = {
   ],
 };
 
-const farmerStatus = {
-  gradingLevel: 'Объявленный поставщик',
-  gradingDescription: 'Ваше хозяйство верифицировано и вы можете участвовать в пуле сопоставления.',
-  accessLevel: 'Доступны приглашения в пул',
-  nextAction: 'Подтвердите хотя бы одну партию для повышения приоритета.',
-  gradingLevels: [
-    { name: 'Наблюдатель', active: false },
-    { name: 'Объявленный поставщик', active: true },
-    { name: 'Стандартный поставщик', active: false },
-  ],
+const getGradingConfig = (grading: string | null | undefined) => {
+  switch (grading) {
+    case 'observer':
+      return {
+        gradingLevel: 'Наблюдатель',
+        gradingDescription: 'Ваша заявка находится на рассмотрении. Вы имеете доступ только для просмотра.',
+        accessLevel: 'Только просмотр',
+        nextAction: 'Ожидайте активации от Администратора.',
+        gradingLevels: [
+          { name: 'Наблюдатель', active: true },
+          { name: 'Объявленный поставщик', active: false },
+          { name: 'Стандартный поставщик', active: false },
+        ],
+      };
+    case 'declared_supplier':
+      return {
+        gradingLevel: 'Объявленный поставщик',
+        gradingDescription: 'Ваше хозяйство верифицировано и вы можете участвовать в пуле сопоставления.',
+        accessLevel: 'Доступны приглашения в пул',
+        nextAction: 'Подтвердите хотя бы одну партию для повышения приоритета.',
+        gradingLevels: [
+          { name: 'Наблюдатель', active: false },
+          { name: 'Объявленный поставщик', active: true },
+          { name: 'Стандартный поставщик', active: false },
+        ],
+      };
+    case 'standard_supplier':
+      return {
+        gradingLevel: 'Стандартный поставщик',
+        gradingDescription: 'Вы достигли высшего уровня надёжности и получаете приоритет при сопоставлении.',
+        accessLevel: 'Полный доступ + приоритет',
+        nextAction: 'Поддерживайте качество поставок для сохранения статуса.',
+        gradingLevels: [
+          { name: 'Наблюдатель', active: false },
+          { name: 'Объявленный поставщик', active: false },
+          { name: 'Стандартный поставщик', active: true },
+        ],
+      };
+    default:
+      return {
+        gradingLevel: 'Наблюдатель',
+        gradingDescription: 'Ваша заявка находится на рассмотрении.',
+        accessLevel: 'Только просмотр',
+        nextAction: 'Ожидайте активации.',
+        gradingLevels: [
+          { name: 'Наблюдатель', active: true },
+          { name: 'Объявленный поставщик', active: false },
+          { name: 'Стандартный поставщик', active: false },
+        ],
+      };
+  }
 };
 
 const recentActivity = [
@@ -61,6 +105,13 @@ export default function Overview() {
   const { t } = useTranslation();
   const { role, roleName } = useRole();
   const navigate = useNavigate();
+  
+  // Fetch current farmer data
+  const { data: currentFarmer } = useCurrentFarmer();
+  const isObserver = useIsObserver();
+  
+  // Get farmer status config based on grading
+  const farmerStatus = getGradingConfig(currentFarmer?.grading);
   
   // Fetch real data for Admin dashboard
   const { data: farmers = [] } = useFarmers();
@@ -222,19 +273,30 @@ export default function Overview() {
 
       {/* Farmer Status Banner */}
       {role === 'farmer' && (
-        <Card className="mb-6 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+        <Card className={`mb-6 ${isObserver ? 'border-amber-500/30 bg-amber-500/5' : 'border-primary/30 bg-gradient-to-r from-primary/5 to-transparent'}`}>
           <CardContent className="p-5">
             <div className="flex flex-col gap-4">
+              {/* Observer Mode Alert */}
+              {isObserver && (
+                <Alert className="border-amber-500/30 bg-amber-500/10 mb-2">
+                  <Lock className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-sm">
+                    <span className="font-medium text-amber-700">Observer Mode</span>
+                    <span className="text-amber-700/80"> — You have read-only access. Batch creation will be available after Admin activation.</span>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {/* Status Header */}
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-6 h-6 text-primary" />
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${isObserver ? 'bg-amber-500/10' : 'bg-primary/10'}`}>
+                    {isObserver ? <Eye className="w-6 h-6 text-amber-600" /> : <Shield className="w-6 h-6 text-primary" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm text-muted-foreground">{t('farmerOverview.yourGradingLevel')}:</span>
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-semibold">
+                      <Badge variant="outline" className={`font-semibold ${isObserver ? 'bg-amber-500/10 text-amber-700 border-amber-500/30' : 'bg-primary/10 text-primary border-primary/30'}`}>
                         {farmerStatus.gradingLevel}
                       </Badge>
                     </div>
@@ -250,7 +312,7 @@ export default function Overview() {
                     <div key={level.name} className="flex items-center">
                       <div className={`px-3 py-1.5 rounded text-xs font-medium ${
                         level.active 
-                          ? 'bg-primary text-primary-foreground' 
+                          ? isObserver ? 'bg-amber-500 text-white' : 'bg-primary text-primary-foreground'
                           : 'bg-secondary text-muted-foreground'
                       }`}>
                         {level.name}
@@ -266,13 +328,17 @@ export default function Overview() {
               {/* Access & Next Action */}
               <div className="flex flex-col md:flex-row md:items-center gap-4 pt-3 border-t border-border/50">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-status-confirmed" />
+                  {isObserver ? (
+                    <Lock className="w-4 h-4 text-amber-600" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-status-confirmed" />
+                  )}
                   <span className="text-sm text-muted-foreground">{t('farmerOverview.access')}:</span>
-                  <span className="text-sm font-medium text-foreground">{farmerStatus.accessLevel}</span>
+                  <span className={`text-sm font-medium ${isObserver ? 'text-amber-700' : 'text-foreground'}`}>{farmerStatus.accessLevel}</span>
                 </div>
                 <div className="hidden md:block w-px h-4 bg-border" />
                 <div className="flex items-center gap-2">
-                  <ArrowRight className="w-4 h-4 text-primary" />
+                  <ArrowRight className={`w-4 h-4 ${isObserver ? 'text-amber-600' : 'text-primary'}`} />
                   <span className="text-sm text-muted-foreground">{t('farmerOverview.nextStep')}:</span>
                   <span className="text-sm text-foreground">{farmerStatus.nextAction}</span>
                 </div>
@@ -330,10 +396,10 @@ export default function Overview() {
           </Card>
         ))}
       </div>
-      {/* Reliability Premium Card for Farmer */}
-      {role === 'farmer' && (
+      {/* Reliability Premium Card for Farmer (hide for observers) */}
+      {role === 'farmer' && !isObserver && currentFarmer?.grading && (
         <div className="mb-6">
-          <ReliabilityPremiumCard farmerGrading="declared_supplier" />
+          <ReliabilityPremiumCard farmerGrading={currentFarmer.grading} />
         </div>
       )}
 

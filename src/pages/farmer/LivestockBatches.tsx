@@ -9,6 +9,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Plus, 
   AlertCircle, 
@@ -18,10 +20,12 @@ import {
   ArrowUpCircle,
   Trash2,
   Edit,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
 import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
+import { useIsObserver, useCanCreateBatches } from '@/hooks/useCurrentFarmer';
 import { PremiumBadge } from '@/components/premium';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -64,6 +68,8 @@ export default function LivestockBatches() {
   const stats = useBatchStats();
   const updateBatch = useUpdateBatch();
   const { data: standardPremiums } = useStandardPremiums();
+  const isObserver = useIsObserver();
+  const canCreateBatches = useCanCreateBatches();
   
   const [withdrawBatchId, setWithdrawBatchId] = useState<string | null>(null);
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
@@ -169,6 +175,17 @@ export default function LivestockBatches() {
         </Card>
       </div>
 
+      {/* Observer Mode Banner */}
+      {isObserver && (
+        <Alert className="mb-6 border-amber-500/30 bg-amber-500/5">
+          <Lock className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-sm">
+            <span className="font-medium text-amber-700">Observer Mode</span>
+            <span className="text-muted-foreground"> — You have read-only access. Batch creation and confirmation will be available after Admin activation.</span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Helper Text */}
       <Card className="mb-6 border-primary/20 bg-primary/5">
         <CardContent className="py-3">
@@ -185,10 +202,29 @@ export default function LivestockBatches() {
             <CardTitle className="text-base font-medium">{t('batches.batchRegistry')}</CardTitle>
             <CardDescription>{t('batches.manageBatches')}</CardDescription>
           </div>
-          <Button size="sm" onClick={() => setNewBatchOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('batches.newBatch')}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-block">
+                  <Button 
+                    size="sm" 
+                    onClick={() => setNewBatchOpen(true)}
+                    disabled={!canCreateBatches}
+                    className={!canCreateBatches ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    {!canCreateBatches && <Lock className="w-3 h-3 mr-2" />}
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('batches.newBatch')}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!canCreateBatches && (
+                <TooltipContent>
+                  <p>Available after Admin activation</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -302,24 +338,55 @@ export default function LivestockBatches() {
                               <Edit className="w-4 h-4" />
                             </Button>
                             {nextStatus && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-8 w-8 text-primary hover:text-primary"
-                                onClick={() => setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
-                                title={`Escalate to ${nextStatus}`}
-                              >
-                                <ArrowUpCircle className="w-4 h-4" />
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-block">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        className={`h-8 w-8 ${!canCreateBatches ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
+                                        onClick={() => canCreateBatches && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
+                                        disabled={!canCreateBatches}
+                                      >
+                                        {!canCreateBatches ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {!canCreateBatches ? (
+                                    <TooltipContent>
+                                      <p>Available after Admin activation</p>
+                                    </TooltipContent>
+                                  ) : (
+                                    <TooltipContent>
+                                      <p>Escalate to {nextStatus}</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setWithdrawBatchId(batch.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-block">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className={`h-8 w-8 ${!canCreateBatches ? 'opacity-50 cursor-not-allowed' : 'text-destructive hover:text-destructive'}`}
+                                      onClick={() => canCreateBatches && setWithdrawBatchId(batch.id)}
+                                      disabled={!canCreateBatches}
+                                    >
+                                      {!canCreateBatches ? <Lock className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                {!canCreateBatches && (
+                                  <TooltipContent>
+                                    <p>Available after Admin activation</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -343,12 +410,33 @@ export default function LivestockBatches() {
               </div>
               <p className="font-medium text-foreground mb-1">{t('batches.noBatches')}</p>
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                {t('batches.noBatchesDescription')}
+                {isObserver 
+                  ? 'Batch creation will be available after Admin activation.'
+                  : t('batches.noBatchesDescription')
+                }
               </p>
-              <Button onClick={() => setNewBatchOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t('batches.declareFirstBatch')}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-block">
+                      <Button 
+                        onClick={() => setNewBatchOpen(true)} 
+                        disabled={!canCreateBatches}
+                        className={!canCreateBatches ? 'opacity-50 cursor-not-allowed' : ''}
+                      >
+                        {!canCreateBatches && <Lock className="w-4 h-4 mr-2" />}
+                        <Plus className="w-4 h-4 mr-2" />
+                        {t('batches.declareFirstBatch')}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!canCreateBatches && (
+                    <TooltipContent>
+                      <p>Available after Admin activation</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </CardContent>
