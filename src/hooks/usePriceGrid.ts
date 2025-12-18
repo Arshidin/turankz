@@ -3,6 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
 
+export interface PriceGridChangeLog {
+  id: string;
+  version_id: string | null;
+  action_type: string;
+  previous_value: string | null;
+  new_value: string | null;
+  changed_by: string;
+  change_reason: string | null;
+  created_at: string;
+}
+
 export interface PriceGridVersion {
   id: string;
   version_name: string;
@@ -196,9 +207,13 @@ export function useActivatePriceGridVersion() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ versionId }: { versionId: string }) => {
+    mutationFn: async ({ versionId, activationReason }: { versionId: string; activationReason: string }) => {
       if (role !== 'admin') {
         throw new Error('Only admins can activate price grid versions');
+      }
+
+      if (!activationReason?.trim()) {
+        throw new Error('A reason for activation is required');
       }
 
       const { data, error } = await supabase
@@ -213,12 +228,13 @@ export function useActivatePriceGridVersion() {
 
       if (error) throw error;
 
-      // Log activation
+      // Log activation with reason
       await supabase.from('price_grid_change_log').insert({
         version_id: versionId,
         action_type: 'version_activated',
         new_value: data.version_name,
         changed_by: `${roleName} (${role})`,
+        change_reason: activationReason.trim(),
       });
 
       return data as PriceGridVersion;
@@ -252,12 +268,20 @@ export function useUpsertPriceGridCell() {
     mutationFn: async ({
       versionId,
       cell,
+      changeReason,
+      previousPrice,
     }: {
       versionId: string;
       cell: Omit<PriceGridCell, 'id' | 'version_id' | 'created_at' | 'updated_at'>;
+      changeReason: string;
+      previousPrice?: number;
     }) => {
       if (role !== 'admin') {
         throw new Error('Only admins can modify price grid cells');
+      }
+
+      if (!changeReason?.trim()) {
+        throw new Error('A reason for the change is required');
       }
 
       const { data, error } = await supabase
@@ -279,12 +303,14 @@ export function useUpsertPriceGridCell() {
 
       if (error) throw error;
 
-      // Log change
+      // Log change with reason
       await supabase.from('price_grid_change_log').insert({
         version_id: versionId,
         action_type: 'cell_updated',
+        previous_value: previousPrice ? `${previousPrice}₸/kg` : null,
         new_value: `${cell.age_category}/${cell.sex}/${cell.weight_min}-${cell.weight_max}kg: ${cell.base_price}₸/kg`,
         changed_by: `${roleName} (${role})`,
+        change_reason: changeReason.trim(),
       });
 
       return data as PriceGridCell;
