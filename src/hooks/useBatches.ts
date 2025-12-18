@@ -5,7 +5,9 @@ import { toast } from '@/hooks/use-toast';
 import { 
   type BatchLifecycleStatus, 
   isTransitionAllowed, 
-  validateTransition 
+  validateTransition,
+  INITIAL_BATCH_STATUS,
+  enforceInitialStatus,
 } from '@/lib/batch-lifecycle';
 
 // Use the strict lifecycle status type
@@ -169,9 +171,13 @@ export const useCreateBatch = () => {
 
   return useMutation({
     mutationFn: async (batch: Omit<Batch, 'id' | 'created_at' | 'updated_at'>) => {
+      // STRICT ENFORCEMENT: All new batches must start as Draft
+      // Any external status input is ignored and overwritten
+      const enforcedBatch = enforceInitialStatus(batch);
+      
       const { data, error } = await supabase
         .from('batches')
-        .insert(batch)
+        .insert(enforcedBatch)
         .select()
         .single();
 
@@ -182,7 +188,7 @@ export const useCreateBatch = () => {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
       toast({
         title: 'Batch Created',
-        description: 'New batch has been added successfully.',
+        description: `New batch has been created with status "${INITIAL_BATCH_STATUS}".`,
       });
     },
     onError: (error) => {

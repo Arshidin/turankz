@@ -29,9 +29,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCreateBatch } from '@/hooks/useBatches';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE } from '@/lib/livestock-criteria';
+import { INITIAL_BATCH_STATUS, getBatchCreationInfo, BATCH_STATUS_LABELS } from '@/lib/batch-lifecycle';
 
 const REGIONS = [
   'Almaty',
@@ -99,6 +101,17 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   const createBatch = useCreateBatch();
   const weekOptions = getTargetWeekOptions();
   
+  // Get current language
+  const getCurrentLang = (): 'en' | 'ru' => {
+    if (typeof window !== 'undefined') {
+      const lang = localStorage.getItem('i18nextLng') || 'ru';
+      return lang.startsWith('ru') ? 'ru' : 'en';
+    }
+    return 'ru';
+  };
+  
+  const lifecycleInfo = getBatchCreationInfo(getCurrentLang());
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -118,7 +131,8 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   });
 
   const onSubmit = async (data: FormData) => {
-    // For now, we'll use a placeholder user_id since auth isn't implemented
+    // Status is enforced by useCreateBatch - always starts as Draft
+    // Any status value here will be ignored by the hook
     const batch = {
       batch_number: generateBatchNumber(),
       user_id: crypto.randomUUID(), // Placeholder - should be auth.uid() when auth is implemented
@@ -128,7 +142,7 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
       grade: data.grade,
       target_week: data.target_week,
       notes: data.notes || null,
-      status: 'draft' as const, // New batches start as draft
+      status: INITIAL_BATCH_STATUS, // Enforced at domain layer - cannot be overridden
       requires_action: false,
       action_type: null,
       mpk_interest: null,
@@ -157,9 +171,17 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
           <DialogTitle>Declare New Batch</DialogTitle>
           <DialogDescription>
             Add a new livestock batch to signal availability for pool matching.
-            New batches start as Draft status — publish to market when ready.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Lifecycle Info Alert */}
+        <Alert className="border-primary/30 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm">
+            <span className="font-medium">{lifecycleInfo.title}:</span>{' '}
+            {lifecycleInfo.description}
+          </AlertDescription>
+        </Alert>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
