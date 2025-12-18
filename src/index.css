@@ -136,6 +136,35 @@
     --pool-cancelled: 215 15% 55%;
     --pool-cancelled-bg: 215 15% 95%;
 
+    /* ===========================================
+       EXECUTION LIFECYCLE STATUS
+       Contracts & Settlement flow statuses
+       =========================================== */
+    
+    /* Matched - Initial state after pool matching */
+    --exec-matched: 200 65% 45%;
+    --exec-matched-bg: 200 65% 95%;
+    
+    /* Scheduled - Delivery dates set */
+    --exec-scheduled: 38 80% 50%;
+    --exec-scheduled-bg: 38 80% 95%;
+    
+    /* Delivered - MPK confirmed receipt */
+    --exec-delivered: 280 50% 50%;
+    --exec-delivered-bg: 280 50% 95%;
+    
+    /* Confirmed - Admin compliance verified */
+    --exec-confirmed: 150 50% 40%;
+    --exec-confirmed-bg: 150 50% 95%;
+    
+    /* Settled - Settlement calculated */
+    --exec-settled: 175 45% 42%;
+    --exec-settled-bg: 175 45% 94%;
+    
+    /* Closed - Fully completed */
+    --exec-closed: 215 15% 50%;
+    --exec-closed-bg: 215 15% 95%;
+
     /* Sidebar */
     --sidebar-background: 215 25% 18%;
     --sidebar-foreground: 210 20% 90%;
@@ -241,6 +270,25 @@
     
     --pool-cancelled: 215 15% 60%;
     --pool-cancelled-bg: 215 15% 18%;
+
+    /* Dark mode execution status */
+    --exec-matched: 200 60% 55%;
+    --exec-matched-bg: 200 60% 15%;
+    
+    --exec-scheduled: 38 70% 55%;
+    --exec-scheduled-bg: 38 70% 15%;
+    
+    --exec-delivered: 280 45% 55%;
+    --exec-delivered-bg: 280 45% 15%;
+    
+    --exec-confirmed: 150 45% 50%;
+    --exec-confirmed-bg: 150 45% 15%;
+    
+    --exec-settled: 175 40% 50%;
+    --exec-settled-bg: 175 40% 15%;
+    
+    --exec-closed: 215 15% 60%;
+    --exec-closed-bg: 215 15% 18%;
 
     --sidebar-background: 215 28% 8%;
     --sidebar-foreground: 210 20% 90%;
@@ -427,6 +475,51 @@
     background-color: hsl(var(--pool-cancelled-bg));
     color: hsl(var(--pool-cancelled));
     border: 1px solid hsl(var(--pool-cancelled) / 0.15);
+  }
+
+  /* ===========================================
+     EXECUTION STATUS BADGES
+     Contracts & Settlement lifecycle
+     =========================================== */
+  
+  .exec-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .exec-matched {
+    background-color: hsl(var(--exec-matched-bg));
+    color: hsl(var(--exec-matched));
+    border: 1px solid hsl(var(--exec-matched) / 0.25);
+  }
+
+  .exec-scheduled {
+    background-color: hsl(var(--exec-scheduled-bg));
+    color: hsl(var(--exec-scheduled));
+    border: 1px solid hsl(var(--exec-scheduled) / 0.25);
+  }
+
+  .exec-delivered {
+    background-color: hsl(var(--exec-delivered-bg));
+    color: hsl(var(--exec-delivered));
+    border: 1px solid hsl(var(--exec-delivered) / 0.25);
+  }
+
+  .exec-confirmed {
+    background-color: hsl(var(--exec-confirmed-bg));
+    color: hsl(var(--exec-confirmed));
+    border: 1px solid hsl(var(--exec-confirmed) / 0.25);
+  }
+
+  .exec-settled {
+    background-color: hsl(var(--exec-settled-bg));
+    color: hsl(var(--exec-settled));
+    border: 1px solid hsl(var(--exec-settled) / 0.2);
+  }
+
+  .exec-closed {
+    background-color: hsl(var(--exec-closed-bg));
+    color: hsl(var(--exec-closed));
+    border: 1px solid hsl(var(--exec-closed) / 0.15);
   }
 
   /* ===========================================
