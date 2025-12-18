@@ -81,6 +81,37 @@ export function BatchStatusTransition({
   const getDescription = (status: BatchLifecycleStatus) =>
     lang === 'ru' ? BATCH_STATUS_DESCRIPTIONS_RU[status] : BATCH_STATUS_DESCRIPTIONS[status];
 
+  // Status-specific confirmation messages
+  const getConfirmationMessage = (targetStatus: BatchLifecycleStatus) => {
+    if (targetStatus === 'soft_committed') {
+      return lang === 'ru'
+        ? 'Предварительное подтверждение сигнализирует о намерении продать, но не гарантирует включение в пул. Вы сможете вносить изменения, но они будут логироваться.'
+        : 'Soft Commitment signals intent to sell but does not guarantee pool inclusion. You can still make changes, but they will be logged.';
+    }
+    if (targetStatus === 'confirmed') {
+      return lang === 'ru'
+        ? 'Подтверждение означает твёрдое обязательство. Партия становится доступной для сопоставления с заявками. Изменения станут невозможны.'
+        : 'Confirming this batch means you commit it for matching. Changes will no longer be possible.';
+    }
+    return getDescription(targetStatus);
+  };
+
+  const getConfirmationWarning = (targetStatus: BatchLifecycleStatus) => {
+    if (targetStatus === 'soft_committed') {
+      return lang === 'ru'
+        ? 'Частые изменения после Предварительного подтверждения снижают приоритет сопоставления.'
+        : 'Frequent changes after Soft Commitment reduce matching priority.';
+    }
+    if (targetStatus === 'confirmed') {
+      return lang === 'ru'
+        ? 'Это действие необратимо. Партия станет доступна только для чтения.'
+        : 'This action is irreversible. The batch will become read-only.';
+    }
+    return lang === 'ru' 
+      ? 'Это действие необратимо. Вы не сможете вернуться к предыдущему статусу.'
+      : 'This action is irreversible. You cannot revert to a previous status.';
+  };
+
   const handleTransitionClick = (targetStatus: BatchLifecycleStatus) => {
     setConfirmDialog({ open: true, targetStatus });
   };
@@ -132,7 +163,12 @@ export function BatchStatusTransition({
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  {lang === 'ru' ? 'Подтвердить изменение статуса' : 'Confirm Status Change'}
+                  {confirmDialog.targetStatus === 'confirmed' 
+                    ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
+                    : confirmDialog.targetStatus === 'soft_committed'
+                    ? (lang === 'ru' ? 'Предварительное подтверждение' : 'Soft Commitment')
+                    : (lang === 'ru' ? 'Подтвердить изменение статуса' : 'Confirm Status Change')
+                  }
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {confirmDialog.targetStatus && (
@@ -142,13 +178,16 @@ export function BatchStatusTransition({
                         <ArrowRight className="w-4 h-4 text-muted-foreground" />
                         <StatusBadge status={confirmDialog.targetStatus} />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {getDescription(confirmDialog.targetStatus)}
+                      <p className="text-sm text-foreground">
+                        {getConfirmationMessage(confirmDialog.targetStatus)}
                       </p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        {lang === 'ru' 
-                          ? 'Это действие необратимо. Вы не сможете вернуться к предыдущему статусу.'
-                          : 'This action is irreversible. You cannot revert to a previous status.'}
+                      <p className={cn(
+                        'text-xs',
+                        confirmDialog.targetStatus === 'confirmed' 
+                          ? 'text-destructive' 
+                          : 'text-amber-600 dark:text-amber-400'
+                      )}>
+                        {getConfirmationWarning(confirmDialog.targetStatus)}
                       </p>
                     </div>
                   )}
@@ -158,8 +197,15 @@ export function BatchStatusTransition({
                 <AlertDialogCancel>
                   {lang === 'ru' ? 'Отмена' : 'Cancel'}
                 </AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirm} disabled={isLoading}>
-                  {lang === 'ru' ? 'Подтвердить' : 'Confirm'}
+                <AlertDialogAction 
+                  onClick={handleConfirm} 
+                  disabled={isLoading}
+                  className={confirmDialog.targetStatus === 'confirmed' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                >
+                  {confirmDialog.targetStatus === 'confirmed'
+                    ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
+                    : (lang === 'ru' ? 'Продолжить' : 'Proceed')
+                  }
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -291,7 +337,12 @@ export function BatchStatusTransition({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {lang === 'ru' ? 'Подтвердить изменение статуса' : 'Confirm Status Change'}
+                {confirmDialog.targetStatus === 'confirmed' 
+                  ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
+                  : confirmDialog.targetStatus === 'soft_committed'
+                  ? (lang === 'ru' ? 'Предварительное подтверждение' : 'Soft Commitment')
+                  : (lang === 'ru' ? 'Подтвердить изменение статуса' : 'Confirm Status Change')
+                }
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {confirmDialog.targetStatus && (
@@ -301,13 +352,16 @@ export function BatchStatusTransition({
                       <ArrowRight className="w-4 h-4 text-muted-foreground" />
                       <StatusBadge status={confirmDialog.targetStatus} />
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {getDescription(confirmDialog.targetStatus)}
+                    <p className="text-sm text-foreground">
+                      {getConfirmationMessage(confirmDialog.targetStatus)}
                     </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      {lang === 'ru' 
-                        ? 'Это действие необратимо. Вы не сможете вернуться к предыдущему статусу.'
-                        : 'This action is irreversible. You cannot revert to a previous status.'}
+                    <p className={cn(
+                      'text-xs',
+                      confirmDialog.targetStatus === 'confirmed' 
+                        ? 'text-destructive' 
+                        : 'text-amber-600 dark:text-amber-400'
+                    )}>
+                      {getConfirmationWarning(confirmDialog.targetStatus)}
                     </p>
                   </div>
                 )}
@@ -317,8 +371,15 @@ export function BatchStatusTransition({
               <AlertDialogCancel>
                 {lang === 'ru' ? 'Отмена' : 'Cancel'}
               </AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirm} disabled={isLoading}>
-                {lang === 'ru' ? 'Подтвердить' : 'Confirm'}
+              <AlertDialogAction 
+                onClick={handleConfirm} 
+                disabled={isLoading}
+                className={confirmDialog.targetStatus === 'confirmed' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              >
+                {confirmDialog.targetStatus === 'confirmed'
+                  ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
+                  : (lang === 'ru' ? 'Продолжить' : 'Proceed')
+                }
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
