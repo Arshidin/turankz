@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select, 
   SelectContent, 
@@ -46,6 +47,7 @@ import { PoolRequestAuditHistory } from '@/components/admin/PoolRequestAuditHist
 import { PoolRequestAdminOverrideBadge } from '@/components/admin/PoolRequestAdminOverrideBadge';
 import { MatchingListPanel } from '@/components/admin/MatchingListPanel';
 import { MatchingWindowLockBanner } from '@/components/admin/MatchingWindowLockBanner';
+import { MatchingWorkspace } from '@/components/admin/MatchingWorkspace';
 import { 
   Clock, 
   Target, 
@@ -65,7 +67,9 @@ import {
   ShieldAlert,
   MoreVertical,
   Edit,
-  History
+  History,
+  Link2,
+  LayoutGrid
 } from 'lucide-react';
 
 type PoolHealth = 'on-track' | 'at-risk' | 'not-viable';
@@ -370,12 +374,27 @@ export default function PoolMatching() {
         description="Coordinate supply and demand to form matched pools" 
       />
 
-      {/* Matching Window Lock Status */}
-      <div className="mb-6">
-        <MatchingWindowLockBanner />
-      </div>
+      <Tabs defaultValue="workspace" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="workspace" className="gap-2">
+            <Link2 className="h-4 w-4" />
+            Matching Workspace
+          </TabsTrigger>
+          <TabsTrigger value="overview" className="gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Pool Overview
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Three-Panel Layout */}
+        <TabsContent value="workspace">
+          <MatchingWorkspace />
+        </TabsContent>
+
+        <TabsContent value="overview">
+          {/* Matching Window Lock Status */}
+          <div className="mb-6">
+            <MatchingWindowLockBanner />
+          </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left Panel: Active Purchase Requests */}
         <div className="lg:col-span-3">
@@ -907,6 +926,8 @@ export default function PoolMatching() {
           </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Admin Override Dialog */}
       {overrideDialog.request && (
