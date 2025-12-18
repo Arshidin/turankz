@@ -37,9 +37,11 @@ Farmers are supply-side participants who declare livestock batches and respond t
 | Own livestock batches | ✅ Full |
 | Own sales calendar | ✅ Full |
 | Pool invitations (received) | ✅ Limited |
+| Aggregated demand signals | ✅ Anonymized (no MPK identities) |
 | Other farmers | ❌ None |
 | MPK identities | ❌ None |
-| Demand volumes | ❌ None |
+| Pool request details | ❌ None |
+| Individual batch matches | ❌ None |
 | System-wide data | ❌ None |
 
 #### Can Act:
@@ -67,6 +69,7 @@ MPKs are demand-side participants who express interest and create purchase pool 
 | Watchlist items | ✅ Own only |
 | Own purchase pool requests | ✅ Full |
 | Request status and fill rate | ✅ Own only |
+| Individual farmer batches in matches | ❌ None |
 | Farmer identities | ❌ None |
 | Individual batch ownership | ❌ None |
 | Admin governance data | ❌ None |
@@ -77,9 +80,10 @@ MPKs are demand-side participants who express interest and create purchase pool 
 |--------|------------|
 | Express interest in supply | ✅ |
 | Create pool requests | ✅ (within limits) |
-| Modify own pool requests | ✅ (within limits) |
+| Modify own draft pool requests | ✅ |
 | Cancel own pool requests | ✅ |
 | See farmer identities | ❌ |
+| See individual batch details | ❌ |
 | Access governance controls | ❌ |
 
 ---

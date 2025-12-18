@@ -724,23 +724,24 @@ export type Database = {
       }
     }
     Views: {
-      aggregated_demand: {
-        Row: {
-          age_max: number | null
-          age_min: number | null
-          regions: string[] | null
-          request_count: number | null
-          required_grade: string | null
-          target_week: string | null
-          total_matched: number | null
-          total_volume: number | null
-          weight_max: number | null
-          weight_min: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      get_aggregated_demand: {
+        Args: never
+        Returns: {
+          age_max: number
+          age_min: number
+          regions: string[]
+          request_count: number
+          required_grade: string
+          target_week: string
+          total_matched: number
+          total_volume: number
+          weight_max: number
+          weight_min: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
