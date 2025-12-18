@@ -17,6 +17,46 @@ export const BATCH_STATUSES = [
 
 export type BatchLifecycleStatus = typeof BATCH_STATUSES[number];
 
+/**
+ * STRICT BATCH CREATION RULES
+ * All newly created batches MUST start with this status.
+ * This is the only valid entry point into the batch lifecycle.
+ */
+export const INITIAL_BATCH_STATUS: BatchLifecycleStatus = 'draft';
+
+/**
+ * Enforce initial batch status - strips any external status input
+ * and returns the mandatory initial status.
+ */
+export function enforceInitialStatus<T extends { status?: unknown }>(
+  batchData: T
+): Omit<T, 'status'> & { status: typeof INITIAL_BATCH_STATUS } {
+  // Remove any external status input and enforce draft
+  const { status: _ignoredStatus, ...rest } = batchData;
+  return {
+    ...rest,
+    status: INITIAL_BATCH_STATUS,
+  };
+}
+
+/**
+ * Get informational text about batch lifecycle entry
+ */
+export function getBatchCreationInfo(lang: 'en' | 'ru' = 'en'): {
+  title: string;
+  description: string;
+} {
+  return lang === 'ru' 
+    ? {
+        title: 'Жизненный цикл партии',
+        description: 'Все партии начинаются со статуса "Черновик" и должны проходить через определённые этапы жизненного цикла.',
+      }
+    : {
+        title: 'Batch Lifecycle',
+        description: 'All batches start in Draft and must progress through defined lifecycle stages.',
+      };
+}
+
 // Labels for display
 export const BATCH_STATUS_LABELS: Record<BatchLifecycleStatus, string> = {
   draft: 'Draft',
