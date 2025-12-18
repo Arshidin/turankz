@@ -37,9 +37,11 @@ import {
   useUpdateFarmerGrading,
   useToggleFarmerRestriction,
   useFarmerBatchStats,
+  useUpdateFarmerRegistration,
   Farmer,
   FarmerGrading,
 } from '@/hooks/useFarmers';
+import { PendingApplicationsCard, type PendingApplication } from '@/components/admin/PendingApplicationsCard';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   Search,
@@ -54,6 +56,8 @@ import {
   AlertCircle,
   Loader2,
   Package,
+  Clock,
+  UserCheck,
 } from 'lucide-react';
 
 const GRADING_ORDER: FarmerGrading[] = ['observer', 'declared_supplier', 'standard_supplier'];
@@ -88,6 +92,20 @@ const getReliabilityBadge = (reliability: string) => {
   }
 };
 
+const getRegistrationStatusBadge = (status: string) => {
+  switch (status) {
+    case 'active':
+      return <Badge className="bg-emerald-500/10 text-emerald-700 border-0 text-xs">Active</Badge>;
+    case 'pending':
+      return <Badge className="bg-amber-500/10 text-amber-700 border-0 text-xs">Pending</Badge>;
+    case 'rejected':
+      return <Badge variant="destructive" className="text-xs">Rejected</Badge>;
+    default:
+      return <Badge variant="outline" className="text-xs">{status}</Badge>;
+  }
+};
+
+
 export default function FarmersManagement() {
   const [selectedFarmerId, setSelectedFarmerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,6 +125,7 @@ export default function FarmersManagement() {
   const { data: activityLog, isLoading: logLoading } = useFarmerActivityLog(selectedFarmerId);
   const updateGrading = useUpdateFarmerGrading();
   const toggleRestriction = useToggleFarmerRestriction();
+  const updateRegistration = useUpdateFarmerRegistration();
 
   const selectedFarmer = farmers?.find(f => f.id === selectedFarmerId);
   
@@ -234,6 +253,42 @@ export default function FarmersManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Applications Section */}
+      <PendingApplicationsCard
+        title="Pending Farmer Applications"
+        applications={(farmers || []).map(f => ({
+          id: f.id,
+          display_id: f.farmer_id,
+          name: f.name,
+          region: f.region,
+          email: f.email,
+          created_at: f.created_at,
+          registration_status: f.registration_status,
+        }))}
+        isLoading={farmersLoading}
+        onActivate={async (id, note) => {
+          const farmer = farmers?.find(f => f.id === id);
+          if (!farmer) return;
+          await updateRegistration.mutateAsync({
+            farmerId: id,
+            newStatus: 'active',
+            previousStatus: farmer.registration_status,
+            note,
+          });
+        }}
+        onReject={async (id, note) => {
+          const farmer = farmers?.find(f => f.id === id);
+          if (!farmer) return;
+          await updateRegistration.mutateAsync({
+            farmerId: id,
+            newStatus: 'rejected',
+            previousStatus: farmer.registration_status,
+            note,
+          });
+        }}
+        isPending={updateRegistration.isPending}
+      />
 
       {/* Helper Text */}
       <div className="mb-6 p-3 bg-secondary/50 rounded-lg">
