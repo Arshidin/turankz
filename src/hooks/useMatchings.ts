@@ -9,6 +9,10 @@ import {
   canCreateMatching,
   type MatchingActionType,
 } from '@/lib/matching-lifecycle';
+import {
+  calculateAutomaticBatchStatus,
+  calculateAutomaticRequestStatus,
+} from '@/lib/automatic-status-transitions';
 import type { MatchingWindow } from '@/lib/matching-window';
 
 export interface Matching {
@@ -33,12 +37,15 @@ export interface MatchingWithDetails extends Matching {
     region: string;
     grade: string;
     status: string;
+    heads: number;
   };
   request?: {
     request_number: string;
     mpk_name: string;
     target_week: string;
     required_grade: string;
+    required_volume: number;
+    matched_volume: number;
   };
 }
 
@@ -102,13 +109,16 @@ export function useMatchingsWithDetails(requestId?: string) {
             batch_number,
             region,
             grade,
-            status
+            status,
+            heads
           ),
           purchase_pool_requests:request_id (
             request_number,
             mpk_name,
             target_week,
-            required_grade
+            required_grade,
+            required_volume,
+            matched_volume
           )
         `)
         .order('created_at', { ascending: false });
@@ -130,7 +140,20 @@ export function useMatchingsWithDetails(requestId?: string) {
 }
 
 /**
- * Hook for creating matchings
+ * Helper to calculate total matched heads for a batch
+ */
+async function getBatchMatchedHeads(batchId: string): Promise<number> {
+  const { data } = await supabase
+    .from('pool_matches')
+    .select('heads_matched')
+    .eq('batch_id', batchId)
+    .in('status', ['active', 'finalized']);
+
+  return data?.reduce((sum, m) => sum + m.heads_matched, 0) || 0;
+}
+
+/**
+ * Hook for creating matchings with automatic status updates
  */
 export function useCreateMatching() {
   const { toast } = useToast();
@@ -192,16 +215,108 @@ export function useCreateMatching() {
         });
       }
 
+      // ============================================
+      // AUTOMATIC STATUS UPDATES
+      // ============================================
+
+      // Group matches by batch and request for efficient updates
+      const batchIds = [...new Set(matches.map(m => m.batch_id))];
+      const requestIds = [...new Set(matches.map(m => m.request_id))];
+
+      // Fetch current batch data
+      const { data: batches } = await supabase
+        .from('batches')
+        .select('id, status, heads')
+        .in('id', batchIds);
+
+      // Fetch current request data
+      const { data: requests } = await supabase
+        .from('purchase_pool_requests')
+        .select('id, status, required_volume, matched_volume')
+        .in('id', requestIds);
+
+      // Update batches: Confirmed → Matched
+      for (const batch of batches || []) {
+        // Calculate total matched heads for this batch (including new matchings)
+        const matchedHeads = await getBatchMatchedHeads(batch.id);
+        
+        const newStatus = calculateAutomaticBatchStatus(
+          batch.status as any,
+          batch.heads,
+          matchedHeads
+        );
+
+        if (newStatus) {
+          await supabase
+            .from('batches')
+            .update({ status: newStatus })
+            .eq('id', batch.id);
+
+          // Log the automatic transition
+          await supabase.from('activity_log').insert({
+            event_type: 'batch_confirmed' as any, // Using closest type
+            actor_role: 'system',
+            actor_name: 'Automatic Status Update',
+            description: `Batch status automatically changed from ${batch.status} to ${newStatus} due to matching creation`,
+            target_type: 'batch',
+            target_id: batch.id,
+            metadata: { previous_status: batch.status, new_status: newStatus, trigger: 'matching_created' },
+          });
+        }
+      }
+
+      // Update requests: Matching → Partial/Fulfilled
+      for (const request of requests || []) {
+        // Calculate new matched volume
+        const additionalHeads = matches
+          .filter(m => m.request_id === request.id)
+          .reduce((sum, m) => sum + m.heads_matched, 0);
+        
+        const newMatchedVolume = request.matched_volume + additionalHeads;
+        
+        const newStatus = calculateAutomaticRequestStatus(
+          request.status as any,
+          request.required_volume,
+          newMatchedVolume
+        );
+
+        // Always update matched_volume
+        const updateData: any = { matched_volume: newMatchedVolume };
+        if (newStatus) {
+          updateData.status = newStatus;
+        }
+
+        await supabase
+          .from('purchase_pool_requests')
+          .update(updateData)
+          .eq('id', request.id);
+
+        if (newStatus) {
+          // Log the automatic transition
+          await supabase.from('activity_log').insert({
+            event_type: 'pool_request_updated' as any,
+            actor_role: 'system',
+            actor_name: 'Automatic Status Update',
+            description: `Request status automatically changed from ${request.status} to ${newStatus} (${newMatchedVolume}/${request.required_volume} matched)`,
+            target_type: 'pool_request',
+            target_id: request.id,
+            metadata: { previous_status: request.status, new_status: newStatus, trigger: 'matching_created' },
+          });
+        }
+      }
+
       return data as Matching[];
     },
     onSuccess: (data) => {
       toast({
         title: 'Matchings Created',
-        description: `${data.length} matching(s) created successfully.`,
+        description: `${data.length} matching(s) created. Status updates applied automatically.`,
       });
       queryClient.invalidateQueries({ queryKey: ['matchings'] });
       queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
       queryClient.invalidateQueries({ queryKey: ['batches'] });
+      queryClient.invalidateQueries({ queryKey: ['confirmed-batches'] });
+      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
     },
     onError: (error) => {
       toast({
@@ -291,7 +406,7 @@ export function useFinalizeMatching() {
 }
 
 /**
- * Hook for cancelling matchings
+ * Hook for cancelling matchings with automatic status updates
  */
 export function useCancelMatching() {
   const { toast } = useToast();
@@ -314,10 +429,10 @@ export function useCancelMatching() {
         throw new Error('Cancellation reason is required');
       }
 
-      // Get current status
+      // Get current matching data
       const { data: current, error: fetchError } = await supabase
         .from('pool_matches')
-        .select('status, heads_matched, request_id')
+        .select('status, heads_matched, request_id, batch_id')
         .eq('id', matchId)
         .single();
 
@@ -329,7 +444,7 @@ export function useCancelMatching() {
         throw new Error(validation.error);
       }
 
-      // Update status
+      // Update matching status
       const { data, error } = await supabase
         .from('pool_matches')
         .update({
@@ -343,21 +458,6 @@ export function useCancelMatching() {
 
       if (error) throw error;
 
-      // Update the pool request matched_volume (subtract cancelled heads)
-      // Get current request and update
-      const { data: req } = await supabase
-        .from('purchase_pool_requests')
-        .select('matched_volume')
-        .eq('id', current.request_id)
-        .single();
-
-      if (req) {
-        await supabase
-          .from('purchase_pool_requests')
-          .update({ matched_volume: Math.max(0, req.matched_volume - current.heads_matched) })
-          .eq('id', current.request_id);
-      }
-
       // Log action
       await supabase.from('matching_activity_log').insert({
         match_id: matchId,
@@ -368,15 +468,71 @@ export function useCancelMatching() {
         note: reason,
       });
 
+      // ============================================
+      // AUTOMATIC STATUS UPDATES ON CANCELLATION
+      // ============================================
+
+      // Get current request data
+      const { data: request } = await supabase
+        .from('purchase_pool_requests')
+        .select('id, status, required_volume, matched_volume')
+        .eq('id', current.request_id)
+        .single();
+
+      if (request) {
+        // Calculate new matched volume
+        const newMatchedVolume = Math.max(0, request.matched_volume - current.heads_matched);
+        
+        // Determine new status
+        let newStatus = request.status;
+        if (request.status === 'fulfilled' || request.status === 'partial') {
+          if (newMatchedVolume >= request.required_volume) {
+            newStatus = 'fulfilled';
+          } else if (newMatchedVolume > 0) {
+            newStatus = 'partial';
+          } else {
+            newStatus = 'matching';
+          }
+        }
+
+        // Update request
+        await supabase
+          .from('purchase_pool_requests')
+          .update({ 
+            matched_volume: newMatchedVolume,
+            status: newStatus,
+          })
+          .eq('id', current.request_id);
+
+        if (newStatus !== request.status) {
+          // Log the automatic transition
+          await supabase.from('activity_log').insert({
+            event_type: 'pool_request_updated' as any,
+            actor_role: 'system',
+            actor_name: 'Automatic Status Update',
+            description: `Request status automatically changed from ${request.status} to ${newStatus} due to matching cancellation`,
+            target_type: 'pool_request',
+            target_id: current.request_id,
+            metadata: { previous_status: request.status, new_status: newStatus, trigger: 'matching_cancelled' },
+          });
+        }
+      }
+
+      // Note: Batch status is not reverted on cancellation
+      // Once a batch is matched, it stays matched (business decision)
+
       return data as Matching;
     },
     onSuccess: () => {
       toast({
         title: 'Matching Cancelled',
-        description: 'The matching has been cancelled.',
+        description: 'The matching has been cancelled. Status updates applied automatically.',
       });
       queryClient.invalidateQueries({ queryKey: ['matchings'] });
       queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['batches'] });
+      queryClient.invalidateQueries({ queryKey: ['confirmed-batches'] });
+      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
     },
     onError: (error) => {
       toast({
