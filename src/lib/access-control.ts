@@ -24,9 +24,11 @@ export interface RolePermissions {
     allMpks: boolean;
     allBatches: boolean;
     aggregatedSupply: boolean;
+    aggregatedDemand: boolean; // Anonymized demand signals for farmers
     farmerIdentities: boolean;
     mpkIdentities: boolean;
-    poolRequests: boolean;
+    poolRequests: boolean; // Full pool request details
+    ownPoolRequests: boolean; // Own pool requests only (for MPK)
     poolMatches: boolean;
     reliabilityScores: boolean;
     auditLogs: boolean;
@@ -66,9 +68,11 @@ export const FARMER_PERMISSIONS: RolePermissions = {
     allMpks: false,
     allBatches: false,
     aggregatedSupply: false,
+    aggregatedDemand: true, // Farmers see anonymized demand signals
     farmerIdentities: false,
     mpkIdentities: false,
-    poolRequests: false,
+    poolRequests: false, // Cannot see full pool request details
+    ownPoolRequests: false,
     poolMatches: false,
     reliabilityScores: false,
     auditLogs: false,
@@ -107,10 +111,12 @@ export const MPK_PERMISSIONS: RolePermissions = {
     allMpks: false,
     allBatches: false,
     aggregatedSupply: true,
+    aggregatedDemand: false, // MPK sees own requests, not aggregated demand
     farmerIdentities: false,
     mpkIdentities: false,
-    poolRequests: true, // Own requests only
-    poolMatches: false,
+    poolRequests: false, // Cannot see all pool requests
+    ownPoolRequests: true, // Can see own pool requests
+    poolMatches: false, // Cannot see individual batch matches
     reliabilityScores: false,
     auditLogs: false,
     governanceData: false,
@@ -148,10 +154,12 @@ export const ADMIN_PERMISSIONS: RolePermissions = {
     allMpks: true,
     allBatches: true,
     aggregatedSupply: true,
+    aggregatedDemand: true,
     farmerIdentities: true,
     mpkIdentities: true,
-    poolRequests: true,
-    poolMatches: true,
+    poolRequests: true, // Full access to all pool requests
+    ownPoolRequests: true,
+    poolMatches: true, // Full access to individual matches
     reliabilityScores: true,
     auditLogs: true,
     governanceData: true,

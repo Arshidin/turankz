@@ -43,6 +43,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
+import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
 import { toast } from '@/hooks/use-toast';
 
 // Map database status to StatusBadge status
@@ -189,6 +190,11 @@ export default function LivestockBatches() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Market Demand Signals */}
+      <div className="mb-6">
+        <AggregatedDemandCard />
+      </div>
 
       {/* Helper Text */}
       <Card className="mb-6 border-primary/20 bg-primary/5">
