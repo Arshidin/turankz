@@ -23,11 +23,11 @@ export function useMatchingRequests(filters?: MatchingRequestFilters) {
   return useQuery({
     queryKey: ['matching-requests', filters],
     queryFn: async () => {
-      // Fetch requests in matching status
+      // Fetch requests available for matching (submitted, matching, partial)
       const { data, error } = await supabase
         .from('purchase_pool_requests')
         .select('*')
-        .eq('status', 'matching')
+        .in('status', ['submitted', 'matching', 'partial'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
