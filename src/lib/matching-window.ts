@@ -153,6 +153,51 @@ export function getWindowStatusDescription(
 }
 
 /**
+ * Compute the effective status of a matching window based on the current date
+ * This allows the system to use real calendar dates instead of manual status updates
+ */
+export function computeEffectiveWindowStatus(
+  startDate: string,
+  lockDate: string,
+  closeDate: string
+): MatchingWindowStatus {
+  const now = new Date();
+  const start = new Date(startDate);
+  const lock = new Date(lockDate);
+  const close = new Date(closeDate);
+  
+  // Set times to start/end of day for proper comparison
+  start.setHours(0, 0, 0, 0);
+  lock.setHours(23, 59, 59, 999);
+  close.setHours(23, 59, 59, 999);
+  
+  if (now < start) {
+    return 'upcoming';
+  }
+  
+  if (now <= lock) {
+    return 'active';
+  }
+  
+  if (now <= close) {
+    return 'locked';
+  }
+  
+  return 'closed';
+}
+
+/**
+ * Get the effective status of a matching window (computed from dates)
+ */
+export function getEffectiveWindowStatus(window: MatchingWindow): MatchingWindowStatus {
+  return computeEffectiveWindowStatus(
+    window.start_date,
+    window.lock_date,
+    window.close_date
+  );
+}
+
+/**
  * Check if batches can be committed in current window status
  */
 export function canCommitBatches(status: MatchingWindowStatus): boolean {

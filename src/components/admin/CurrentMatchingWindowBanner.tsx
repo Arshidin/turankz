@@ -20,6 +20,7 @@ import {
   calculateCountdown,
   getContextualWindowMessage,
   getCountdownUrgency,
+  getEffectiveWindowStatus,
   type CountdownResult,
 } from '@/lib/matching-window';
 

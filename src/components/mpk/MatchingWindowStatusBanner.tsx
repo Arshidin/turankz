@@ -18,6 +18,7 @@ import {
   MATCHING_WINDOW_STATUS_COLORS,
   MATCHING_WINDOW_STATUS_LABELS,
   type MatchingWindow,
+  type MatchingWindowStatus,
 } from '@/lib/matching-window';
 import { format, parseISO } from 'date-fns';
 
@@ -102,9 +103,9 @@ export function MatchingWindowStatusBanner({ onSubmissionStatusChange }: Matchin
               {matchingWindow && (
                 <Badge 
                   variant="outline" 
-                  className={`text-xs ${MATCHING_WINDOW_STATUS_COLORS[matchingWindow.status].bg} ${MATCHING_WINDOW_STATUS_COLORS[matchingWindow.status].text} ${MATCHING_WINDOW_STATUS_COLORS[matchingWindow.status].border}`}
+                  className={`text-xs ${MATCHING_WINDOW_STATUS_COLORS[matchingWindow.status as MatchingWindowStatus].bg} ${MATCHING_WINDOW_STATUS_COLORS[matchingWindow.status as MatchingWindowStatus].text} ${MATCHING_WINDOW_STATUS_COLORS[matchingWindow.status as MatchingWindowStatus].border}`}
                 >
-                  {MATCHING_WINDOW_STATUS_LABELS[matchingWindow.status]}
+                  {MATCHING_WINDOW_STATUS_LABELS[matchingWindow.status as MatchingWindowStatus]}
                 </Badge>
               )}
             </div>
