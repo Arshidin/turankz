@@ -1,25 +1,37 @@
+/**
+ * PROTECTED ROUTE COMPONENT
+ * 
+ * Enforces role + account_status guards on ALL routes.
+ * Redirects to AccessRestricted page with reason when blocked.
+ */
+
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { AppRole } from '@/hooks/useAuth';
+import { AccountStatus } from '@/lib/account-status';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: AppRole[];
+  allowedStatuses?: AccountStatus[];
   requireActive?: boolean;
 }
 
 export function ProtectedRoute({ 
   children, 
   allowedRoles,
-  requireActive = true 
+  allowedStatuses,
+  requireActive = false,
 }: ProtectedRouteProps) {
-  const { user, role, registrationStatus, isLoading } = useAuthContext();
+  const { user, role, registrationStatus, isLoading: authLoading } = useAuthContext();
+  const { accountStatus, isLoading: statusLoading, checkRouteAccess } = useAccountStatus();
   const location = useLocation();
 
-  // Show loading while checking auth
-  if (isLoading) {
+  // Show loading while checking auth and status
+  if (authLoading || statusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -37,8 +49,8 @@ export function ProtectedRoute({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Check if user is active (for non-admin roles)
-  if (requireActive && role !== 'admin' && registrationStatus !== 'active') {
+  // Check if user is pending registration (for non-admin roles)
+  if (role !== 'admin' && registrationStatus === 'pending') {
     return <Navigate to="/pending" replace />;
   }
 
@@ -46,11 +58,42 @@ export function ProtectedRoute({
   if (allowedRoles && !allowedRoles.includes(role)) {
     // Redirect to appropriate home based on role
     const roleHomePaths: Record<AppRole, string> = {
-      admin: '/admin/farmers',
+      admin: '/',
       farmer: '/',
       mpk: '/mpk/market',
     };
     return <Navigate to={roleHomePaths[role]} replace />;
+  }
+
+  // Check account status if specific statuses are required
+  if (allowedStatuses && !allowedStatuses.includes(accountStatus)) {
+    return (
+      <Navigate 
+        to="/access-restricted" 
+        state={{ 
+          reason: accountStatus === 'observer' 
+            ? 'This feature requires an active account. Please wait for Admin activation.'
+            : 'Your account has been suspended. Please contact Admin.',
+          requiredStatus: allowedStatuses.join(', '),
+        }} 
+        replace 
+      />
+    );
+  }
+
+  // Check if route requires active status
+  if (requireActive && accountStatus !== 'active' && role !== 'admin') {
+    const routeCheck = checkRouteAccess(location.pathname);
+    
+    if (!routeCheck.accessible) {
+      return (
+        <Navigate 
+          to="/access-restricted" 
+          state={{ reason: routeCheck.reason }} 
+          replace 
+        />
+      );
+    }
   }
 
   return <>{children}</>;

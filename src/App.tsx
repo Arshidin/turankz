@@ -28,6 +28,7 @@ import ExecutionManagement from "./pages/admin/ExecutionManagement";
 import MatchingWindowsManagement from "./pages/admin/MatchingWindowsManagement";
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
+import AccessRestricted from "./pages/AccessRestricted";
 
 // Auth pages
 import RoleSelection from "./pages/auth/RoleSelection";
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/auth/register/farmer" element={<FarmerRegistration />} />
               <Route path="/auth/register/mpk" element={<MpkRegistration />} />
               <Route path="/pending" element={<PendingActivation />} />
+              <Route path="/access-restricted" element={<AccessRestricted />} />
               
               {/* Protected Routes */}
               <Route path="/" element={
