@@ -3,8 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import type { AcceptanceCriteria } from '@/lib/livestock-criteria';
+import { 
+  type PoolRequestLifecycleStatus,
+  validatePoolRequestTransition,
+  type PoolRequestRole,
+} from '@/lib/pool-request-lifecycle';
 
-export type PoolRequestStatus = 'pending' | 'partial' | 'fulfilled' | 'cancelled';
+// Updated status type to match new lifecycle
+export type PoolRequestStatus = PoolRequestLifecycleStatus;
 
 export interface PoolRequest {
   id: string;
@@ -203,7 +209,7 @@ export function useCreatePoolRequest() {
           ...request,
           request_number: generateRequestNumber(),
           matched_volume: 0,
-          status: 'pending' as PoolRequestStatus,
+          status: 'submitted' as PoolRequestStatus, // New requests start as 'submitted' (skip draft for now)
           accepted_breeds: request.accepted_breeds || [],
           accepted_genders: request.accepted_genders || [],
           age_range_min: request.age_range_min ?? null,
@@ -261,6 +267,57 @@ export function useCancelPoolRequest() {
     onError: (error) => {
       toast({
         title: 'Error cancelling request',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Transition pool request status with FSM validation
+export function useTransitionPoolRequestStatus() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      fromStatus,
+      toStatus,
+      role,
+    }: {
+      id: string;
+      fromStatus: PoolRequestLifecycleStatus;
+      toStatus: PoolRequestLifecycleStatus;
+      role: PoolRequestRole;
+    }) => {
+      // Validate transition
+      const validation = validatePoolRequestTransition(fromStatus, toStatus, role);
+      
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
+      const { data, error } = await supabase
+        .from('purchase_pool_requests')
+        .update({ status: toStatus })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+      toast({
+        title: 'Status updated',
+        description: `Request status changed to ${variables.toStatus}.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Transition blocked',
         description: error.message,
         variant: 'destructive',
       });

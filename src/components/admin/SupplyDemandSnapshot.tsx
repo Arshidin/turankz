@@ -8,7 +8,7 @@ interface SupplyData {
 }
 
 interface DemandData {
-  pending: number;
+  submitted: number; // Combined submitted + matching
   partial: number;
   fulfilled: number;
 }
@@ -39,7 +39,7 @@ export function SupplyDemandSnapshot({
   byMonth,
 }: SupplyDemandSnapshotProps) {
   const totalSupply = supplyTotals.forecast + supplyTotals.softCommitted + supplyTotals.confirmed;
-  const totalDemand = demandTotals.pending + demandTotals.partial + demandTotals.fulfilled;
+  const totalDemand = demandTotals.submitted + demandTotals.partial + demandTotals.fulfilled;
   const balance = totalSupply - totalDemand;
   const balancePercentage = totalDemand > 0 ? Math.round((totalSupply / totalDemand) * 100) : 100;
 
@@ -104,7 +104,7 @@ export function SupplyDemandSnapshot({
               />
               <div 
                 className="bg-slate-400" 
-                style={{ width: `${(demandTotals.pending / totalDemand) * 100}%` }} 
+                style={{ width: `${(demandTotals.submitted / totalDemand) * 100}%` }} 
               />
             </div>
             <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
@@ -118,7 +118,7 @@ export function SupplyDemandSnapshot({
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-slate-400" />
-                Pending: {demandTotals.pending}
+                Submitted: {demandTotals.submitted}
               </span>
             </div>
           </div>
@@ -188,7 +188,7 @@ export function SupplyDemandSnapshot({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {byMonth.map((month) => {
               const monthSupply = month.supply.forecast + month.supply.softCommitted + month.supply.confirmed;
-              const monthDemand = month.demand.pending + month.demand.partial + month.demand.fulfilled;
+              const monthDemand = month.demand.submitted + month.demand.partial + month.demand.fulfilled;
               const coverage = monthDemand > 0 ? Math.round((monthSupply / monthDemand) * 100) : 100;
               
               return (
@@ -213,7 +213,7 @@ export function SupplyDemandSnapshot({
                     <div className="flex gap-1 h-2">
                       <div className="bg-green-500 rounded-l" style={{ flex: month.demand.fulfilled }} />
                       <div className="bg-amber-500" style={{ flex: month.demand.partial }} />
-                      <div className="bg-slate-400 rounded-r" style={{ flex: month.demand.pending }} />
+                      <div className="bg-slate-400 rounded-r" style={{ flex: month.demand.submitted }} />
                     </div>
                     
                     <div className={`text-center pt-2 text-sm font-bold ${coverage >= 100 ? 'text-status-confirmed' : 'text-amber-600'}`}>
