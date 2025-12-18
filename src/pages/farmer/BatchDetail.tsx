@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Form,
   FormControl,
@@ -47,7 +48,8 @@ import {
   X,
   Loader2,
   ArrowDownCircle,
-  Lock
+  Lock,
+  Info
 } from 'lucide-react';
 import { useBatch, useConfirmBatch, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
@@ -60,6 +62,7 @@ import {
   ReadinessTransitionDialog,
   SoftCommitEditDialog,
 } from '@/components/data-integrity';
+import { BatchFSMPanel } from '@/components/batches';
 import { useChangeTracking } from '@/hooks/useChangeTracking';
 import { DEFAULT_CONSTRAINTS, requiresReadinessConfirmation } from '@/lib/change-constraints';
 import {
@@ -67,6 +70,7 @@ import {
   requiresEditConfirmation,
   getLockedFieldTooltip,
   getEditRulesForStatus,
+  type BatchLifecycleStatus,
 } from '@/lib/batch-lifecycle';
 
 const REGIONS = [
@@ -271,6 +275,25 @@ export default function BatchDetail() {
     if (!batch) return;
     await confirmBatch.mutateAsync(batch.id);
     navigate('/farmer/batches');
+  };
+
+  // Handler for FSM panel transitions
+  const handleFSMTransition = async (toStatus: BatchLifecycleStatus) => {
+    if (!batch) return;
+    
+    await trackReadinessChange(batch.id, batch.status, toStatus as BatchStatus);
+    
+    await updateBatch.mutateAsync({
+      id: batch.id,
+      status: toStatus as BatchStatus,
+      requires_action: false,
+      action_type: null,
+    });
+    
+    toast({
+      title: 'Status Updated',
+      description: `Batch status changed to ${toStatus.replace('_', ' ')}.`,
+    });
   };
 
   const handleAcceptInvitation = async () => {
@@ -607,44 +630,91 @@ export default function BatchDetail() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-medium">Batch Information</CardTitle>
-                  <StatusBadge status={mapStatus(batch.status)} />
+                  <div className="flex items-center gap-2">
+                    {isReadOnly && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">
+                              <Lock className="w-3 h-3 mr-1" />
+                              Locked
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{lockedTooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    <StatusBadge status={mapStatus(batch.status)} />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Read-only lock message */}
+                {isReadOnly && (
+                  <Alert className="mb-4 border-amber-500/30 bg-amber-500/5">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-sm text-amber-700">
+                      This batch is locked due to its confirmed status. All fields are read-only.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Batch ID</p>
-                      <p className="text-sm font-semibold">{batch.batch_number}</p>
+                    <div className="flex items-start gap-2">
+                      {isReadOnly && <Lock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Batch ID</p>
+                        <p className="text-sm font-semibold">{batch.batch_number}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Number of Heads</p>
-                      <p className="text-sm font-semibold">{batch.heads}</p>
+                    <div className="flex items-start gap-2">
+                      {isReadOnly && <Lock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Number of Heads</p>
+                        <p className="text-sm font-semibold">{batch.heads}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Average Weight</p>
-                      <p className={`text-sm font-semibold ${!batch.avg_weight ? 'text-amber-600' : ''}`}>
-                        {batch.avg_weight ? `${batch.avg_weight} kg` : '—'}
-                        {!batch.avg_weight && (
-                          <span className="text-xs font-normal text-amber-600 ml-2">Not set</span>
-                        )}
-                      </p>
+                    <div className="flex items-start gap-2">
+                      {isReadOnly && <Lock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Average Weight</p>
+                        <p className={`text-sm font-semibold ${!batch.avg_weight ? 'text-amber-600' : ''}`}>
+                          {batch.avg_weight ? `${batch.avg_weight} kg` : '—'}
+                          {!batch.avg_weight && (
+                            <span className="text-xs font-normal text-amber-600 ml-2">Not set</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Grade</p>
-                      <Badge variant="outline">Grade {batch.grade}</Badge>
+                    <div className="flex items-start gap-2">
+                      {isReadOnly && <Lock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Grade</p>
+                        <Badge variant="outline">Grade {batch.grade}</Badge>
+                      </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      {isReadOnly ? (
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      )}
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Region</p>
                         <p className="text-sm font-medium">{batch.region}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      {isReadOnly ? (
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      )}
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Target Week</p>
                         <p className="text-sm font-medium">{batch.target_week}</p>
@@ -655,7 +725,10 @@ export default function BatchDetail() {
 
                 {/* Livestock Characteristics */}
                 <div className="mt-6 pt-4 border-t">
-                  <p className="text-xs text-muted-foreground mb-3">Livestock Characteristics</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    {isReadOnly && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+                    <p className="text-xs text-muted-foreground">Livestock Characteristics</p>
+                  </div>
                   {(batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max) ? (
                     <div className="grid grid-cols-2 gap-4">
                       {batch.breed && (
@@ -694,7 +767,10 @@ export default function BatchDetail() {
 
                 {batch.notes && (
                   <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      {isReadOnly && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+                      <p className="text-xs text-muted-foreground">Notes</p>
+                    </div>
                     <p className="text-sm">{batch.notes}</p>
                   </div>
                 )}
@@ -724,121 +800,13 @@ export default function BatchDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Status Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Current Status</span>
-                <StatusBadge status={mapStatus(batch.status)} />
-              </div>
-              
-              {/* Soft Committed helper text */}
-              {batch.status === 'forecast' && nextStatus === 'soft_committed' && (
-                <div className="border-t pt-4">
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-3">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      Soft Commitment signals intent but does not guarantee matching.
-                    </p>
-                  </div>
-                  <Button 
-                    className="w-full bg-amber-600 hover:bg-amber-700" 
-                    onClick={handleEscalateStatus}
-                    disabled={updateBatch.isPending}
-                  >
-                    {updateBatch.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <ArrowUpCircle className="w-4 h-4 mr-2" />
-                    )}
-                    Soft Commit
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    You can still edit the batch after soft commitment.
-                  </p>
-                </div>
-              )}
-
-              {/* Draft to Forecast transition */}
-              {batch.status === 'draft' && nextStatus === 'forecast' && (
-                <div className="border-t pt-4">
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Publish to make this batch visible in market overview.
-                  </p>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleEscalateStatus}
-                    disabled={updateBatch.isPending}
-                  >
-                    {updateBatch.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <ArrowUpCircle className="w-4 h-4 mr-2" />
-                    )}
-                    Publish to Market
-                  </Button>
-                </div>
-              )}
-
-              {/* Soft Committed state - show confirm option */}
-              {batch.status === 'soft_committed' && (
-                <div className="border-t pt-4">
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-3">
-                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                      Confirming makes this batch eligible for pool matching. Changes will no longer be possible.
-                    </p>
-                  </div>
-                  <Button 
-                    className="w-full bg-emerald-600 hover:bg-emerald-700" 
-                    onClick={handleConfirm}
-                    disabled={confirmBatch.isPending}
-                  >
-                    {confirmBatch.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                    )}
-                    Confirm Batch
-                  </Button>
-                  <p className="text-xs text-destructive text-center mt-2">
-                    This action is irreversible.
-                  </p>
-                </div>
-              )}
-
-              {batch.status === 'confirmed' && (
-                <div className="bg-emerald-500/10 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-emerald-600">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="text-sm font-medium">Batch Confirmed</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This batch is committed for pool matching. No changes allowed.
-                  </p>
-                </div>
-              )}
-
-              {/* Allow status modification (including downgrades) */}
-              {(batch.status === 'confirmed' || batch.status === 'soft_committed') && (
-                <div className="border-t pt-4">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-muted-foreground"
-                    onClick={() => setShowReadinessDialog(true)}
-                  >
-                    <ArrowDownCircle className="w-4 h-4 mr-2" />
-                    Modify Status
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    Downgrades require confirmation and will be logged.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* FSM Verification Panel - Primary Status Management */}
+          <BatchFSMPanel
+            currentStatus={batch.status as BatchLifecycleStatus}
+            batchId={batch.batch_number}
+            onTransition={handleFSMTransition}
+            isTransitioning={updateBatch.isPending || confirmBatch.isPending}
+          />
 
           {/* Quick Actions */}
           {!isEditing && (
