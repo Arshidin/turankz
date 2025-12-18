@@ -298,6 +298,47 @@ export type Database = {
         }
         Relationships: []
       }
+      matching_activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          match_id: string
+          new_value: string | null
+          note: string | null
+          performed_by: string
+          previous_value: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          match_id: string
+          new_value?: string | null
+          note?: string | null
+          performed_by: string
+          previous_value?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          match_id?: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string
+          previous_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matching_activity_log_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "pool_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matching_windows: {
         Row: {
           close_date: string
@@ -516,27 +557,48 @@ export type Database = {
       pool_matches: {
         Row: {
           batch_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
           created_at: string
+          created_by: string | null
+          finalized_at: string | null
           heads_matched: number
           id: string
+          matching_date: string
+          matching_window_id: string | null
+          notes: string | null
           request_id: string
-          status: string
+          status: Database["public"]["Enums"]["matching_status"]
         }
         Insert: {
           batch_id: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
+          created_by?: string | null
+          finalized_at?: string | null
           heads_matched: number
           id?: string
+          matching_date?: string
+          matching_window_id?: string | null
+          notes?: string | null
           request_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["matching_status"]
         }
         Update: {
           batch_id?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
+          created_by?: string | null
+          finalized_at?: string | null
           heads_matched?: number
           id?: string
+          matching_date?: string
+          matching_window_id?: string | null
+          notes?: string | null
           request_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["matching_status"]
         }
         Relationships: [
           {
@@ -544,6 +606,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pool_matches_matching_window_id_fkey"
+            columns: ["matching_window_id"]
+            isOneToOne: false
+            referencedRelation: "matching_windows"
             referencedColumns: ["id"]
           },
           {
@@ -847,6 +916,7 @@ export type Database = {
         | "delivered"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
+      matching_status: "active" | "finalized" | "cancelled"
       matching_window_status: "upcoming" | "active" | "locked" | "closed"
       mpk_status: "active" | "restricted" | "inactive"
       notification_type:
@@ -1028,6 +1098,7 @@ export const Constants = {
       ],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
+      matching_status: ["active", "finalized", "cancelled"],
       matching_window_status: ["upcoming", "active", "locked", "closed"],
       mpk_status: ["active", "restricted", "inactive"],
       notification_type: [
