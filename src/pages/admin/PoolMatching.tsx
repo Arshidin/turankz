@@ -44,6 +44,8 @@ import {
 import { PoolRequestOverrideDialog } from '@/components/admin/PoolRequestOverrideDialog';
 import { PoolRequestAuditHistory } from '@/components/admin/PoolRequestAuditHistory';
 import { PoolRequestAdminOverrideBadge } from '@/components/admin/PoolRequestAdminOverrideBadge';
+import { MatchingListPanel } from '@/components/admin/MatchingListPanel';
+import { MatchingWindowLockBanner } from '@/components/admin/MatchingWindowLockBanner';
 import { 
   Clock, 
   Target, 
@@ -327,7 +329,6 @@ export default function PoolMatching() {
       request_id: activeRequest.id,
       batch_id: s.id,
       heads_matched: s.heads,
-      status: 'proposed',
     }));
 
     await createMatch.mutateAsync(matches);
@@ -369,26 +370,10 @@ export default function PoolMatching() {
         description="Coordinate supply and demand to form matched pools" 
       />
 
-      {/* Timing Context Banner */}
-      <Card className="mb-6 border-primary/20 bg-primary/5">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">Next Matching Window: Dec 18–19</p>
-                <p className="text-xs text-muted-foreground">Matching decisions should be finalized before the start of the target week.</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-semibold text-foreground">W52</p>
-              <p className="text-xs text-muted-foreground">Current Target Week</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Matching Window Lock Status */}
+      <div className="mb-6">
+        <MatchingWindowLockBanner />
+      </div>
 
       {/* Three-Panel Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -899,6 +884,13 @@ export default function PoolMatching() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Matchings Side Panel */}
+        {activeRequestId && !showAuditHistory && (
+          <div className="lg:col-span-3">
+            <MatchingListPanel requestId={activeRequestId} compact />
+          </div>
+        )}
 
         {/* Audit History Side Panel */}
         {showAuditHistory && activeRequestId && (

@@ -35,13 +35,22 @@ export interface PoolRequest {
   weight_range_max: number | null;
 }
 
+export type MatchingStatus = 'active' | 'finalized' | 'cancelled';
+
 export interface PoolMatch {
   id: string;
   request_id: string;
   batch_id: string;
   heads_matched: number;
-  status: string;
+  status: MatchingStatus;
+  matching_date: string;
+  created_by: string | null;
   created_at: string;
+  finalized_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  notes: string | null;
+  matching_window_id: string | null;
 }
 
 export function usePoolRequests() {
@@ -131,10 +140,23 @@ export function useCreatePoolMatch() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (matches: Omit<PoolMatch, 'id' | 'created_at'>[]) => {
+    mutationFn: async (matches: Array<{
+      request_id: string;
+      batch_id: string;
+      heads_matched: number;
+      status?: MatchingStatus;
+    }>) => {
+      const insertData = matches.map(m => ({
+        request_id: m.request_id,
+        batch_id: m.batch_id,
+        heads_matched: m.heads_matched,
+        status: m.status || 'active' as MatchingStatus,
+        matching_date: new Date().toISOString().split('T')[0],
+      }));
+      
       const { data, error } = await supabase
         .from('pool_matches')
-        .insert(matches)
+        .insert(insertData)
         .select();
 
       if (error) throw error;
