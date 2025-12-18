@@ -105,28 +105,22 @@ export function isTransitionAllowed(
 }
 
 /**
+ * @deprecated Use getAllowedTransitions() instead. This function assumes linear workflow.
  * Get the next allowed status for a given role
  */
 export function getNextAllowedStatus(
   currentStatus: BatchLifecycleStatus,
   role: 'farmer' | 'admin' | 'mpk'
 ): BatchLifecycleStatus | null {
-  if (role === 'mpk') return null;
-  
-  const allowedTransitions = ALLOWED_TRANSITIONS.filter(
-    t => t.from === currentStatus && t.allowedRoles.includes(role as 'farmer' | 'admin')
-  );
-  
-  if (allowedTransitions.length === 0) return null;
-  
-  // Return the first (most common) next status
-  return allowedTransitions[0].to;
+  const allowed = getAllowedTransitions(currentStatus, role);
+  return allowed.length > 0 ? allowed[0] : null;
 }
 
 /**
- * Get all possible next statuses for a given role
+ * PRIMARY FUNCTION: Get all allowed transitions from current status for a given role.
+ * Returns an array of valid target statuses (no linear assumptions).
  */
-export function getAllNextStatuses(
+export function getAllowedTransitions(
   currentStatus: BatchLifecycleStatus,
   role: 'farmer' | 'admin' | 'mpk'
 ): BatchLifecycleStatus[] {
@@ -135,6 +129,16 @@ export function getAllNextStatuses(
   return ALLOWED_TRANSITIONS
     .filter(t => t.from === currentStatus && t.allowedRoles.includes(role as 'farmer' | 'admin'))
     .map(t => t.to);
+}
+
+/**
+ * @deprecated Alias for getAllowedTransitions. Use getAllowedTransitions() directly.
+ */
+export function getAllNextStatuses(
+  currentStatus: BatchLifecycleStatus,
+  role: 'farmer' | 'admin' | 'mpk'
+): BatchLifecycleStatus[] {
+  return getAllowedTransitions(currentStatus, role);
 }
 
 // Editable fields for batch
@@ -313,18 +317,18 @@ export function getDisabledTransitionTooltip(
     return 'Cannot revert to a previous status. Batch lifecycle is irreversible.';
   }
   
-  // Trying to skip steps
-  if (targetIndex > currentIndex + 1) {
-    return 'Cannot skip lifecycle steps. Progress to the next status first.';
-  }
-  
-  // Admin-only transition
+  // Check if transition exists but is admin-only
   const transition = ALLOWED_TRANSITIONS.find(
     t => t.from === currentStatus && t.to === targetStatus
   );
   
   if (transition && !transition.allowedRoles.includes(role as 'farmer' | 'admin')) {
     return 'This action requires Admin privileges.';
+  }
+  
+  // Transition not defined in FSM
+  if (!transition) {
+    return 'This transition is not allowed from the current status.';
   }
   
   return 'This action is not allowed at the current batch status.';
@@ -346,16 +350,16 @@ export function getDisabledTransitionTooltipRu(
     return 'Невозможно вернуться к предыдущему статусу. Жизненный цикл партии необратим.';
   }
   
-  if (targetIndex > currentIndex + 1) {
-    return 'Невозможно пропустить этапы. Сначала перейдите к следующему статусу.';
-  }
-  
   const transition = ALLOWED_TRANSITIONS.find(
     t => t.from === currentStatus && t.to === targetStatus
   );
   
   if (transition && !transition.allowedRoles.includes(role as 'farmer' | 'admin')) {
     return 'Это действие требует прав Администратора.';
+  }
+  
+  if (!transition) {
+    return 'Этот переход недоступен из текущего статуса.';
   }
   
   return 'Это действие недоступно при текущем статусе партии.';

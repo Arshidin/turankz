@@ -13,7 +13,7 @@ import {
   BATCH_STATUSES,
   BATCH_STATUS_LABELS,
   BATCH_STATUS_LABELS_RU,
-  getNextAllowedStatus,
+  getAllowedTransitions,
   getTransitionActionLabel,
   getTransitionActionLabelRu,
   BATCH_STATUS_DESCRIPTIONS,
@@ -54,7 +54,8 @@ export function BatchStatusTransition({
 }: BatchStatusTransitionProps) {
   const navigate = useNavigate();
   const lang = getCurrentLanguage();
-  const nextStatus = getNextAllowedStatus(currentStatus, role);
+  const allowedTransitions = getAllowedTransitions(currentStatus, role);
+  const hasNextAction = allowedTransitions.length > 0;
   
   const getLabel = (status: BatchLifecycleStatus) => 
     lang === 'ru' ? BATCH_STATUS_LABELS_RU[status] : BATCH_STATUS_LABELS[status];
@@ -80,7 +81,7 @@ export function BatchStatusTransition({
         <div className="flex items-center gap-2">
           <StatusBadge status={currentStatus} />
           
-          {nextStatus ? (
+          {hasNextAction ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -90,7 +91,13 @@ export function BatchStatusTransition({
                   className="text-xs"
                 >
                   <ExternalLink className="w-3 h-3 mr-1" />
-                  {getActionLabel(nextStatus)}
+                  {allowedTransitions.length === 1 
+                    ? getActionLabel(allowedTransitions[0])
+                    : (lang === 'ru' ? 'Действия' : 'Actions')
+                  }
+                  {allowedTransitions.length > 1 && (
+                    <span className="ml-1 text-muted-foreground">({allowedTransitions.length})</span>
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -135,7 +142,7 @@ export function BatchStatusTransition({
             {BATCH_STATUSES.map((status, index) => {
               const isCurrent = status === currentStatus;
               const isPast = index < currentIndex;
-              const isNext = index === currentIndex + 1;
+              const isAllowed = allowedTransitions.includes(status);
               
               return (
                 <div key={status} className="flex items-center">
@@ -160,12 +167,12 @@ export function BatchStatusTransition({
                             {lang === 'ru' ? 'Пройден' : 'Done'}
                           </span>
                         )}
-                        {isNext && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {lang === 'ru' ? 'Далее' : 'Next'}
+                        {isAllowed && (
+                          <span className="text-[10px] text-primary">
+                            {lang === 'ru' ? 'Доступно' : 'Available'}
                           </span>
                         )}
-                        {!isCurrent && !isPast && !isNext && (
+                        {!isCurrent && !isPast && !isAllowed && (
                           <Lock className="w-3 h-3 text-muted-foreground" />
                         )}
                       </div>
@@ -187,8 +194,8 @@ export function BatchStatusTransition({
           </div>
         )}
 
-        {/* Next action redirect button */}
-        {nextStatus && (
+        {/* Available actions redirect */}
+        {hasNextAction && (
           <div className="flex items-center gap-3">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -198,7 +205,10 @@ export function BatchStatusTransition({
                   className="flex items-center gap-2"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  {getActionLabel(nextStatus)}
+                  {allowedTransitions.length === 1 
+                    ? getActionLabel(allowedTransitions[0])
+                    : (lang === 'ru' ? `${allowedTransitions.length} доступных действий` : `${allowedTransitions.length} available actions`)
+                  }
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -210,14 +220,18 @@ export function BatchStatusTransition({
                 <Info className="w-4 h-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>{getDescription(nextStatus)}</p>
+                <div className="space-y-1">
+                  {allowedTransitions.map(status => (
+                    <p key={status}>• {getActionLabel(status)}</p>
+                  ))}
+                </div>
               </TooltipContent>
             </Tooltip>
           </div>
         )}
 
-        {/* No next action available */}
-        {!nextStatus && (
+        {/* No actions available */}
+        {!hasNextAction && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Lock className="w-4 h-4" />
             {currentStatus === 'closed' || currentStatus === 'matched' ? (
