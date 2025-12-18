@@ -375,17 +375,21 @@ export default function LivestockBatches() {
                                       <Button 
                                         variant="ghost" 
                                         size="icon"
-                                        className={`h-8 w-8 ${!canCreateBatches ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
-                                        onClick={() => canCreateBatches && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
-                                        disabled={!canCreateBatches}
+                                        className={`h-8 w-8 ${(!canCreateBatches || isTimeLocked) ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
+                                        onClick={() => canCreateBatches && !isTimeLocked && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
+                                        disabled={!canCreateBatches || isTimeLocked}
                                       >
-                                        {!canCreateBatches ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                                        {(!canCreateBatches || isTimeLocked) ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
                                       </Button>
                                     </span>
                                   </TooltipTrigger>
                                   {!canCreateBatches ? (
                                     <TooltipContent>
                                       <p>Available after Admin activation</p>
+                                    </TooltipContent>
+                                  ) : isTimeLocked ? (
+                                    <TooltipContent>
+                                      <p>{getTimeLockedTooltip()}</p>
                                     </TooltipContent>
                                   ) : (
                                     <TooltipContent>
