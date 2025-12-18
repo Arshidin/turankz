@@ -2,11 +2,11 @@
  * SIDEBAR COMPONENT
  * 
  * Renders navigation based on role AND account status.
- * Components are NOT mounted if access is not allowed.
- * 
- * Contracts & Execution visibility:
- * - Admin: always visible
- * - Farmer/MPK: only visible if they have at least one execution record
+ * Navigation is grouped by user intent:
+ * - Overview (situational awareness)
+ * - Market Participation (core actions)
+ * - Execution (contracts & delivery)
+ * - Governance (admin only)
  */
 
 import { NavLink, useLocation } from 'react-router-dom';
@@ -31,12 +31,15 @@ import {
   ClipboardList,
   CalendarClock,
   Eye,
-  Lock
+  Lock,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AccountStatus } from '@/lib/account-status';
+import { useState } from 'react';
 
 interface NavItem {
   labelKey: string;
@@ -47,37 +50,119 @@ interface NavItem {
   requiresExecutions?: boolean;
 }
 
-// FARMER navigation - filtered by account status
-const farmerNavItems: NavItem[] = [
-  { labelKey: 'nav.overview', path: '/', icon: Home, requiredStatus: ['observer', 'active'] },
-  { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
-  { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
-  { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
-  { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
-  { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['active'] },
+interface NavGroup {
+  key: string;
+  labelKey: string;
+  items: NavItem[];
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}
+
+// FARMER navigation - grouped by intent
+const farmerNavGroups: NavGroup[] = [
+  {
+    key: 'overview',
+    labelKey: 'nav.groups.overview',
+    items: [
+      { labelKey: 'nav.overview', path: '/', icon: Home, requiredStatus: ['observer', 'active'] },
+      { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
+    ],
+  },
+  {
+    key: 'participation',
+    labelKey: 'nav.groups.participation',
+    items: [
+      { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
+      { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
+    ],
+  },
+  {
+    key: 'execution',
+    labelKey: 'nav.groups.execution',
+    items: [
+      { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
+    ],
+  },
+  {
+    key: 'account',
+    labelKey: 'nav.groups.account',
+    items: [
+      { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['active'] },
+    ],
+  },
 ];
 
-// MPK navigation - filtered by account status
-const mpkNavItems: NavItem[] = [
-  { labelKey: 'nav.marketOverview', path: '/mpk/market', icon: BarChart3, requiredStatus: ['observer', 'active'] },
-  { labelKey: 'nav.purchasePoolRequests', path: '/mpk/requests', icon: ShoppingCart, requiredStatus: ['active'] },
-  { labelKey: 'nav.contractsExecution', path: '/mpk/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
-  { labelKey: 'nav.watchlist', path: '/mpk/watchlist', icon: BookmarkCheck, requiredStatus: ['active'] },
-  { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
-  { labelKey: 'nav.profile', path: '/mpk/profile', icon: User, requiredStatus: ['active'] },
+// MPK navigation - grouped by intent
+const mpkNavGroups: NavGroup[] = [
+  {
+    key: 'overview',
+    labelKey: 'nav.groups.overview',
+    items: [
+      { labelKey: 'nav.marketOverview', path: '/mpk/market', icon: BarChart3, requiredStatus: ['observer', 'active'] },
+      { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
+    ],
+  },
+  {
+    key: 'participation',
+    labelKey: 'nav.groups.demand',
+    items: [
+      { labelKey: 'nav.purchasePoolRequests', path: '/mpk/requests', icon: ShoppingCart, requiredStatus: ['active'] },
+      { labelKey: 'nav.watchlist', path: '/mpk/watchlist', icon: BookmarkCheck, requiredStatus: ['active'] },
+    ],
+  },
+  {
+    key: 'execution',
+    labelKey: 'nav.groups.execution',
+    items: [
+      { labelKey: 'nav.contractsExecution', path: '/mpk/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
+    ],
+  },
+  {
+    key: 'account',
+    labelKey: 'nav.groups.account',
+    items: [
+      { labelKey: 'nav.profile', path: '/mpk/profile', icon: User, requiredStatus: ['active'] },
+    ],
+  },
 ];
 
-// ADMIN navigation - full access
-const adminNavItems: NavItem[] = [
-  { labelKey: 'nav.platformOverview', path: '/', icon: Home },
-  { labelKey: 'nav.matchingWindows', path: '/admin/windows', icon: CalendarClock },
-  { labelKey: 'nav.poolMatching', path: '/admin/matching', icon: GitMerge },
-  { labelKey: 'nav.contractsExecution', path: '/admin/executions', icon: ClipboardList },
-  { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
-  { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },
-  { labelKey: 'nav.priceGridManagement', path: '/admin/price-grid', icon: Grid3X3 },
-  { labelKey: 'nav.premiumRulesIncentives', path: '/admin/premiums', icon: Award },
-  { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
+// ADMIN navigation - grouped by function
+const adminNavGroups: NavGroup[] = [
+  {
+    key: 'overview',
+    labelKey: 'nav.groups.overview',
+    items: [
+      { labelKey: 'nav.platformOverview', path: '/', icon: Home },
+      { labelKey: 'nav.matchingWindows', path: '/admin/windows', icon: CalendarClock },
+    ],
+  },
+  {
+    key: 'matching',
+    labelKey: 'nav.groups.matching',
+    items: [
+      { labelKey: 'nav.poolMatching', path: '/admin/matching', icon: GitMerge },
+      { labelKey: 'nav.contractsExecution', path: '/admin/executions', icon: ClipboardList },
+    ],
+  },
+  {
+    key: 'participants',
+    labelKey: 'nav.groups.participants',
+    items: [
+      { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
+      { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },
+    ],
+  },
+  {
+    key: 'governance',
+    labelKey: 'nav.groups.governance',
+    items: [
+      { labelKey: 'nav.priceGridManagement', path: '/admin/price-grid', icon: Grid3X3 },
+      { labelKey: 'nav.premiumRulesIncentives', path: '/admin/premiums', icon: Award },
+      { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
+    ],
+    collapsible: true,
+    defaultOpen: false,
+  },
 ];
 
 export function Sidebar() {
@@ -86,45 +171,62 @@ export function Sidebar() {
   const { accountStatus, isLoading, isObserver, isSuspended } = useAccountStatus();
   const { data: hasExecutions = false } = useHasExecutions();
   const location = useLocation();
+  
+  // Track collapsed state for collapsible groups
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  // Get navigation items based on role
-  const getNavItems = (): NavItem[] => {
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
+
+  // Get navigation groups based on role
+  const getNavGroups = (): NavGroup[] => {
     switch (role) {
       case 'farmer':
-        return farmerNavItems;
+        return farmerNavGroups;
       case 'mpk':
-        return mpkNavItems;
+        return mpkNavGroups;
       case 'admin':
-        return adminNavItems;
+        return adminNavGroups;
       default:
         return [];
     }
   };
 
-  // Filter nav items by account status and execution availability
-  const getFilteredNavItems = (): NavItem[] => {
-    const items = getNavItems();
-    
-    // Admin always has full access
+  // Filter items within each group
+  const filterItems = (items: NavItem[]): NavItem[] => {
     if (role === 'admin') return items;
     
-    // Filter items based on required status and execution availability
     return items.filter(item => {
-      // Check status requirement
       if (item.requiredStatus && !item.requiredStatus.includes(accountStatus)) {
         return false;
       }
-      
-      // Check execution requirement - only show if user has executions
       if (item.requiresExecutions && !hasExecutions) {
         return false;
       }
-      
       return true;
     });
   };
 
-  const navItems = getFilteredNavItems();
+  // Filter out empty groups
+  const getFilteredGroups = (): NavGroup[] => {
+    return getNavGroups()
+      .map(group => ({
+        ...group,
+        items: filterItems(group.items),
+      }))
+      .filter(group => group.items.length > 0);
+  };
+
+  const navGroups = getFilteredGroups();
 
   const roleLabel = {
     farmer: t('roles.farmer'),
@@ -132,7 +234,7 @@ export function Sidebar() {
     admin: t('roles.administration'),
   }[role];
 
-  // Check if path matches (exact or starts with for nested routes)
+  // Check if path matches
   const isActive = (path: string) => {
     if (path === '/') {
       return location.pathname === '/';
@@ -140,7 +242,7 @@ export function Sidebar() {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  // Show loading skeleton while determining account status
+  // Show loading skeleton
   if (isLoading) {
     return (
       <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 h-full overflow-y-auto">
@@ -166,7 +268,6 @@ export function Sidebar() {
           <span className="text-[11px] font-medium uppercase tracking-wider text-sidebar-muted">
             {roleLabel}
           </span>
-          {/* Account Status Badge */}
           {role !== 'admin' && (
             <Badge 
               variant={isObserver ? 'secondary' : isSuspended ? 'destructive' : 'outline'}
@@ -192,34 +293,66 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Navigation Items */}
-      <nav className="flex-1 px-2">
-        <ul className="space-y-0.5">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors",
-                  isActive(item.path)
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                )}
-              >
-                <item.icon className={cn(
-                  "w-4 h-4",
-                  isActive(item.path) 
-                    ? "text-primary" 
-                    : "text-sidebar-muted"
-                )} />
-                <span className="flex-1">{t(item.labelKey)}</span>
-                {item.readOnly && (
-                  <Eye className="w-3 h-3 text-muted-foreground" />
-                )}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+      {/* Navigation Groups */}
+      <nav className="flex-1 px-2 pb-4">
+        {navGroups.map((group, groupIndex) => {
+          const isCollapsed = group.collapsible && collapsedGroups.has(group.key);
+          const isDefaultCollapsed = group.collapsible && group.defaultOpen === false && !collapsedGroups.has(group.key);
+          const shouldShow = !group.collapsible || !isCollapsed;
+
+          return (
+            <div key={group.key} className={cn(groupIndex > 0 && 'mt-4')}>
+              {/* Group Label */}
+              {group.collapsible ? (
+                <button
+                  onClick={() => toggleGroup(group.key)}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+                >
+                  <span>{t(group.labelKey)}</span>
+                  {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                </button>
+              ) : (
+                <div className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-sidebar-muted">
+                  {t(group.labelKey)}
+                </div>
+              )}
+
+              {/* Group Items */}
+              {shouldShow && (
+                <ul className="space-y-0.5 mt-1">
+                  {group.items.map((item) => (
+                    <li key={item.path}>
+                      <NavLink
+                        to={item.path}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                          isActive(item.path)
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        )}
+                      >
+                        <item.icon className={cn(
+                          "w-4 h-4",
+                          isActive(item.path) 
+                            ? "text-primary" 
+                            : "text-sidebar-muted"
+                        )} />
+                        <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                        {item.readOnly && (
+                          <Eye className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        )}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {/* Footer */}

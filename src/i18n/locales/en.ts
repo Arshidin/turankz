@@ -60,6 +60,16 @@ export const en = {
     priceGridManagement: 'Reference Price Grid Management',
     premiumRulesIncentives: 'Premium Rules & Incentives',
     activityLog: 'Activity Log',
+    groups: {
+      overview: 'Overview',
+      participation: 'Market Participation',
+      demand: 'Demand Signaling',
+      execution: 'Execution',
+      account: 'Account',
+      matching: 'Pool Matching',
+      participants: 'Participants',
+      governance: 'Governance',
+    },
   },
   
   roles: {
