@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, 
   AlertCircle, 
@@ -21,7 +22,9 @@ import {
   Trash2,
   Edit,
   AlertTriangle,
-  Lock
+  Lock,
+  TrendingUp,
+  Package
 } from 'lucide-react';
 import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
@@ -45,6 +48,7 @@ import {
 import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
 import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
 import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
+import { useAggregatedDemand } from '@/hooks/useAggregatedDemand';
 import { toast } from '@/hooks/use-toast';
 
 // Map database status to StatusBadge status
@@ -65,6 +69,17 @@ const isApproachingDeadline = (targetWeek: string, status: BatchStatus): boolean
   const targetMonth = parseInt(targetWeek.split('-')[1] || '0', 10) - 1;
   return targetMonth <= currentMonth + 1;
 };
+
+// Small component for demand badge in tabs
+function DemandBadge() {
+  const { data: demands } = useAggregatedDemand();
+  if (!demands || demands.length === 0) return null;
+  return (
+    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+      {demands.length}
+    </Badge>
+  );
+}
 
 export default function LivestockBatches() {
   const navigate = useNavigate();
@@ -150,77 +165,82 @@ export default function LivestockBatches() {
       {/* Matching Window Status Banner */}
       <CurrentMatchingWindowBanner />
 
-      {/* Two-column layout: Batch Stats + Market Signals side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 mb-6">
-        {/* Batch Stats - compact inline */}
-        <div className="lg:col-span-2 grid grid-cols-3 gap-3">
-          <Card className="border-muted">
-            <CardContent className="py-4 px-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-muted">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xl font-semibold">{stats.forecast}</p>
-                  <p className="text-xs text-muted-foreground">{t('batches.forecast')}</p>
-                </div>
+      {/* Batch Stats Summary - compact inline */}
+      <div className="grid grid-cols-3 gap-3 mt-4 mb-4">
+        <Card className="border-muted">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-muted">
+                <FileText className="h-4 w-4 text-muted-foreground" />
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-amber-500/20">
-            <CardContent className="py-4 px-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-amber-500/10">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-semibold">{stats.softCommitted}</p>
-                  <p className="text-xs text-muted-foreground">{t('batches.softCommitted')}</p>
-                </div>
+              <div>
+                <p className="text-xl font-semibold">{stats.forecast}</p>
+                <p className="text-xs text-muted-foreground">{t('batches.forecast')}</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-emerald-500/20">
-            <CardContent className="py-4 px-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-emerald-500/10">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-semibold">{stats.confirmed}</p>
-                  <p className="text-xs text-muted-foreground">{t('batches.confirmed')}</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-amber-500/20">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-amber-500/10">
+                <Clock className="h-4 w-4 text-amber-600" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Market Demand Signals - collapsible, right side */}
-        <div className="lg:col-span-1">
-          <AggregatedDemandCard />
-        </div>
+              <div>
+                <p className="text-xl font-semibold">{stats.softCommitted}</p>
+                <p className="text-xs text-muted-foreground">{t('batches.softCommitted')}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-emerald-500/20">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-emerald-500/10">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold">{stats.confirmed}</p>
+                <p className="text-xs text-muted-foreground">{t('batches.confirmed')}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Batches Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base font-medium">{t('batches.batchRegistry')}</CardTitle>
-            <CardDescription>{t('batches.manageBatches')}</CardDescription>
-          </div>
+      {/* Tabs: Batch Registry + Market Demand */}
+      <Tabs defaultValue="batches" className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="batches" className="gap-2">
+              <Package className="h-4 w-4" />
+              {t('batches.batchRegistry')}
+              {batches && batches.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {batches.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="demand" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Market Demand
+              <DemandBadge />
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Quick New Batch Button */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="inline-block">
                   <Button 
-                    size="sm" 
                     onClick={() => setNewBatchOpen(true)}
                     disabled={!canCreateBatches}
                     className={!canCreateBatches ? 'opacity-50 cursor-not-allowed' : ''}
                   >
-                    {!canCreateBatches && <Lock className="w-3 h-3 mr-2" />}
+                    {!canCreateBatches && <Lock className="w-4 h-4 mr-2" />}
                     <Plus className="w-4 h-4 mr-2" />
                     {t('batches.newBatch')}
                   </Button>
@@ -233,7 +253,14 @@ export default function LivestockBatches() {
               )}
             </Tooltip>
           </TooltipProvider>
-        </CardHeader>
+        </div>
+
+        {/* Tab: Batch Registry */}
+        <TabsContent value="batches" className="mt-0">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>{t('batches.manageBatches')}</CardDescription>
+            </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-3">
@@ -465,8 +492,15 @@ export default function LivestockBatches() {
               </TooltipProvider>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Market Demand */}
+        <TabsContent value="demand" className="mt-0">
+          <AggregatedDemandCard />
+        </TabsContent>
+      </Tabs>
 
       {/* Escalate Status Dialog */}
       <AlertDialog open={!!escalateBatch} onOpenChange={() => setEscalateBatch(null)}>
