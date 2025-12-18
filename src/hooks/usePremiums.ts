@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export type PremiumType = 'standard' | 'reliability' | 'predictability' | 'volume_consistency';
+
 export interface PremiumSetting {
   id: string;
-  premium_type: 'standard' | 'reliability';
+  premium_type: PremiumType;
   level_key: string;
   level_name: string;
   premium_value: number;
@@ -14,6 +16,20 @@ export interface PremiumSetting {
   created_at: string;
   updated_at: string;
 }
+
+export const PREMIUM_TYPE_LABELS: Record<PremiumType, string> = {
+  standard: 'Standard Compliance',
+  reliability: 'Reliability',
+  predictability: 'Predictability',
+  volume_consistency: 'Volume Consistency',
+};
+
+export const PREMIUM_TYPE_DESCRIPTIONS: Record<PremiumType, string> = {
+  standard: 'Batch fully matches price grid criteria',
+  reliability: 'Based on farmer confirmation behavior',
+  predictability: 'Batch confirmed early with no edits',
+  volume_consistency: 'Consistent delivery over time',
+};
 
 export interface PremiumChangeLog {
   id: string;
@@ -74,6 +90,72 @@ export function useReliabilityPremiums() {
       
       if (error) throw error;
       return data as PremiumSetting[];
+    },
+  });
+}
+
+// Fetch predictability premiums only
+export function usePredictabilityPremiums() {
+  return useQuery({
+    queryKey: ['premium-settings', 'predictability'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('premium_settings')
+        .select('*')
+        .eq('premium_type', 'predictability')
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (error) throw error;
+      return data as PremiumSetting[];
+    },
+  });
+}
+
+// Fetch volume consistency premiums only
+export function useVolumeConsistencyPremiums() {
+  return useQuery({
+    queryKey: ['premium-settings', 'volume_consistency'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('premium_settings')
+        .select('*')
+        .eq('premium_type', 'volume_consistency')
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (error) throw error;
+      return data as PremiumSetting[];
+    },
+  });
+}
+
+// Toggle premium active state
+export function useTogglePremiumActive() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, is_active, changed_by }: { id: string; is_active: boolean; changed_by: string }) => {
+      const { error } = await supabase
+        .from('premium_settings')
+        .update({ is_active })
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      // Log the change
+      await supabase
+        .from('premium_change_log')
+        .insert({
+          premium_setting_id: id,
+          previous_value: is_active ? 0 : 1,
+          new_value: is_active ? 1 : 0,
+          changed_by,
+          change_reason: is_active ? 'Premium enabled' : 'Premium disabled',
+        });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['premium-settings'] });
     },
   });
 }
@@ -145,8 +227,26 @@ export function getPremiumByLevel(premiums: PremiumSetting[] | undefined, levelK
   return premiums?.find(p => p.level_key === levelKey);
 }
 
-// Calculate total premium for a batch
+// Calculate total premium for a batch with all premium types
 export function calculateTotalPremium(
+  standardPremiums: PremiumSetting[] | undefined,
+  reliabilityPremiums: PremiumSetting[] | undefined,
+  predictabilityPremiums: PremiumSetting[] | undefined,
+  volumeConsistencyPremiums: PremiumSetting[] | undefined,
+  standardStatus: string,
+  farmerGrading: string,
+  predictabilityLevel: string,
+  volumeConsistencyLevel: string
+): number {
+  const standardPremium = getPremiumByLevel(standardPremiums, standardStatus)?.premium_value ?? 0;
+  const reliabilityPremium = getPremiumByLevel(reliabilityPremiums, farmerGrading)?.premium_value ?? 0;
+  const predictabilityPremium = getPremiumByLevel(predictabilityPremiums, predictabilityLevel)?.premium_value ?? 0;
+  const volumeConsistencyPremium = getPremiumByLevel(volumeConsistencyPremiums, volumeConsistencyLevel)?.premium_value ?? 0;
+  return standardPremium + reliabilityPremium + predictabilityPremium + volumeConsistencyPremium;
+}
+
+// Simple calculation for backwards compatibility
+export function calculateBasicPremium(
   standardPremiums: PremiumSetting[] | undefined,
   reliabilityPremiums: PremiumSetting[] | undefined,
   standardStatus: string,
