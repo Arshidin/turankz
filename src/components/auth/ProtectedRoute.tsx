@@ -44,9 +44,14 @@ export function ProtectedRoute({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // No role assigned yet - redirect to auth (registration incomplete)
-  if (!role) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+  // Role is still loading (user exists but role hasn't been fetched yet)
+  // This prevents premature redirect while async role fetch is in progress
+  if (user && !role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // If registration is still pending, allow read-only routes (dashboard + price grid)
