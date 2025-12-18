@@ -22,7 +22,7 @@ export function useHasExecutions() {
   const { data: currentMpk } = useCurrentMpk();
 
   return useQuery({
-    queryKey: ['has-executions', user?.id, role, currentFarmer?.id, currentMpk?.id],
+    queryKey: ['has-executions', user?.id, role, currentFarmer?.id, currentMpk?.mpk_id],
     queryFn: async () => {
       // Admin always has access
       if (role === 'admin') {
@@ -58,12 +58,12 @@ export function useHasExecutions() {
         return (count ?? 0) > 0;
       }
 
-      if (role === 'mpk' && currentMpk?.id) {
+      if (role === 'mpk' && currentMpk?.mpk_id) {
         // Check if MPK has any requests with executions
         const { data: requests } = await supabase
           .from('purchase_pool_requests')
           .select('id')
-          .eq('mpk_id', currentMpk.id);
+          .eq('mpk_id', currentMpk.mpk_id);
 
         if (!requests || requests.length === 0) {
           return false;
