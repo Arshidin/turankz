@@ -164,9 +164,9 @@ function CreateVersionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Price Grid Version</DialogTitle>
+          <DialogTitle>Create New Reference Grid Version</DialogTitle>
           <DialogDescription>
-            Create a new version to define pricing cells
+            Create a new version to define indicative reference pricing cells
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -260,7 +260,7 @@ function CellEditor({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{cell ? 'Edit Price Cell' : 'Add Price Cell'}</DialogTitle>
+          <DialogTitle>{cell ? 'Update Reference Benchmark' : 'Add Reference Price Cell'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
@@ -335,7 +335,7 @@ function CellEditor({
           </div>
 
           <div className="space-y-2">
-            <Label>Base Price (₸/kg) *</Label>
+            <Label>Reference Price (₸/kg) *</Label>
             <Input
               type="number"
               value={basePrice}
@@ -450,8 +450,8 @@ export default function PriceGridManagement() {
   return (
     <MainLayout>
       <PageHeader
-        title="Price Grid Management"
-        description="Create, edit, and activate price grid versions"
+        title="Reference Price Grid Management"
+        description="Create, edit, and activate indicative reference price grid versions"
         actions={
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -460,11 +460,20 @@ export default function PriceGridManagement() {
         }
       />
 
+      {/* Mandatory Disclaimer for Admin */}
+      <Card className="mb-6 border-amber-500/20 bg-amber-500/5">
+        <CardContent className="py-3">
+          <p className="text-xs text-muted-foreground">
+            <strong>Note:</strong> Reference prices are indicative market benchmarks only. TURAN does not set, enforce, or guarantee transaction prices. All prices are market-oriented and participation is voluntary.
+          </p>
+        </CardContent>
+      </Card>
+
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'grid' | 'governance')} className="space-y-6">
         <TabsList>
           <TabsTrigger value="grid" className="gap-2">
             <Grid3X3 className="h-4 w-4" />
-            Price Grid
+            Reference Grid
           </TabsTrigger>
           <TabsTrigger value="governance" className="gap-2">
             <ShieldCheck className="h-4 w-4" />
@@ -502,7 +511,7 @@ export default function PriceGridManagement() {
           ) : (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground text-sm">
-                No versions created yet. Create your first price grid version.
+                No versions created yet. Create your first reference grid version.
               </CardContent>
             </Card>
           )}
@@ -520,7 +529,7 @@ export default function PriceGridManagement() {
                       {selectedVersion.version_name}
                     </CardTitle>
                     <CardDescription>
-                      {cells?.length || 0} price cells defined
+                      {cells?.length || 0} reference price cells defined
                     </CardDescription>
                   </div>
                   <Button size="sm" onClick={() => setShowAddCell(true)}>
@@ -540,7 +549,7 @@ export default function PriceGridManagement() {
                         <TableHead>Sex</TableHead>
                         <TableHead>Weight</TableHead>
                         <TableHead>Breed</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-right">Ref. Price</TableHead>
                         <TableHead className="w-20"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -588,7 +597,7 @@ export default function PriceGridManagement() {
                   </Table>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p className="mb-3">No price cells defined yet.</p>
+                    <p className="mb-3">No reference price cells defined yet.</p>
                     <Button variant="outline" onClick={() => setShowAddCell(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add First Cell
@@ -601,7 +610,7 @@ export default function PriceGridManagement() {
             <Card>
               <CardContent className="py-16 text-center text-muted-foreground">
                 <Grid3X3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Select a version to view and edit price cells</p>
+                <p>Select a version to view and edit reference price cells</p>
               </CardContent>
             </Card>
           )}
@@ -639,10 +648,10 @@ export default function PriceGridManagement() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Activate This Version?</DialogTitle>
+            <DialogTitle>Activate Reference Grid (Indicative)?</DialogTitle>
             <DialogDescription>
-              This will deactivate any currently active price grid and make this version the
-              active one visible to all users.
+              This will deactivate any currently active reference grid and make this version the
+              active indicative reference visible to all users. Reference prices are market benchmarks only.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -662,7 +671,7 @@ export default function PriceGridManagement() {
               onClick={handleActivate}
               disabled={!activationReason.trim() || activateVersion.isPending}
             >
-              {activateVersion.isPending ? 'Activating...' : 'Activate Version'}
+              {activateVersion.isPending ? 'Activating...' : 'Activate Reference Grid'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -672,9 +681,9 @@ export default function PriceGridManagement() {
       <Dialog open={!!duplicateVersion} onOpenChange={() => setDuplicateVersion(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Duplicate Version</DialogTitle>
+            <DialogTitle>Duplicate Reference Grid Version</DialogTitle>
             <DialogDescription>
-              Create a copy of "{duplicateVersion?.version_name}" with all its price cells.
+              Create a copy of "{duplicateVersion?.version_name}" with all its reference price cells.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
