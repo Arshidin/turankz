@@ -545,6 +545,153 @@ export function useCancelMatching() {
 }
 
 /**
+ * Hook for reallocating matching volume before finalization
+ */
+export function useReallocateMatchingVolume() {
+  const { toast } = useToast();
+  const { role, roleName } = useRole();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      matchId,
+      newHeadsMatched,
+      reason,
+    }: {
+      matchId: string;
+      newHeadsMatched: number;
+      reason: string;
+    }) => {
+      if (role !== 'admin') {
+        throw new Error('Only admins can reallocate matching volumes');
+      }
+
+      if (!reason.trim()) {
+        throw new Error('Reallocation reason is required');
+      }
+
+      if (newHeadsMatched <= 0) {
+        throw new Error('Heads matched must be greater than 0');
+      }
+
+      // Get current matching data
+      const { data: current, error: fetchError } = await supabase
+        .from('pool_matches')
+        .select('status, heads_matched, request_id, batch_id')
+        .eq('id', matchId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Only allow reallocation of active matchings
+      if (current.status !== 'active') {
+        throw new Error('Can only reallocate active matchings');
+      }
+
+      // Get batch info to validate volume
+      const { data: batch } = await supabase
+        .from('batches')
+        .select('heads')
+        .eq('id', current.batch_id)
+        .single();
+
+      if (batch && newHeadsMatched > batch.heads) {
+        throw new Error(`Cannot allocate more than batch capacity (${batch.heads} heads)`);
+      }
+
+      const previousHeads = current.heads_matched;
+      const headsDifference = newHeadsMatched - previousHeads;
+
+      // Update matching
+      const { data, error } = await supabase
+        .from('pool_matches')
+        .update({ heads_matched: newHeadsMatched })
+        .eq('id', matchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Log reallocation action
+      await supabase.from('matching_activity_log').insert({
+        match_id: matchId,
+        action_type: 'volume_reallocated',
+        previous_value: `${previousHeads} heads`,
+        new_value: `${newHeadsMatched} heads`,
+        performed_by: `${roleName} (${role})`,
+        note: reason,
+      });
+
+      // Update request matched_volume
+      const { data: request } = await supabase
+        .from('purchase_pool_requests')
+        .select('id, status, required_volume, matched_volume')
+        .eq('id', current.request_id)
+        .single();
+
+      if (request) {
+        const newMatchedVolume = request.matched_volume + headsDifference;
+        
+        // Determine new status based on matched volume
+        let newStatus = request.status;
+        if (newMatchedVolume >= request.required_volume) {
+          newStatus = 'fulfilled';
+        } else if (newMatchedVolume > 0) {
+          newStatus = 'partial';
+        } else {
+          newStatus = 'matching';
+        }
+
+        await supabase
+          .from('purchase_pool_requests')
+          .update({ 
+            matched_volume: Math.max(0, newMatchedVolume),
+            status: newStatus,
+          })
+          .eq('id', current.request_id);
+
+        if (newStatus !== request.status) {
+          await supabase.from('activity_log').insert({
+            event_type: 'pool_request_updated' as any,
+            actor_role: role,
+            actor_name: roleName,
+            description: `Request status changed from ${request.status} to ${newStatus} due to volume reallocation`,
+            target_type: 'pool_request',
+            target_id: current.request_id,
+            metadata: { 
+              previous_status: request.status, 
+              new_status: newStatus, 
+              trigger: 'volume_reallocated',
+              previous_volume: previousHeads,
+              new_volume: newHeadsMatched,
+            },
+          });
+        }
+      }
+
+      return data as Matching;
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: 'Volume Reallocated',
+        description: `Updated to ${variables.newHeadsMatched} heads.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['matchings'] });
+      queryClient.invalidateQueries({ queryKey: ['matchings-details'] });
+      queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['matching-activity'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error Reallocating Volume',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
  * Hook to fetch matching activity history
  */
 export function useMatchingActivityHistory(matchId: string | null) {

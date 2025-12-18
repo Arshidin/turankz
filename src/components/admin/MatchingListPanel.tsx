@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -23,11 +22,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   useMatchingsWithDetails,
   useFinalizeMatching,
   useCancelMatching,
   type MatchingWithDetails,
 } from '@/hooks/useMatchings';
+import { ReallocateVolumeDialog } from './ReallocateVolumeDialog';
+import { MatchingAuditHistory } from './MatchingAuditHistory';
 import {
   MATCHING_STATUS_LABELS,
   type MatchingLifecycleStatus,
@@ -39,6 +47,9 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
+  MoreHorizontal,
+  ArrowLeftRight,
+  History,
 } from 'lucide-react';
 
 interface MatchingListPanelProps {
@@ -82,6 +93,8 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
     matchId: null,
   });
   const [cancelReason, setCancelReason] = useState('');
+  const [reallocateMatching, setReallocateMatching] = useState<MatchingWithDetails | null>(null);
+  const [auditMatchId, setAuditMatchId] = useState<string | null>(null);
 
   const handleFinalize = (matchId: string) => {
     finalizeMatching.mutate({ matchId });
@@ -206,17 +219,43 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Finalize
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-destructive hover:text-destructive"
-                          onClick={() => setCancelDialog({ open: true, matchId: matching.id })}
-                          disabled={cancelMatching.isPending}
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Cancel
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setReallocateMatching(matching)}>
+                              <ArrowLeftRight className="h-4 w-4 mr-2" />
+                              Reallocate Volume
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setAuditMatchId(matching.id)}>
+                              <History className="h-4 w-4 mr-2" />
+                              View Audit History
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setCancelDialog({ open: true, matchId: matching.id })}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Cancel Matching
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
+                    )}
+                    {matching.status === 'finalized' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setAuditMatchId(matching.id)}
+                      >
+                        <History className="h-3 w-3 mr-1" />
+                        History
+                      </Button>
                     )}
                     {matching.status === 'cancelled' && matching.cancellation_reason && (
                       <span className="text-xs text-muted-foreground italic">
@@ -279,6 +318,26 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
               {cancelMatching.isPending ? 'Cancelling...' : 'Cancel Matching'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reallocate Volume Dialog */}
+      <ReallocateVolumeDialog
+        matching={reallocateMatching}
+        open={!!reallocateMatching}
+        onOpenChange={(open) => !open && setReallocateMatching(null)}
+      />
+
+      {/* Audit History Dialog */}
+      <Dialog open={!!auditMatchId} onOpenChange={(open) => !open && setAuditMatchId(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Matching Audit History
+            </DialogTitle>
+          </DialogHeader>
+          <MatchingAuditHistory matchId={auditMatchId} />
         </DialogContent>
       </Dialog>
     </>
