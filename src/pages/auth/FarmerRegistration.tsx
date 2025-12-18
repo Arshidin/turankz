@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
 
@@ -392,21 +392,63 @@ export default function FarmerRegistration() {
           )}
 
           {step === 4 && (
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-amber-600" />
+            <div className="space-y-5">
+              {/* Status Icon */}
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-amber-600" />
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <p className="font-medium text-lg">Observer — Pending activation</p>
+              {/* Status Block */}
+              <div className="text-center space-y-1">
+                <div className="inline-block px-3 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30">
+                  <span className="text-sm font-semibold text-amber-700">Observer — Pending activation</span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Your registration has been submitted for review.
-                  You will have read-only access until Admin approval.
+                  Your profile is under review by the TURAN Administration.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  You currently have read-only access.<br />
+                  You will be able to declare livestock batches only after Admin approval.
                 </p>
               </div>
 
+              {/* Access Limitations */}
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Current Access</p>
+                <ul className="space-y-2 text-sm text-foreground">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    View market standards and price grid
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    Explore demand overview (read-only)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">Cannot create or confirm batches yet</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Expectation Note */}
+              <Alert className="border-border bg-background">
+                <Clock className="h-4 w-4" />
+                <AlertDescription className="text-xs text-muted-foreground">
+                  Activation typically occurs after a brief profile review.
+                  You will be notified once access is granted.
+                </AlertDescription>
+              </Alert>
+
+              {/* CTA */}
               <Button className="w-full" onClick={() => navigate('/')}>
-                Continue to Dashboard
+                Go to Dashboard
               </Button>
             </div>
           )}
