@@ -227,7 +227,7 @@ function CellEditor({
   const [sex, setSex] = useState(cell?.sex || '');
   const [weightMin, setWeightMin] = useState(cell?.weight_min?.toString() || '');
   const [weightMax, setWeightMax] = useState(cell?.weight_max?.toString() || '');
-  const [breedGroup, setBreedGroup] = useState(cell?.breed_group || '');
+  const [breedGroup, setBreedGroup] = useState(cell?.breed_group || '__all__');
   const [basePrice, setBasePrice] = useState(cell?.base_price?.toString() || '');
   const [notes, setNotes] = useState(cell?.notes || '');
   const [changeReason, setChangeReason] = useState('');
@@ -245,7 +245,7 @@ function CellEditor({
           sex,
           weight_min: parseInt(weightMin, 10),
           weight_max: parseInt(weightMax, 10),
-          breed_group: breedGroup || null,
+          breed_group: breedGroup === '__all__' ? null : breedGroup,
           base_price: parseInt(basePrice, 10),
           notes: notes || null,
         },
@@ -324,7 +324,7 @@ function CellEditor({
                 <SelectValue placeholder="All breeds" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All breeds</SelectItem>
+                <SelectItem value="__all__">All breeds</SelectItem>
                 {BREED_GROUPS.map((bg) => (
                   <SelectItem key={bg.value} value={bg.value}>
                     {bg.label}
