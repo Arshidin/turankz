@@ -14,6 +14,7 @@ import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
 import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
 import { AttentionRequired } from '@/components/admin/AttentionRequired';
 import { MatchingWindowBanner } from '@/components/admin/MatchingWindowBanner';
+import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { ReliabilityPremiumCard } from '@/components/premium';
 import { useFarmers } from '@/hooks/useFarmers';
 import { useMpks } from '@/hooks/useMpks';
@@ -348,31 +349,11 @@ export default function Overview() {
         </Card>
       )}
 
-      {/* Matching Window Alert for Farmer */}
+      {/* Current Matching Window Banner */}
       {role === 'farmer' && (
-        <Card className="mb-6 border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t('admin.nextMatchingWindow')}</p>
-                  <p className="text-lg font-bold text-amber-600">{nextMatchingWindow.date}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                  {t('admin.daysRemaining', { count: nextMatchingWindow.daysRemaining })}
-                </Badge>
-                <p className="text-sm text-muted-foreground">
-                  {t('admin.completeActionsBefore')}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6">
+          <CurrentMatchingWindowBanner />
+        </div>
       )}
 
       {/* Summary Cards */}
