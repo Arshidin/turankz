@@ -1,12 +1,54 @@
 /**
  * Platform Terminology
- * Turan Standard Pool v1.1
+ * Turan Standard Pool v1.2
  * 
  * Consistent terminology ensures users understand concepts
  * across all roles and pages without confusion.
  * 
+ * IMPORTANT: All pricing terminology uses reference-based, market-driven language
+ * to avoid any interpretation of price fixing or mandatory pricing.
+ * 
  * RULE: Avoid synonyms that may confuse users.
  */
+
+// ============================================================================
+// PRICING TERMINOLOGY - Reference-based, Market-driven
+// ============================================================================
+
+export const PRICING_TERMS = {
+  // Core terminology renames
+  PRICE_GRID: 'Reference Price Grid',
+  BASE_PRICE: 'Reference Price',
+  FINAL_PRICE: 'Indicative Settlement Price',
+  PRICING_ENGINE: 'Reference Pricing & Premiums Engine',
+  PRICE_CALCULATION: 'Indicative Price Calculation',
+  PRICE_PER_KG: 'Indicative price per kg (market-based)',
+  
+  // Admin actions
+  EDIT_PRICE: 'Update Reference Benchmark',
+  ACTIVATE_GRID: 'Activate Reference Grid (Indicative)',
+  
+  // Short forms for UI
+  REF_PRICE: 'Ref. Price',
+  IND_PRICE: 'Ind. Price',
+} as const;
+
+export const PRICING_DESCRIPTIONS = {
+  REFERENCE_GRID: 'Indicative market benchmarks for live cattle pricing',
+  REFERENCE_PRICE: 'Market-oriented benchmark price (indicative only)',
+  INDICATIVE_SETTLEMENT: 'Estimated price based on current reference grid and premiums',
+  PREMIUM_NATURE: 'Incentive-based premiums earned for compliance with standards, predictability, and discipline',
+} as const;
+
+/**
+ * Standard disclaimer to display wherever pricing appears.
+ * Required for legal and antitrust compliance.
+ */
+export const PRICING_DISCLAIMER = {
+  FULL: 'Reference prices are indicative market benchmarks. Final settlement prices are determined at delivery based on market conditions. TURAN does not set, enforce, or guarantee transaction prices. Participation is voluntary.',
+  COMPACT: 'Reference prices are indicative market benchmarks. Final settlement prices are determined at delivery.',
+  PREMIUM: 'Incentive-based premiums earned for compliance with standards, predictability, and discipline.',
+} as const;
 
 // ============================================================================
 // STATUS LABELS - Use these exact labels everywhere
@@ -97,6 +139,7 @@ export const PAGE_TITLES = {
   POOL_MATCHING: 'Pool Matching',
   FARMER_MANAGEMENT: 'Farmer Management',
   MPK_MANAGEMENT: 'MPK Management',
+  REFERENCE_PRICE_GRID: 'Reference Price Grid',
 } as const;
 
 export const PAGE_DESCRIPTIONS = {
@@ -117,6 +160,7 @@ export const PAGE_DESCRIPTIONS = {
   POOL_MATCHING: 'Coordinate supply and demand to form matched pools',
   FARMER_MANAGEMENT: 'Manage farmer base, control access, and enforce discipline through grading',
   MPK_MANAGEMENT: 'Control onboarding, visibility, and demand discipline of processing plants',
+  REFERENCE_PRICE_GRID: 'Manage indicative reference prices for market benchmarking',
 } as const;
 
 // ============================================================================

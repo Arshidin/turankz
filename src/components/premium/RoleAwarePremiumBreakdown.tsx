@@ -160,7 +160,7 @@ export function RoleAwarePremiumBreakdown({
     return (
       <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Base Price</span>
+          <span className="text-muted-foreground">Reference Price</span>
           <span className="font-medium">{breakdown.basePricePerKg} ₸/kg</span>
         </div>
         <div className="flex items-center justify-between text-sm">
@@ -169,7 +169,7 @@ export function RoleAwarePremiumBreakdown({
         </div>
         <Separator />
         <div className="flex items-center justify-between">
-          <span className="font-medium">Total Price</span>
+          <span className="font-medium">Indicative Price</span>
           <span className="font-bold text-lg">{breakdown.totalPricePerKg} ₸/kg</span>
         </div>
         {isLocked && (
@@ -188,7 +188,7 @@ export function RoleAwarePremiumBreakdown({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Your Price Breakdown</CardTitle>
+            <CardTitle className="text-base">Your Indicative Price Breakdown</CardTitle>
             {isLocked && (
               <Badge variant="outline" className="gap-1">
                 <Lock className="h-3 w-3" />
@@ -199,7 +199,7 @@ export function RoleAwarePremiumBreakdown({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between py-2 bg-muted/50 rounded-lg px-3">
-            <span className="font-medium">Base Price (Market Grid)</span>
+            <span className="font-medium">Reference Price (Market Grid)</span>
             <span className="font-semibold">{breakdown.basePricePerKg} ₸/kg</span>
           </div>
 
@@ -217,14 +217,14 @@ export function RoleAwarePremiumBreakdown({
           </div>
 
           <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-            <span className="font-semibold">Your Price per kg</span>
+            <span className="font-semibold">Indicative Price per kg</span>
             <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
           </div>
 
           {!isLocked && (
             <p className="text-xs text-muted-foreground text-center">
               <Eye className="h-3 w-3 inline mr-1" />
-              This is an estimate. Final price is locked upon matching finalization.
+              This is an indicative estimate. Final settlement price is determined at delivery based on market conditions.
             </p>
           )}
         </CardContent>
@@ -259,7 +259,7 @@ export function RoleAwarePremiumBreakdown({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between py-2 bg-muted/50 rounded-lg px-3">
-            <span className="font-medium">Base Price</span>
+            <span className="font-medium">Reference Price</span>
             <span className="font-semibold">{breakdown.basePricePerKg} ₸/kg</span>
           </div>
 
@@ -297,7 +297,7 @@ export function RoleAwarePremiumBreakdown({
           <Separator className="my-2" />
 
           <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-            <span className="font-semibold">Price per kg</span>
+            <span className="font-semibold">Indicative Price per kg</span>
             <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
           </div>
         </CardContent>
@@ -310,19 +310,19 @@ export function RoleAwarePremiumBreakdown({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Full Price Breakdown</CardTitle>
-          {isLocked && (
-            <Badge variant="outline" className="gap-1">
-              <Lock className="h-3 w-3" />
+            <CardTitle className="text-base">Full Indicative Price Breakdown</CardTitle>
+            {isLocked && (
+              <Badge variant="outline" className="gap-1">
+                <Lock className="h-3 w-3" />
               Locked
             </Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center justify-between py-2 bg-muted/50 rounded-lg px-3">
-          <span className="font-medium">Base Price (Grid)</span>
-          <span className="font-semibold">{breakdown.basePricePerKg} ₸/kg</span>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between py-2 bg-muted/50 rounded-lg px-3">
+            <span className="font-medium">Reference Price (Grid)</span>
+            <span className="font-semibold">{breakdown.basePricePerKg} ₸/kg</span>
         </div>
 
         <div className="divide-y">
@@ -338,10 +338,10 @@ export function RoleAwarePremiumBreakdown({
           <span className="font-medium text-emerald-600">+{breakdown.totalPremium} ₸/kg</span>
         </div>
 
-        <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-          <span className="font-semibold">Total Price per kg</span>
-          <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
-        </div>
+          <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
+            <span className="font-semibold">Indicative Settlement Price per kg</span>
+            <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
+          </div>
 
         {isLocked && lockedAt && (
           <p className="text-xs text-muted-foreground text-center">

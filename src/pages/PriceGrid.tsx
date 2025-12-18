@@ -40,18 +40,17 @@ export default function PriceGrid() {
   return (
     <MainLayout>
       <PageHeader 
-        title="Turan Live Cattle Price Grid" 
-        description="Unified market reference for live cattle pricing across the platform"
+        title="Turan Reference Price Grid" 
+        description="Indicative market benchmarks for live cattle pricing"
       />
 
-      {/* Intro Note */}
+      {/* Mandatory Disclaimer */}
       <Card className="mb-6 border-primary/20 bg-primary/5">
         <CardContent className="py-4">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-primary mt-0.5 shrink-0" />
             <p className="text-sm text-muted-foreground">
-              This page presents a unified and transparent live cattle pricing framework used as a market reference. 
-              It is informational only and does not represent final transaction prices.
+              Reference prices are indicative market benchmarks. Final settlement prices are determined at delivery based on market conditions. TURAN does not set, enforce, or guarantee transaction prices. Participation is voluntary.
             </p>
           </div>
         </CardContent>
@@ -76,10 +75,10 @@ export default function PriceGrid() {
       {!isLoading && !error && !activeGrid && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">No active price grid available.</p>
+            <p className="text-muted-foreground">No active reference price grid available.</p>
             {role === 'admin' && (
               <p className="text-sm text-muted-foreground mt-2">
-                Go to Price Grid Management to create and activate a price grid.
+                Go to Reference Price Grid Management to create and activate a reference grid.
               </p>
             )}
           </CardContent>
@@ -111,18 +110,18 @@ export default function PriceGrid() {
             </CardHeader>
           </Card>
 
-          {/* Price Grid Table */}
+          {/* Reference Price Grid Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Base Prices (₸/kg live weight)</CardTitle>
+              <CardTitle>Reference Prices (₸/kg live weight)</CardTitle>
               <CardDescription>
-                Prices by age category, sex, and weight range
+                Indicative prices by age category, sex, and weight range
               </CardDescription>
             </CardHeader>
             <CardContent>
               {activeGrid.cells.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No price cells defined in this grid.
+                  No reference price cells defined in this grid.
                 </p>
               ) : (
                 <Table>
@@ -132,7 +131,7 @@ export default function PriceGrid() {
                       <TableHead>Sex</TableHead>
                       <TableHead>Weight Range</TableHead>
                       <TableHead>Breed Group</TableHead>
-                      <TableHead className="text-right">Base Price</TableHead>
+                      <TableHead className="text-right">Reference Price</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -162,26 +161,26 @@ export default function PriceGrid() {
           {/* Usage Notes */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Usage Notes</CardTitle>
+              <CardTitle className="text-base">Important Notes</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 text-sm">
                   <CircleDot className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">
-                    The grid is a <span className="text-foreground font-medium">market reference</span>, not a contract price.
+                    The grid provides <span className="text-foreground font-medium">indicative market benchmarks</span>, not contract prices or guaranteed rates.
                   </span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <CircleDot className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">
-                    Final prices may include additional premiums or discounts based on specific transaction terms.
+                    Final settlement prices are determined at delivery based on market conditions and are not enforced by TURAN.
                   </span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <CircleDot className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">
-                    Reliability and pool participation premiums are applied separately and are not reflected in this grid.
+                    Incentive-based premiums for compliance with standards, predictability, and discipline are applied separately and reflected in indicative calculations.
                   </span>
                 </li>
               </ul>
