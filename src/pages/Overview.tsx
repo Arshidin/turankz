@@ -176,7 +176,7 @@ export default function Overview() {
         title: `Request ${r.request_number} at risk`,
         description: `Only ${Math.round((r.matched_volume / r.required_volume) * 100)}% filled for ${r.target_week}`,
         severity: 'high' as const,
-        linkTo: '/admin/pool-matching',
+        linkTo: '/admin/matching',
         linkLabel: 'Review',
       })),
     ...farmers
