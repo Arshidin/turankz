@@ -49,7 +49,6 @@ const farmerNavItems: NavItem[] = [
   { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
   { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['active'] },
-  { labelKey: 'nav.help', path: '/help', icon: HelpCircle, requiredStatus: ['observer', 'active'] },
 ];
 
 // MPK navigation - filtered by account status
@@ -59,7 +58,6 @@ const mpkNavItems: NavItem[] = [
   { labelKey: 'nav.watchlist', path: '/mpk/watchlist', icon: BookmarkCheck, requiredStatus: ['active'] },
   { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
   { labelKey: 'nav.profile', path: '/mpk/profile', icon: User, requiredStatus: ['active'] },
-  { labelKey: 'nav.help', path: '/help', icon: HelpCircle, requiredStatus: ['observer', 'active'] },
 ];
 
 // ADMIN navigation - full access
@@ -165,17 +163,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Observer Mode Banner */}
-      {isObserver && role !== 'admin' && (
-        <div className="mx-2 mb-2 px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/20">
-          <div className="flex items-center gap-2">
-            <Eye className="w-3.5 h-3.5 text-amber-600" />
-            <span className="text-xs text-amber-700 dark:text-amber-400">
-              {t('nav.observerMode') || 'Read-only mode'}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Suspended Mode Banner */}
       {isSuspended && (
