@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowRight, Lock, Info } from 'lucide-react';
+import { ExternalLink, Lock, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
@@ -9,26 +9,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   type BatchLifecycleStatus,
   BATCH_STATUSES,
   BATCH_STATUS_LABELS,
   BATCH_STATUS_LABELS_RU,
   getNextAllowedStatus,
-  isTransitionAllowed,
   getTransitionActionLabel,
   getTransitionActionLabelRu,
-  getDisabledTransitionTooltip,
-  getDisabledTransitionTooltipRu,
   BATCH_STATUS_DESCRIPTIONS,
   BATCH_STATUS_DESCRIPTIONS_RU,
 } from '@/lib/batch-lifecycle';
@@ -45,25 +32,27 @@ const getCurrentLanguage = (): string => {
 interface BatchStatusTransitionProps {
   currentStatus: BatchLifecycleStatus;
   role: 'farmer' | 'admin' | 'mpk';
-  onTransition: (newStatus: BatchLifecycleStatus) => Promise<void>;
-  isLoading?: boolean;
+  batchId: string;
   showAllStatuses?: boolean;
   compact?: boolean;
 }
 
+/**
+ * BatchStatusTransition - READ-ONLY status display component
+ * 
+ * This component displays batch status information and next recommended actions,
+ * but does NOT execute status transitions directly.
+ * 
+ * All status transitions must go through BatchFSMPanel on the Batch Detail page.
+ */
 export function BatchStatusTransition({
   currentStatus,
   role,
-  onTransition,
-  isLoading = false,
+  batchId,
   showAllStatuses = false,
   compact = false,
 }: BatchStatusTransitionProps) {
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    targetStatus: BatchLifecycleStatus | null;
-  }>({ open: false, targetStatus: null });
-  
+  const navigate = useNavigate();
   const lang = getCurrentLanguage();
   const nextStatus = getNextAllowedStatus(currentStatus, role);
   
@@ -73,74 +62,41 @@ export function BatchStatusTransition({
   const getActionLabel = (status: BatchLifecycleStatus) =>
     lang === 'ru' ? getTransitionActionLabelRu(status) : getTransitionActionLabel(status);
   
-  const getTooltip = (from: BatchLifecycleStatus, to: BatchLifecycleStatus) =>
-    lang === 'ru' 
-      ? getDisabledTransitionTooltipRu(from, to, role)
-      : getDisabledTransitionTooltip(from, to, role);
-  
   const getDescription = (status: BatchLifecycleStatus) =>
     lang === 'ru' ? BATCH_STATUS_DESCRIPTIONS_RU[status] : BATCH_STATUS_DESCRIPTIONS[status];
 
-  // Status-specific confirmation messages
-  const getConfirmationMessage = (targetStatus: BatchLifecycleStatus) => {
-    if (targetStatus === 'soft_committed') {
-      return lang === 'ru'
-        ? 'Предварительное подтверждение сигнализирует о намерении продать, но не гарантирует включение в пул. Вы сможете вносить изменения, но они будут логироваться.'
-        : 'Soft Commitment signals intent to sell but does not guarantee pool inclusion. You can still make changes, but they will be logged.';
-    }
-    if (targetStatus === 'confirmed') {
-      return lang === 'ru'
-        ? 'Подтверждение означает твёрдое обязательство. Партия становится доступной для сопоставления с заявками. Изменения станут невозможны.'
-        : 'Confirming this batch means you commit it for matching. Changes will no longer be possible.';
-    }
-    return getDescription(targetStatus);
-  };
+  const redirectTooltip = lang === 'ru' 
+    ? 'Управление статусом доступно в Деталях партии'
+    : 'Status changes are managed in the Batch Details view';
 
-  const getConfirmationWarning = (targetStatus: BatchLifecycleStatus) => {
-    if (targetStatus === 'soft_committed') {
-      return lang === 'ru'
-        ? 'Частые изменения после Предварительного подтверждения снижают приоритет сопоставления.'
-        : 'Frequent changes after Soft Commitment reduce matching priority.';
-    }
-    if (targetStatus === 'confirmed') {
-      return lang === 'ru'
-        ? 'Это действие необратимо. Партия станет доступна только для чтения.'
-        : 'This action is irreversible. The batch will become read-only.';
-    }
-    return lang === 'ru' 
-      ? 'Это действие необратимо. Вы не сможете вернуться к предыдущему статусу.'
-      : 'This action is irreversible. You cannot revert to a previous status.';
-  };
-
-  const handleTransitionClick = (targetStatus: BatchLifecycleStatus) => {
-    setConfirmDialog({ open: true, targetStatus });
-  };
-
-  const handleConfirm = async () => {
-    if (confirmDialog.targetStatus) {
-      await onTransition(confirmDialog.targetStatus);
-    }
-    setConfirmDialog({ open: false, targetStatus: null });
+  const handleNavigateToBatchDetail = () => {
+    navigate(`/farmer/batches/${batchId}`);
   };
 
   if (compact) {
-    // Compact mode: just show current status and next action button
+    // Compact mode: just show current status and redirect button
     return (
       <TooltipProvider>
         <div className="flex items-center gap-2">
           <StatusBadge status={currentStatus} />
           
           {nextStatus ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleTransitionClick(nextStatus)}
-              disabled={isLoading}
-              className="text-xs"
-            >
-              <ArrowRight className="w-3 h-3 mr-1" />
-              {getActionLabel(nextStatus)}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleNavigateToBatchDetail}
+                  className="text-xs"
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  {getActionLabel(nextStatus)}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{redirectTooltip}</p>
+              </TooltipContent>
+            </Tooltip>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -154,68 +110,12 @@ export function BatchStatusTransition({
               </TooltipContent>
             </Tooltip>
           )}
-          
-          {/* Confirmation Dialog */}
-          <AlertDialog 
-            open={confirmDialog.open} 
-            onOpenChange={(open) => setConfirmDialog({ open, targetStatus: confirmDialog.targetStatus })}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {confirmDialog.targetStatus === 'confirmed' 
-                    ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
-                    : confirmDialog.targetStatus === 'soft_committed'
-                    ? (lang === 'ru' ? 'Предварительное подтверждение' : 'Soft Commitment')
-                    : (lang === 'ru' ? 'Подтвердить изменение статуса' : 'Confirm Status Change')
-                  }
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {confirmDialog.targetStatus && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center py-2">
-                        <StatusBadge status={currentStatus} />
-                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                        <StatusBadge status={confirmDialog.targetStatus} />
-                      </div>
-                      <p className="text-sm text-foreground">
-                        {getConfirmationMessage(confirmDialog.targetStatus)}
-                      </p>
-                      <p className={cn(
-                        'text-xs',
-                        confirmDialog.targetStatus === 'confirmed' 
-                          ? 'text-destructive' 
-                          : 'text-amber-600 dark:text-amber-400'
-                      )}>
-                        {getConfirmationWarning(confirmDialog.targetStatus)}
-                      </p>
-                    </div>
-                  )}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>
-                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                </AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleConfirm} 
-                  disabled={isLoading}
-                  className={confirmDialog.targetStatus === 'confirmed' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                >
-                  {confirmDialog.targetStatus === 'confirmed'
-                    ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
-                    : (lang === 'ru' ? 'Продолжить' : 'Proceed')
-                  }
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </TooltipProvider>
     );
   }
 
-  // Full mode: show all statuses in a timeline
+  // Full mode: show all statuses in a timeline (read-only)
   const currentIndex = BATCH_STATUSES.indexOf(currentStatus);
 
   return (
@@ -229,28 +129,24 @@ export function BatchStatusTransition({
           <StatusBadge status={currentStatus} />
         </div>
 
-        {/* Status timeline */}
+        {/* Status timeline (read-only visualization) */}
         {showAllStatuses && (
           <div className="flex items-center gap-1 overflow-x-auto pb-2">
             {BATCH_STATUSES.map((status, index) => {
               const isCurrent = status === currentStatus;
               const isPast = index < currentIndex;
               const isNext = index === currentIndex + 1;
-              const canTransition = isTransitionAllowed(currentStatus, status, role);
               
               return (
                 <div key={status} className="flex items-center">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
-                        onClick={() => canTransition && handleTransitionClick(status)}
-                        disabled={!canTransition || isLoading}
+                      <div
                         className={cn(
-                          'flex flex-col items-center gap-1 px-3 py-2 rounded-md transition-colors',
+                          'flex flex-col items-center gap-1 px-3 py-2 rounded-md',
                           isCurrent && 'bg-primary/10 ring-2 ring-primary',
                           isPast && 'opacity-50',
-                          canTransition && !isCurrent && 'hover:bg-muted cursor-pointer',
-                          !canTransition && !isCurrent && !isPast && 'opacity-50 cursor-not-allowed'
+                          !isCurrent && !isPast && 'opacity-50'
                         )}
                       >
                         <StatusBadge status={status} size="sm" />
@@ -264,29 +160,25 @@ export function BatchStatusTransition({
                             {lang === 'ru' ? 'Пройден' : 'Done'}
                           </span>
                         )}
-                        {isNext && canTransition && (
-                          <span className="text-[10px] text-primary">
+                        {isNext && (
+                          <span className="text-[10px] text-muted-foreground">
                             {lang === 'ru' ? 'Далее' : 'Next'}
                           </span>
                         )}
-                        {!canTransition && !isCurrent && !isPast && (
+                        {!isCurrent && !isPast && !isNext && (
                           <Lock className="w-3 h-3 text-muted-foreground" />
                         )}
-                      </button>
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {canTransition ? (
-                        <p>{getDescription(status)}</p>
-                      ) : (
-                        <p>{getTooltip(currentStatus, status)}</p>
-                      )}
+                      <p>{getDescription(status)}</p>
                     </TooltipContent>
                   </Tooltip>
                   
                   {index < BATCH_STATUSES.length - 1 && (
-                    <ArrowRight className={cn(
-                      'w-4 h-4 mx-1',
-                      index < currentIndex ? 'text-muted-foreground' : 'text-border'
+                    <div className={cn(
+                      'w-4 h-0.5 mx-1',
+                      index < currentIndex ? 'bg-muted-foreground' : 'bg-border'
                     )} />
                   )}
                 </div>
@@ -295,17 +187,24 @@ export function BatchStatusTransition({
           </div>
         )}
 
-        {/* Next action button */}
+        {/* Next action redirect button */}
         {nextStatus && (
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => handleTransitionClick(nextStatus)}
-              disabled={isLoading}
-              className="flex items-center gap-2"
-            >
-              <ArrowRight className="w-4 h-4" />
-              {getActionLabel(nextStatus)}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleNavigateToBatchDetail}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {getActionLabel(nextStatus)}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{redirectTooltip}</p>
+              </TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger>
                 <Info className="w-4 h-4 text-muted-foreground" />
@@ -329,61 +228,16 @@ export function BatchStatusTransition({
           </div>
         )}
 
-        {/* Confirmation Dialog */}
-        <AlertDialog 
-          open={confirmDialog.open} 
-          onOpenChange={(open) => setConfirmDialog({ open, targetStatus: confirmDialog.targetStatus })}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {confirmDialog.targetStatus === 'confirmed' 
-                  ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
-                  : confirmDialog.targetStatus === 'soft_committed'
-                  ? (lang === 'ru' ? 'Предварительное подтверждение' : 'Soft Commitment')
-                  : (lang === 'ru' ? 'Подтвердить изменение статуса' : 'Confirm Status Change')
-                }
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmDialog.targetStatus && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 justify-center py-2">
-                      <StatusBadge status={currentStatus} />
-                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                      <StatusBadge status={confirmDialog.targetStatus} />
-                    </div>
-                    <p className="text-sm text-foreground">
-                      {getConfirmationMessage(confirmDialog.targetStatus)}
-                    </p>
-                    <p className={cn(
-                      'text-xs',
-                      confirmDialog.targetStatus === 'confirmed' 
-                        ? 'text-destructive' 
-                        : 'text-amber-600 dark:text-amber-400'
-                    )}>
-                      {getConfirmationWarning(confirmDialog.targetStatus)}
-                    </p>
-                  </div>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>
-                {lang === 'ru' ? 'Отмена' : 'Cancel'}
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleConfirm} 
-                disabled={isLoading}
-                className={confirmDialog.targetStatus === 'confirmed' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              >
-                {confirmDialog.targetStatus === 'confirmed'
-                  ? (lang === 'ru' ? 'Подтвердить партию' : 'Confirm Batch')
-                  : (lang === 'ru' ? 'Продолжить' : 'Proceed')
-                }
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Info message about status management */}
+        <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-md border border-border/50">
+          <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            {lang === 'ru' 
+              ? 'Управление статусом партии осуществляется через панель FSM на странице деталей партии.'
+              : 'Batch status management is handled through the FSM panel on the Batch Detail page.'
+            }
+          </p>
+        </div>
       </div>
     </TooltipProvider>
   );
