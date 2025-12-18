@@ -162,24 +162,93 @@ export function getAvailableTransitions(
 }
 
 /**
- * Check if the request can be edited
+ * Editable fields in Pool Requests
+ */
+export type PoolRequestEditableField = 
+  | 'regions'
+  | 'age_range_min'
+  | 'age_range_max'
+  | 'weight_range_min'
+  | 'weight_range_max'
+  | 'required_volume'
+  | 'target_week';
+
+/**
+ * All editable fields list
+ */
+export const POOL_REQUEST_EDITABLE_FIELDS: PoolRequestEditableField[] = [
+  'regions',
+  'age_range_min',
+  'age_range_max',
+  'weight_range_min',
+  'weight_range_max',
+  'required_volume',
+  'target_week',
+];
+
+/**
+ * Field labels for display
+ */
+export const POOL_REQUEST_FIELD_LABELS: Record<PoolRequestEditableField, string> = {
+  regions: 'Target Regions',
+  age_range_min: 'Minimum Age',
+  age_range_max: 'Maximum Age',
+  weight_range_min: 'Minimum Weight',
+  weight_range_max: 'Maximum Weight',
+  required_volume: 'Required Volume',
+  target_week: 'Delivery Period',
+};
+
+/**
+ * Field editability by status and role
+ * - Draft: All fields editable by MPK
+ * - Submitted: Read-only for MPK, Admin override only
+ * - Matching and beyond: Fully read-only
+ */
+export function canEditField(
+  field: PoolRequestEditableField,
+  status: PoolRequestLifecycleStatus,
+  role: PoolRequestRole
+): boolean {
+  // Closed/cancelled: never editable
+  if (status === 'closed' || status === 'cancelled') {
+    return false;
+  }
+  
+  // Draft: all fields editable by MPK or Admin
+  if (status === 'draft') {
+    return role === 'mpk' || role === 'admin';
+  }
+  
+  // Submitted: only Admin can edit (as override)
+  if (status === 'submitted') {
+    return role === 'admin';
+  }
+  
+  // Matching and beyond: fully read-only for everyone
+  return false;
+}
+
+/**
+ * Get all editable fields for a status and role
+ */
+export function getEditableFields(
+  status: PoolRequestLifecycleStatus,
+  role: PoolRequestRole
+): PoolRequestEditableField[] {
+  return POOL_REQUEST_EDITABLE_FIELDS.filter(field => 
+    canEditField(field, status, role)
+  );
+}
+
+/**
+ * Check if the request can be edited at all
  */
 export function canEditPoolRequest(
   status: PoolRequestLifecycleStatus,
   role: PoolRequestRole
 ): boolean {
-  // Draft can always be edited by MPK
-  if (status === 'draft' && role === 'mpk') {
-    return true;
-  }
-  
-  // Admin can edit in any status except closed/cancelled
-  if (role === 'admin' && status !== 'closed' && status !== 'cancelled') {
-    return true;
-  }
-  
-  // Once submitted, MPK cannot edit without admin override
-  return false;
+  return getEditableFields(status, role).length > 0;
 }
 
 /**
@@ -193,7 +262,42 @@ export function isPoolRequestReadOnly(
 }
 
 /**
- * Get tooltip explaining why editing is disabled
+ * Get tooltip explaining why a field is locked
+ */
+export function getFieldLockedTooltip(
+  field: PoolRequestEditableField,
+  status: PoolRequestLifecycleStatus,
+  role: PoolRequestRole,
+  lang: 'en' | 'ru' = 'en'
+): string | null {
+  // If field is editable, no tooltip needed
+  if (canEditField(field, status, role)) {
+    return null;
+  }
+  
+  if (status === 'closed' || status === 'cancelled') {
+    return lang === 'ru' 
+      ? 'Заявка закрыта. Редактирование невозможно.'
+      : 'Request is closed. Editing is not allowed.';
+  }
+  
+  if (status === 'matching' || status === 'partial' || status === 'fulfilled') {
+    return lang === 'ru'
+      ? 'Заявка заблокирована после начала сопоставления.'
+      : 'This request is locked after matching begins.';
+  }
+  
+  if (status === 'submitted' && role === 'mpk') {
+    return lang === 'ru'
+      ? 'Заявка заблокирована после подачи.'
+      : 'This request is locked after submission.';
+  }
+  
+  return null;
+}
+
+/**
+ * Get tooltip explaining why editing is disabled at the request level
  */
 export function getPoolRequestLockedTooltip(
   status: PoolRequestLifecycleStatus,
@@ -206,7 +310,13 @@ export function getPoolRequestLockedTooltip(
       : 'Request is closed. Editing is not allowed.';
   }
   
-  if (role === 'mpk' && status !== 'draft') {
+  if (status === 'matching' || status === 'partial' || status === 'fulfilled') {
+    return lang === 'ru'
+      ? 'Заявка заблокирована после начала сопоставления.'
+      : 'Request is locked once matching begins.';
+  }
+  
+  if (role === 'mpk' && status === 'submitted') {
     return lang === 'ru'
       ? 'После подачи редактирование требует одобрения Администратора.'
       : 'Editing after submission requires Admin override.';
