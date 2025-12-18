@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
 import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
+import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { toast } from '@/hooks/use-toast';
 
 // Map database status to StatusBadge status
@@ -190,6 +191,11 @@ export default function LivestockBatches() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Matching Window Status Banner */}
+      <div className="mb-6">
+        <CurrentMatchingWindowBanner />
+      </div>
 
       {/* Market Demand Signals */}
       <div className="mb-6">

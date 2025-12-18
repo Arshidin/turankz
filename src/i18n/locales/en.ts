@@ -53,6 +53,7 @@ export const en = {
     watchlist: 'Watchlist',
     purchasePoolRequests: 'Purchase Pool Requests',
     poolMatching: 'Pool Matching',
+    matchingWindows: 'Matching Windows',
     offtakeRegistry: 'Offtake Registry',
     farmerManagement: 'Farmer Management',
     mpkManagement: 'MPK Management',
