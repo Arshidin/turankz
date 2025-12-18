@@ -209,3 +209,178 @@ export function getWindowBannerInfo(
       return { title: '', message: '' };
   }
 }
+
+/**
+ * COUNTDOWN UTILITIES
+ * Calculate time remaining until lock_date
+ */
+
+export interface CountdownResult {
+  days: number;
+  hours: number;
+  minutes: number;
+  totalHours: number;
+  isExpired: boolean;
+  formattedShort: string;
+  formattedLong: string;
+}
+
+/**
+ * Calculate countdown to a target date
+ */
+export function calculateCountdown(
+  targetDate: string,
+  lang: 'en' | 'ru' = 'en'
+): CountdownResult {
+  const now = new Date();
+  const target = new Date(targetDate);
+  
+  // Set to end of day
+  target.setHours(23, 59, 59, 999);
+  
+  const diffMs = target.getTime() - now.getTime();
+  const isExpired = diffMs <= 0;
+  
+  if (isExpired) {
+    return {
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      totalHours: 0,
+      isExpired: true,
+      formattedShort: lang === 'ru' ? 'Истекло' : 'Expired',
+      formattedLong: lang === 'ru' ? 'Срок истёк' : 'Deadline has passed',
+    };
+  }
+  
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const minutes = totalMinutes % 60;
+  
+  // Format short (e.g., "2d 5h" or "5h 30m")
+  let formattedShort: string;
+  if (days > 0) {
+    formattedShort = lang === 'ru' 
+      ? `${days}д ${hours}ч` 
+      : `${days}d ${hours}h`;
+  } else if (hours > 0) {
+    formattedShort = lang === 'ru' 
+      ? `${hours}ч ${minutes}м` 
+      : `${hours}h ${minutes}m`;
+  } else {
+    formattedShort = lang === 'ru' 
+      ? `${minutes}м` 
+      : `${minutes}m`;
+  }
+  
+  // Format long (e.g., "2 days, 5 hours remaining")
+  let formattedLong: string;
+  if (lang === 'ru') {
+    if (days > 0) {
+      formattedLong = `Осталось ${days} ${getDaysWord(days, 'ru')} и ${hours} ${getHoursWord(hours, 'ru')}`;
+    } else if (hours > 0) {
+      formattedLong = `Осталось ${hours} ${getHoursWord(hours, 'ru')} и ${minutes} ${getMinutesWord(minutes, 'ru')}`;
+    } else {
+      formattedLong = `Осталось ${minutes} ${getMinutesWord(minutes, 'ru')}`;
+    }
+  } else {
+    if (days > 0) {
+      formattedLong = `${days} day${days !== 1 ? 's' : ''}, ${hours} hour${hours !== 1 ? 's' : ''} remaining`;
+    } else if (hours > 0) {
+      formattedLong = `${hours} hour${hours !== 1 ? 's' : ''}, ${minutes} minute${minutes !== 1 ? 's' : ''} remaining`;
+    } else {
+      formattedLong = `${minutes} minute${minutes !== 1 ? 's' : ''} remaining`;
+    }
+  }
+  
+  return {
+    days,
+    hours,
+    minutes,
+    totalHours,
+    isExpired,
+    formattedShort,
+    formattedLong,
+  };
+}
+
+// Russian word declension helpers
+function getDaysWord(n: number, lang: 'ru' | 'en'): string {
+  if (lang === 'en') return n === 1 ? 'day' : 'days';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'день';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'дня';
+  return 'дней';
+}
+
+function getHoursWord(n: number, lang: 'ru' | 'en'): string {
+  if (lang === 'en') return n === 1 ? 'hour' : 'hours';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'час';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'часа';
+  return 'часов';
+}
+
+function getMinutesWord(n: number, lang: 'ru' | 'en'): string {
+  if (lang === 'en') return n === 1 ? 'minute' : 'minutes';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'минута';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'минуты';
+  return 'минут';
+}
+
+/**
+ * Get contextual message based on window status and countdown
+ */
+export function getContextualWindowMessage(
+  status: MatchingWindowStatus,
+  countdown: CountdownResult,
+  lang: 'en' | 'ru' = 'en'
+): string {
+  if (status === 'active') {
+    if (countdown.isExpired) {
+      return lang === 'ru'
+        ? 'Дедлайн прошёл. Обновления партий заблокированы.'
+        : 'Deadline has passed. Batch updates are locked.';
+    }
+    if (countdown.days === 0 && countdown.hours < 24) {
+      return lang === 'ru'
+        ? `Срочно! Осталось ${countdown.formattedShort} для обновления партий.`
+        : `Urgent! ${countdown.formattedShort} left to update batches.`;
+    }
+    return lang === 'ru'
+      ? `Вы можете обновлять партии до дедлайна. ${countdown.formattedLong}.`
+      : `You can still update batches before the deadline. ${countdown.formattedLong}.`;
+  }
+  
+  if (status === 'locked' || countdown.isExpired) {
+    return lang === 'ru'
+      ? 'Обновление партий заблокировано до следующего Окна сопоставления.'
+      : 'Batch updates are locked until the next Matching Window.';
+  }
+  
+  if (status === 'upcoming') {
+    return lang === 'ru'
+      ? 'Подготовьте ваши партии. Окно откроется скоро.'
+      : 'Prepare your batches. Window will open soon.';
+  }
+  
+  return '';
+}
+
+/**
+ * Determine urgency level based on countdown
+ */
+export function getCountdownUrgency(
+  countdown: CountdownResult
+): 'normal' | 'warning' | 'critical' | 'expired' {
+  if (countdown.isExpired) return 'expired';
+  if (countdown.days === 0 && countdown.hours < 6) return 'critical';
+  if (countdown.days === 0 && countdown.hours < 24) return 'warning';
+  return 'normal';
+}
