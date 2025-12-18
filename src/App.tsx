@@ -21,6 +21,7 @@ import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
 import PoolMatching from "./pages/admin/PoolMatching";
 import OfftakeRegistry from "./pages/admin/OfftakeRegistry";
+import PriceGridManagement from "./pages/admin/PriceGridManagement";
 import ActivityLog from "./pages/admin/ActivityLog";
 import PremiumManagement from "./pages/admin/PremiumManagement";
 import PriceGrid from "./pages/PriceGrid";
@@ -131,6 +132,11 @@ const App = () => (
               <Route path="/admin/premiums" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <PremiumManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/price-grid" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <PriceGridManagement />
                 </ProtectedRoute>
               } />
               <Route path="/admin/activity" element={

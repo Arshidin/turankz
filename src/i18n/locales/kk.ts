@@ -57,6 +57,7 @@ export const kk = {
     farmerManagement: 'Фермерлерді басқару',
     mpkManagement: 'ЕӨК басқару',
     premiumManagement: 'Сыйлықақыларды басқару',
+    priceGridManagement: 'Баға торын басқару',
     activityLog: 'Әрекеттер журналы',
   },
   

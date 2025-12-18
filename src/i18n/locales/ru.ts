@@ -57,6 +57,7 @@ export const ru = {
     farmerManagement: 'Управление фермерами',
     mpkManagement: 'Управление МПК',
     premiumManagement: 'Управление премиями',
+    priceGridManagement: 'Управление ценовой сеткой',
     activityLog: 'Журнал активности',
   },
   

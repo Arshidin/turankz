@@ -57,6 +57,7 @@ export const en = {
     farmerManagement: 'Farmer Management',
     mpkManagement: 'MPK Management',
     premiumManagement: 'Premium Management',
+    priceGridManagement: 'Price Grid Management',
     activityLog: 'Activity Log',
   },
   
