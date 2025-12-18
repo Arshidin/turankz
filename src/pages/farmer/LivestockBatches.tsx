@@ -136,54 +136,9 @@ export default function LivestockBatches() {
         description={t('batches.description')} 
       />
 
-      {/* Summary Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-muted">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{stats.forecast}</p>
-                <p className="text-sm text-muted-foreground">{t('batches.forecast')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{stats.softCommitted}</p>
-                <p className="text-sm text-muted-foreground">{t('batches.softCommitted')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{stats.confirmed}</p>
-                <p className="text-sm text-muted-foreground">{t('batches.confirmed')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Observer Mode Banner */}
       {isObserver && (
-        <Alert className="mb-6 border-amber-500/30 bg-amber-500/5">
+        <Alert className="mb-4 border-amber-500/30 bg-amber-500/5">
           <Lock className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-sm">
             <span className="font-medium text-amber-700">Observer Mode</span>
@@ -193,23 +148,60 @@ export default function LivestockBatches() {
       )}
 
       {/* Matching Window Status Banner */}
-      <div className="mb-6">
-        <CurrentMatchingWindowBanner />
-      </div>
+      <CurrentMatchingWindowBanner />
 
-      {/* Market Demand Signals */}
-      <div className="mb-6">
-        <AggregatedDemandCard />
-      </div>
+      {/* Two-column layout: Batch Stats + Market Signals side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 mb-6">
+        {/* Batch Stats - compact inline */}
+        <div className="lg:col-span-2 grid grid-cols-3 gap-3">
+          <Card className="border-muted">
+            <CardContent className="py-4 px-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-muted">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-xl font-semibold">{stats.forecast}</p>
+                  <p className="text-xs text-muted-foreground">{t('batches.forecast')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-amber-500/20">
+            <CardContent className="py-4 px-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-amber-500/10">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-semibold">{stats.softCommitted}</p>
+                  <p className="text-xs text-muted-foreground">{t('batches.softCommitted')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-emerald-500/20">
+            <CardContent className="py-4 px-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-emerald-500/10">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-semibold">{stats.confirmed}</p>
+                  <p className="text-xs text-muted-foreground">{t('batches.confirmed')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Helper Text */}
-      <Card className="mb-6 border-primary/20 bg-primary/5">
-        <CardContent className="py-3">
-          <p className="text-sm text-muted-foreground">
-            <strong>{t('common.notes')}:</strong> {t('batches.notePoolMatching')}
-          </p>
-        </CardContent>
-      </Card>
+        {/* Market Demand Signals - collapsible, right side */}
+        <div className="lg:col-span-1">
+          <AggregatedDemandCard />
+        </div>
+      </div>
 
       {/* Main Batches Table */}
       <Card>
