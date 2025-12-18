@@ -52,6 +52,7 @@ export interface EditValidationResult {
  * - After confirmation dialogs
  * - Immediately before any state mutation
  * 
+ * @param adminUnlockInfo - Optional admin unlock info to bypass time locks
  * @returns TransitionValidationResult with detailed error information
  */
 export function validateBatchTransition(
@@ -59,10 +60,11 @@ export function validateBatchTransition(
   toStatus: BatchLifecycleStatus,
   role: 'farmer' | 'admin' | 'mpk',
   matchingWindow: MatchingWindow | null | undefined,
-  lang: 'en' | 'ru' = 'en'
+  lang: 'en' | 'ru' = 'en',
+  adminUnlockInfo?: { isAdminUnlocked: boolean }
 ): TransitionValidationResult {
-  // Step 1: Check time-based constraints first (can be overridden by admin)
-  const timeLock = getBatchLockStatus(fromStatus, matchingWindow, role);
+  // Step 1: Check time-based constraints first (can be overridden by admin or admin unlock)
+  const timeLock = getBatchLockStatus(fromStatus, matchingWindow, role, adminUnlockInfo);
   
   if (timeLock.isLocked) {
     return {
@@ -123,13 +125,15 @@ export function validateBatchTransition(
  * 1. Status-based edit rules
  * 2. Matching Window time constraints
  * 
+ * @param adminUnlockInfo - Optional admin unlock info to bypass time locks
  * @returns EditValidationResult with detailed error information
  */
 export function validateBatchEdit(
   batchStatus: BatchLifecycleStatus,
   role: 'farmer' | 'admin' | 'mpk',
   matchingWindow: MatchingWindow | null | undefined,
-  lang: 'en' | 'ru' = 'en'
+  lang: 'en' | 'ru' = 'en',
+  adminUnlockInfo?: { isAdminUnlocked: boolean }
 ): EditValidationResult {
   let statusBlocked = false;
   let timeBlocked = false;
@@ -139,8 +143,8 @@ export function validateBatchEdit(
     statusBlocked = true;
   }
 
-  // Step 2: Check time-based constraints
-  const timeLock = getBatchLockStatus(batchStatus, matchingWindow, role);
+  // Step 2: Check time-based constraints (respects admin unlock)
+  const timeLock = getBatchLockStatus(batchStatus, matchingWindow, role, adminUnlockInfo);
   if (timeLock.isLocked) {
     timeBlocked = true;
   }

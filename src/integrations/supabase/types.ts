@@ -53,9 +53,55 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_overrides: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          new_value: string | null
+          override_type: string
+          performed_by: string
+          previous_value: string | null
+          reason: string
+          target_id: string
+          target_name: string | null
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: string | null
+          override_type: string
+          performed_by: string
+          previous_value?: string | null
+          reason: string
+          target_id: string
+          target_name?: string | null
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: string | null
+          override_type?: string
+          performed_by?: string
+          previous_value?: string | null
+          reason?: string
+          target_id?: string
+          target_name?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       batches: {
         Row: {
           action_type: string | null
+          admin_unlock_reason: string | null
+          admin_unlocked: boolean
+          admin_unlocked_at: string | null
+          admin_unlocked_by: string | null
           age_max: number | null
           age_min: number | null
           avg_weight: number | null
@@ -80,6 +126,10 @@ export type Database = {
         }
         Insert: {
           action_type?: string | null
+          admin_unlock_reason?: string | null
+          admin_unlocked?: boolean
+          admin_unlocked_at?: string | null
+          admin_unlocked_by?: string | null
           age_max?: number | null
           age_min?: number | null
           avg_weight?: number | null
@@ -104,6 +154,10 @@ export type Database = {
         }
         Update: {
           action_type?: string | null
+          admin_unlock_reason?: string | null
+          admin_unlocked?: boolean
+          admin_unlocked_at?: string | null
+          admin_unlocked_by?: string | null
           age_max?: number | null
           age_min?: number | null
           avg_weight?: number | null
