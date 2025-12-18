@@ -735,32 +735,63 @@ export default function BatchDetail() {
                 <StatusBadge status={mapStatus(batch.status)} />
               </div>
               
-              {nextStatus && (
-                <>
-                  <div className="border-t pt-4">
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Escalate readiness to increase matching priority
+              {/* Soft Committed helper text */}
+              {batch.status === 'forecast' && nextStatus === 'soft_committed' && (
+                <div className="border-t pt-4">
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-3">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Soft Commitment signals intent but does not guarantee matching.
                     </p>
-                    <Button 
-                      className="w-full" 
-                      onClick={handleEscalateStatus}
-                      disabled={updateBatch.isPending}
-                    >
-                      {updateBatch.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <ArrowUpCircle className="w-4 h-4 mr-2" />
-                      )}
-                      Move to {getStatusLabel(nextStatus)}
-                    </Button>
                   </div>
-                </>
+                  <Button 
+                    className="w-full bg-amber-600 hover:bg-amber-700" 
+                    onClick={handleEscalateStatus}
+                    disabled={updateBatch.isPending}
+                  >
+                    {updateBatch.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <ArrowUpCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Soft Commit
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    You can still edit the batch after soft commitment.
+                  </p>
+                </div>
               )}
 
-              {batch.status === 'soft_committed' && (
+              {/* Draft to Forecast transition */}
+              {batch.status === 'draft' && nextStatus === 'forecast' && (
                 <div className="border-t pt-4">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Publish to make this batch visible in market overview.
+                  </p>
                   <Button 
                     className="w-full" 
+                    onClick={handleEscalateStatus}
+                    disabled={updateBatch.isPending}
+                  >
+                    {updateBatch.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <ArrowUpCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Publish to Market
+                  </Button>
+                </div>
+              )}
+
+              {/* Soft Committed state - show confirm option */}
+              {batch.status === 'soft_committed' && (
+                <div className="border-t pt-4">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-3">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                      Confirming makes this batch eligible for pool matching. Changes will no longer be possible.
+                    </p>
+                  </div>
+                  <Button 
+                    className="w-full bg-emerald-600 hover:bg-emerald-700" 
                     onClick={handleConfirm}
                     disabled={confirmBatch.isPending}
                   >
@@ -771,8 +802,8 @@ export default function BatchDetail() {
                     )}
                     Confirm Batch
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    Confirming commits you to delivering this batch.
+                  <p className="text-xs text-destructive text-center mt-2">
+                    This action is irreversible.
                   </p>
                 </div>
               )}
@@ -784,7 +815,7 @@ export default function BatchDetail() {
                     <span className="text-sm font-medium">Batch Confirmed</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    This batch is committed for pool matching.
+                    This batch is committed for pool matching. No changes allowed.
                   </p>
                 </div>
               )}
