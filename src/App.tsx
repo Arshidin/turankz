@@ -65,36 +65,36 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Farmer Routes */}
+              {/* Farmer Routes - requireActive blocks observer/suspended */}
               <Route path="/farmer/profile" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <FarmerProfile />
                 </ProtectedRoute>
               } />
               <Route path="/farmer/batches" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <LivestockBatches />
                 </ProtectedRoute>
               } />
               <Route path="/farmer/batch/:batchId" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <BatchDetail />
                 </ProtectedRoute>
               } />
               <Route path="/farmer/calendar" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <SalesCalendar />
                 </ProtectedRoute>
               } />
               <Route path="/farmer/executions" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <FarmerExecutions />
                 </ProtectedRoute>
               } />
               
-              {/* MPK Routes */}
+              {/* MPK Routes - requireActive blocks observer/suspended */}
               <Route path="/mpk/profile" element={
-                <ProtectedRoute allowedRoles={['mpk', 'admin']}>
+                <ProtectedRoute allowedRoles={['mpk', 'admin']} requireActive>
                   <MpkProfile />
                 </ProtectedRoute>
               } />
@@ -104,17 +104,17 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/mpk/watchlist" element={
-                <ProtectedRoute allowedRoles={['mpk', 'admin']}>
+                <ProtectedRoute allowedRoles={['mpk', 'admin']} requireActive>
                   <Watchlist />
                 </ProtectedRoute>
               } />
               <Route path="/mpk/requests" element={
-                <ProtectedRoute allowedRoles={['mpk', 'admin']}>
+                <ProtectedRoute allowedRoles={['mpk', 'admin']} requireActive>
                   <PurchasePoolRequests />
                 </ProtectedRoute>
               } />
               <Route path="/mpk/executions" element={
-                <ProtectedRoute allowedRoles={['mpk', 'admin']}>
+                <ProtectedRoute allowedRoles={['mpk', 'admin']} requireActive>
                   <MpkExecutions />
                 </ProtectedRoute>
               } />

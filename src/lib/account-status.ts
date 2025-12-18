@@ -112,7 +112,9 @@ export interface NavPermission {
 export const FARMER_NAV_PERMISSIONS: NavPermission[] = [
   { path: '/', requiredStatus: ['observer', 'active'], readOnly: false },
   { path: '/farmer/batches', requiredStatus: ['active'] },
+  { path: '/farmer/batch', requiredStatus: ['active'] }, // Batch detail pages
   { path: '/farmer/calendar', requiredStatus: ['active'] },
+  { path: '/farmer/executions', requiredStatus: ['active'] },
   { path: '/price-grid', requiredStatus: ['observer', 'active'], readOnly: true },
   { path: '/farmer/profile', requiredStatus: ['active'] },
 ];
@@ -120,6 +122,7 @@ export const FARMER_NAV_PERMISSIONS: NavPermission[] = [
 export const MPK_NAV_PERMISSIONS: NavPermission[] = [
   { path: '/mpk/market', requiredStatus: ['observer', 'active'], readOnly: false },
   { path: '/mpk/requests', requiredStatus: ['active'] },
+  { path: '/mpk/executions', requiredStatus: ['active'] },
   { path: '/mpk/watchlist', requiredStatus: ['active'] },
   { path: '/price-grid', requiredStatus: ['observer', 'active'], readOnly: true },
   { path: '/mpk/profile', requiredStatus: ['active'] },
