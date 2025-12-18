@@ -72,7 +72,7 @@ export function PremiumBreakdownCard({ breakdown, isLocked, lockedAt, compact }:
     return (
       <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Base Price</span>
+          <span className="text-muted-foreground">Reference Price</span>
           <span className="font-medium">{breakdown.basePricePerKg} ₸/kg</span>
         </div>
         <div className="flex items-center justify-between text-sm">
@@ -81,7 +81,7 @@ export function PremiumBreakdownCard({ breakdown, isLocked, lockedAt, compact }:
         </div>
         <Separator />
         <div className="flex items-center justify-between">
-          <span className="font-medium">Total Price</span>
+          <span className="font-medium">Indicative Price</span>
           <span className="font-bold text-lg">{breakdown.totalPricePerKg} ₸/kg</span>
         </div>
         {isLocked && (
@@ -98,7 +98,7 @@ export function PremiumBreakdownCard({ breakdown, isLocked, lockedAt, compact }:
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Price Breakdown</CardTitle>
+          <CardTitle className="text-base">Indicative Price Breakdown</CardTitle>
           {isLocked && (
             <Badge variant="outline" className="gap-1">
               <Lock className="h-3 w-3" />
@@ -108,9 +108,9 @@ export function PremiumBreakdownCard({ breakdown, isLocked, lockedAt, compact }:
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Base Price */}
+        {/* Reference Price */}
         <div className="flex items-center justify-between py-2 bg-muted/50 rounded-lg px-3">
-          <span className="font-medium">Base Price (from Grid)</span>
+          <span className="font-medium">Reference Price (from Grid)</span>
           <span className="font-semibold">{breakdown.basePricePerKg} ₸/kg</span>
         </div>
 
@@ -129,9 +129,9 @@ export function PremiumBreakdownCard({ breakdown, isLocked, lockedAt, compact }:
           <span className="font-medium text-emerald-600">+{breakdown.totalPremium} ₸/kg</span>
         </div>
 
-        {/* Final Price */}
+        {/* Final Price - now labeled as Indicative */}
         <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-          <span className="font-semibold">Total Price per kg</span>
+          <span className="font-semibold">Indicative Price per kg</span>
           <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
         </div>
 
