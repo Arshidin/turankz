@@ -53,6 +53,7 @@ export const kk = {
     watchlist: 'Қадағалау',
     purchasePoolRequests: 'Сатып алу өтінімдері',
     poolMatching: 'Пул сәйкестендіру',
+    offtakeRegistry: 'Офтейк тізілімі',
     farmerManagement: 'Фермерлерді басқару',
     mpkManagement: 'ЕӨК басқару',
     premiumManagement: 'Сыйлықақыларды басқару',
