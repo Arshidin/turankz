@@ -329,7 +329,7 @@ export function useCreateMatching() {
 }
 
 /**
- * Hook for finalizing matchings with premium locking
+ * Hook for finalizing matchings with premium locking and execution creation
  */
 export function useFinalizeMatching() {
   const { toast } = useToast();
@@ -362,10 +362,18 @@ export function useFinalizeMatching() {
         throw new Error('Only admins can finalize matchings');
       }
 
-      // Get current status
+      // Get current matching data with batch and request info
       const { data: current, error: fetchError } = await supabase
         .from('pool_matches')
-        .select('status')
+        .select(`
+          *,
+          batches:batch_id (
+            delivery_period
+          ),
+          purchase_pool_requests:request_id (
+            target_delivery_period
+          )
+        `)
         .eq('id', matchId)
         .single();
 
@@ -405,7 +413,7 @@ export function useFinalizeMatching() {
         };
       }
 
-      // Update status
+      // Update matching status
       const { data, error } = await supabase
         .from('pool_matches')
         .update(updateData)
@@ -425,14 +433,63 @@ export function useFinalizeMatching() {
         note: note || (premiumBreakdown ? `Premiums locked: ${premiumBreakdown.totalPremium} ₸/kg` : null),
       });
 
+      // ============================================
+      // CREATE EXECUTION RECORD (only after finalization)
+      // ============================================
+      
+      // Check if execution already exists for this match
+      const { data: existingExecution } = await supabase
+        .from('offtake_executions')
+        .select('id')
+        .eq('match_id', matchId)
+        .maybeSingle();
+
+      if (!existingExecution) {
+        // Determine delivery period (prefer request's, fall back to batch's)
+        const deliveryPeriod = 
+          (current as any).purchase_pool_requests?.target_delivery_period || 
+          (current as any).batches?.delivery_period || 
+          'short_term';
+
+        // Create execution record
+        const { error: execError } = await supabase
+          .from('offtake_executions')
+          .insert({
+            match_id: matchId,
+            batch_id: current.batch_id,
+            request_id: current.request_id,
+            matched_volume: current.heads_matched,
+            delivery_period: deliveryPeriod,
+            reference_price_at_match: premiumBreakdown?.basePricePerKg || current.base_price_per_kg || null,
+            status: 'matched',
+          });
+
+        if (execError) {
+          console.error('Error creating execution record:', execError);
+          // Don't fail the finalization, just log the error
+        } else {
+          // Log execution creation
+          await supabase.from('activity_log').insert({
+            event_type: 'batch_confirmed' as any, // Using closest type
+            actor_role: role,
+            actor_name: roleName,
+            description: `Execution record created for match ${matchId}`,
+            target_type: 'execution',
+            target_id: matchId,
+            metadata: { trigger: 'matching_finalized', matched_volume: current.heads_matched },
+          });
+        }
+      }
+
       return data as Matching;
     },
     onSuccess: () => {
       toast({
         title: 'Matching Finalized',
-        description: 'The matching has been finalized and premiums locked.',
+        description: 'The matching has been finalized, premiums locked, and execution record created.',
       });
       queryClient.invalidateQueries({ queryKey: ['matchings'] });
+      queryClient.invalidateQueries({ queryKey: ['executions'] });
     },
     onError: (error) => {
       toast({

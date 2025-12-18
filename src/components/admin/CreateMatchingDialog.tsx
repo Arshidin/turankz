@@ -17,9 +17,10 @@ import { Slider } from '@/components/ui/slider';
 import { useCreateMatching } from '@/hooks/useMatchings';
 import { useCurrentMatchingWindow } from '@/hooks/useMatchingWindows';
 import { canCreateMatching } from '@/lib/matching-lifecycle';
+import { validateMatchingCriteria, getDeliveryPeriodLabel, type DeliveryPeriod } from '@/lib/matching-validation';
 import type { ConfirmedBatch } from '@/hooks/useConfirmedBatches';
 import type { MatchingPoolRequest } from '@/hooks/useMatchingRequests';
-import { Link2, AlertTriangle, Package, Target, CheckCircle2, Loader2, Info } from 'lucide-react';
+import { Link2, AlertTriangle, Package, Target, CheckCircle2, Loader2, Info, AlertCircle } from 'lucide-react';
 
 interface CreateMatchingDialogProps {
   open: boolean;
@@ -54,9 +55,37 @@ export function CreateMatchingDialog({
     }
   }, [selectedBatch?.id, selectedRequest?.id, maxVolume]);
 
-  // Validation
+  // Validation - including delivery period check
   const canCreate = canCreateMatching(matchingWindow);
   
+  // Criteria validation (delivery period, region, grade, etc.)
+  const criteriaValidation = useMemo(() => {
+    if (!selectedBatch || !selectedRequest) {
+      return { valid: false, errors: [], warnings: [] };
+    }
+
+    return validateMatchingCriteria(
+      {
+        region: selectedBatch.region,
+        grade: selectedBatch.grade,
+        weight_min: selectedBatch.weight_min,
+        weight_max: selectedBatch.weight_max,
+        age_min: selectedBatch.age_min,
+        age_max: selectedBatch.age_max,
+        delivery_period: (selectedBatch as any).delivery_period as DeliveryPeriod | null,
+      },
+      {
+        regions: selectedRequest.regions,
+        required_grade: selectedRequest.required_grade,
+        weight_range_min: selectedRequest.weight_range_min,
+        weight_range_max: selectedRequest.weight_range_max,
+        age_range_min: selectedRequest.age_range_min,
+        age_range_max: selectedRequest.age_range_max,
+        target_delivery_period: selectedRequest.target_delivery_period as DeliveryPeriod | null,
+      }
+    );
+  }, [selectedBatch, selectedRequest]);
+
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
 
@@ -79,8 +108,11 @@ export function CreateMatchingDialog({
       errors.push(canCreate.reason || 'Cannot create matching');
     }
 
+    // Add criteria validation errors (blocking)
+    errors.push(...criteriaValidation.errors);
+
     return errors;
-  }, [selectedBatch, selectedRequest, matchedVolume, maxBatchVolume, maxRequestVolume, canCreate]);
+  }, [selectedBatch, selectedRequest, matchedVolume, maxBatchVolume, maxRequestVolume, canCreate, criteriaValidation]);
 
   const isValid = validationErrors.length === 0;
 
@@ -151,6 +183,9 @@ export function CreateMatchingDialog({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {selectedBatch.region} · Grade {selectedBatch.grade} · {selectedBatch.heads} total heads
+                  {(selectedBatch as any).delivery_period && (
+                    <span className="ml-1">· {getDeliveryPeriodLabel((selectedBatch as any).delivery_period)}</span>
+                  )}
                 </p>
               </div>
             ) : (
@@ -176,6 +211,9 @@ export function CreateMatchingDialog({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {selectedRequest.mpk_name} · {selectedRequest.regions.join(', ')} · Grade {selectedRequest.required_grade}
+                  {selectedRequest.target_delivery_period && (
+                    <span className="ml-1">· {getDeliveryPeriodLabel(selectedRequest.target_delivery_period as DeliveryPeriod)}</span>
+                  )}
                 </p>
               </div>
             ) : (
@@ -246,7 +284,22 @@ export function CreateMatchingDialog({
             </AlertDescription>
           </Alert>
 
-          {/* Validation Errors */}
+          {/* Criteria Warnings (non-blocking) */}
+          {criteriaValidation.warnings.length > 0 && selectedBatch && selectedRequest && (
+            <Alert className="border-amber-500/30 bg-amber-500/5">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs text-amber-700">
+                <strong>Warnings (Admin override allowed):</strong>
+                <ul className="list-disc list-inside mt-1">
+                  {criteriaValidation.warnings.map((warn, i) => (
+                    <li key={i}>{warn}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Validation Errors (blocking) */}
           {validationErrors.length > 0 && selectedBatch && selectedRequest && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
