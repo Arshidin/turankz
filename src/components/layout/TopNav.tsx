@@ -61,17 +61,22 @@ export function TopNav() {
     setIsLoggingOut(true);
     try {
       const { error } = await signOut();
-      if (error) {
-        toast({
-          title: lang === 'ru' ? 'Ошибка' : 'Error',
-          description: lang === 'ru' ? 'Не удалось выйти из системы' : 'Failed to sign out',
-          variant: 'destructive',
-        });
-      } else {
-        // Clear any cached state
-        sessionStorage.clear();
-        navigate('/auth');
+      // Clear local state regardless of server response
+      // Session might already be expired on server (which returns error)
+      // but we should still clear local state and redirect
+      sessionStorage.clear();
+      localStorage.removeItem('supabase.auth.token');
+      
+      if (error && !error.message?.includes('session_not_found') && !error.message?.includes('Session not found')) {
+        // Only show error for unexpected failures, not for already-expired sessions
+        console.warn('Sign out warning:', error.message);
       }
+      
+      navigate('/auth');
+    } catch (err) {
+      // Even on exception, clear state and redirect
+      sessionStorage.clear();
+      navigate('/auth');
     } finally {
       setIsLoggingOut(false);
     }
