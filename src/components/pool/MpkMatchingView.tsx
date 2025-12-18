@@ -159,7 +159,7 @@ export function MpkMatchingView({ requestId }: MpkMatchingViewProps) {
                 <TableHead className="text-xs">Grade</TableHead>
                 <TableHead className="text-xs">Target Week</TableHead>
                 <TableHead className="text-xs">Heads</TableHead>
-                <TableHead className="text-xs">Price</TableHead>
+                <TableHead className="text-xs">Indicative Price</TableHead>
                 <TableHead className="text-xs">Match Date</TableHead>
                 <TableHead className="text-xs">Status</TableHead>
               </TableRow>
@@ -200,9 +200,9 @@ export function MpkMatchingView({ requestId }: MpkMatchingViewProps) {
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="text-xs space-y-1">
-                            <p>Base: {matching.base_price_per_kg} ₸/kg</p>
+                            <p>Reference: {matching.base_price_per_kg} ₸/kg</p>
                             <p>Premiums: +{matching.total_premium} ₸/kg</p>
-                            <p className="text-muted-foreground">Price locked at finalization</p>
+                            <p className="text-muted-foreground">Indicative price locked at finalization</p>
                           </div>
                         </TooltipContent>
                       </Tooltip>
