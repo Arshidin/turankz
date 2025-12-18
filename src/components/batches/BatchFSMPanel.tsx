@@ -47,7 +47,7 @@ import {
   BATCH_STATUS_DESCRIPTIONS,
   type BatchLifecycleStatus,
   isTransitionAllowed,
-  getAllNextStatuses,
+  getAllowedTransitions,
   getTransitionActionLabel,
   getDisabledTransitionTooltip,
   isBatchReadOnly,
@@ -87,8 +87,8 @@ export function BatchFSMPanel({
   const currentIndex = getStatusIndex(currentStatus);
   const userRole = role as 'farmer' | 'admin' | 'mpk';
 
-  // Get all allowed next statuses for current user
-  const allowedNextStatuses = getAllNextStatuses(currentStatus, userRole);
+  // Get all allowed transitions for current user (array-based, no linear assumptions)
+  const allowedTransitions = getAllowedTransitions(currentStatus, userRole);
 
   // Handle transition with confirmation for critical ones
   const handleTransitionClick = (toStatus: BatchLifecycleStatus) => {
@@ -174,17 +174,8 @@ export function BatchFSMPanel({
       };
     }
 
-    // Check for skipping steps
-    const toIndex = getStatusIndex(toStatus);
-    if (toIndex > currentIndex + 1) {
-      return {
-        allowed: false,
-        reason: 'Cannot skip lifecycle steps. Progress through each stage sequentially.',
-        type: 'invalid',
-      };
-    }
-
     // Check for going backwards
+    const toIndex = getStatusIndex(toStatus);
     if (toIndex < currentIndex) {
       return {
         allowed: false,
@@ -193,10 +184,11 @@ export function BatchFSMPanel({
       };
     }
 
+    // Transition not defined in FSM
     return {
       allowed: false,
-      reason: validation.error || 'This transition is not allowed.',
-      type: 'blocked',
+      reason: validation.error || 'This transition is not allowed from the current status.',
+      type: 'invalid',
     };
   };
 
@@ -288,9 +280,9 @@ export function BatchFSMPanel({
               Available Actions
             </p>
             
-            {allowedNextStatuses.length > 0 ? (
+            {allowedTransitions.length > 0 ? (
               <div className="space-y-2">
-                {allowedNextStatuses.map((toStatus) => (
+                {allowedTransitions.map((toStatus) => (
                   <Button
                     key={toStatus}
                     className="w-full justify-between"
@@ -331,7 +323,7 @@ export function BatchFSMPanel({
               {BATCH_STATUSES.filter(s => {
                 const actionStatus = getActionStatus(s);
                 return s !== currentStatus && 
-                       !allowedNextStatuses.includes(s) && 
+                       !allowedTransitions.includes(s) && 
                        (actionStatus.type === 'admin_only' || 
                         actionStatus.type === 'blocked' || 
                         actionStatus.type === 'invalid');
