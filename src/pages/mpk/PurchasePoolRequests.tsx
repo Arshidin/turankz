@@ -48,23 +48,41 @@ const statusConfig: Record<PoolRequestStatus, {
   className: string;
   description: string;
 }> = {
+  draft: {
+    label: 'Draft',
+    icon: Clock,
+    className: 'bg-muted text-muted-foreground border-border',
+    description: 'Request is being prepared. Not yet submitted.'
+  },
+  submitted: { 
+    label: 'Submitted', 
+    icon: Clock, 
+    className: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+    description: 'Request submitted. Awaiting Admin review.'
+  },
+  matching: { 
+    label: 'Matching', 
+    icon: Clock, 
+    className: 'bg-violet-500/10 text-violet-600 border-violet-500/30',
+    description: 'Admin is actively matching supply to this request.'
+  },
+  partial: { 
+    label: 'Partial', 
+    icon: Clock, 
+    className: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+    description: 'Some supply matched. Matching continues for remaining volume.'
+  },
   fulfilled: { 
     label: 'Fulfilled', 
     icon: CheckCircle2, 
     className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
     description: 'Request fully matched. Awaiting delivery confirmation.'
   },
-  partial: { 
-    label: 'Partial', 
-    icon: Clock, 
-    className: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-    description: 'Matching in progress. Additional supply being sourced.'
-  },
-  pending: { 
-    label: 'Pending', 
-    icon: Clock, 
-    className: 'bg-muted text-muted-foreground border-border',
-    description: 'Request submitted. Awaiting initial matches.'
+  closed: {
+    label: 'Closed',
+    icon: CheckCircle2,
+    className: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
+    description: 'Request completed. No further changes allowed.'
   },
   cancelled: {
     label: 'Cancelled',
@@ -76,7 +94,7 @@ const statusConfig: Record<PoolRequestStatus, {
 
 // Check if request is at risk (low fill rate, approaching deadline)
 function isAtRisk(request: PoolRequest): boolean {
-  if (request.status === 'fulfilled' || request.status === 'cancelled') return false;
+  if (request.status === 'fulfilled' || request.status === 'cancelled' || request.status === 'closed' || request.status === 'draft') return false;
   const fillRate = request.required_volume > 0 ? request.matched_volume / request.required_volume : 0;
   // Consider at risk if less than 50% filled
   return fillRate < 0.5;
@@ -233,7 +251,7 @@ export default function PurchasePoolRequests() {
                   ? Math.round((request.matched_volume / request.required_volume) * 100) 
                   : 0;
                 const atRisk = isAtRisk(request);
-                const isActionable = request.status === 'pending' || request.status === 'partial';
+                const isActionable = request.status === 'submitted' || request.status === 'matching' || request.status === 'partial';
                 
                 return (
                   <div 

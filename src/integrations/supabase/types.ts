@@ -784,7 +784,14 @@ export type Database = {
         | "farmer_declined"
         | "request_stalled"
         | "reliability_dropped"
-      pool_request_status: "pending" | "partial" | "fulfilled" | "cancelled"
+      pool_request_status:
+        | "draft"
+        | "submitted"
+        | "matching"
+        | "partial"
+        | "fulfilled"
+        | "closed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -959,7 +966,15 @@ export const Constants = {
         "request_stalled",
         "reliability_dropped",
       ],
-      pool_request_status: ["pending", "partial", "fulfilled", "cancelled"],
+      pool_request_status: [
+        "draft",
+        "submitted",
+        "matching",
+        "partial",
+        "fulfilled",
+        "closed",
+        "cancelled",
+      ],
     },
   },
 } as const

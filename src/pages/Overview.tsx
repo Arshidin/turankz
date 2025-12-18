@@ -128,7 +128,7 @@ export default function Overview() {
   const activeFarmers = farmers.filter(f => !f.is_restricted).length;
   const activeMpks = mpks.filter(m => m.status === 'active').length;
   const totalDeclaredVolume = batches.reduce((sum, b) => sum + b.heads, 0);
-  const activePoolRequests = poolRequests.filter(r => r.status === 'pending' || r.status === 'partial').length;
+  const activePoolRequests = poolRequests.filter(r => r.status === 'submitted' || r.status === 'matching' || r.status === 'partial').length;
 
   // Calculate supply totals
   const supplyTotals = {
@@ -139,7 +139,7 @@ export default function Overview() {
 
   // Calculate demand totals
   const demandTotals = {
-    pending: poolRequests.filter(r => r.status === 'pending').reduce((sum, r) => sum + r.required_volume, 0),
+    submitted: poolRequests.filter(r => r.status === 'submitted' || r.status === 'matching').reduce((sum, r) => sum + r.required_volume, 0),
     partial: poolRequests.filter(r => r.status === 'partial').reduce((sum, r) => sum + r.required_volume, 0),
     fulfilled: poolRequests.filter(r => r.status === 'fulfilled').reduce((sum, r) => sum + r.required_volume, 0),
   };
@@ -157,24 +157,24 @@ export default function Overview() {
     {
       month: 'January 2026',
       supply: { forecast: 320, softCommitted: 180, confirmed: 85 },
-      demand: { pending: 250, partial: 120, fulfilled: 80 },
+      demand: { submitted: 250, partial: 120, fulfilled: 80 },
     },
     {
       month: 'February 2026',
       supply: { forecast: 280, softCommitted: 150, confirmed: 60 },
-      demand: { pending: 200, partial: 100, fulfilled: 50 },
+      demand: { submitted: 200, partial: 100, fulfilled: 50 },
     },
     {
       month: 'March 2026',
       supply: { forecast: 350, softCommitted: 120, confirmed: 40 },
-      demand: { pending: 180, partial: 80, fulfilled: 30 },
+      demand: { submitted: 180, partial: 80, fulfilled: 30 },
     },
   ];
 
   // Generate attention items
   const attentionItems = [
     ...poolRequests
-      .filter(r => r.status === 'pending' && r.matched_volume < r.required_volume * 0.3)
+      .filter(r => (r.status === 'submitted' || r.status === 'matching') && r.matched_volume < r.required_volume * 0.3)
       .slice(0, 2)
       .map(r => ({
         id: r.id,

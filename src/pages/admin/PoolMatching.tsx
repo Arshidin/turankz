@@ -72,8 +72,14 @@ const getStatusBadge = (status: PoolRequestStatus) => {
       return <Badge className="bg-status-confirmed-bg text-status-confirmed border-0">Fulfilled</Badge>;
     case 'partial':
       return <Badge className="bg-status-soft-bg text-status-soft border-0">Partial</Badge>;
-    case 'pending':
-      return <Badge className="bg-status-forecast-bg text-status-forecast border-0">Pending</Badge>;
+    case 'submitted':
+      return <Badge className="bg-blue-500/10 text-blue-600 border-0">Submitted</Badge>;
+    case 'matching':
+      return <Badge className="bg-violet-500/10 text-violet-600 border-0">Matching</Badge>;
+    case 'draft':
+      return <Badge variant="outline" className="text-muted-foreground">Draft</Badge>;
+    case 'closed':
+      return <Badge className="bg-slate-500/10 text-slate-600 border-0">Closed</Badge>;
     case 'cancelled':
       return <Badge variant="outline" className="text-muted-foreground">Cancelled</Badge>;
   }
@@ -323,7 +329,7 @@ export default function PoolMatching() {
     if (!activeRequest) return;
     await updateRequest.mutateAsync({
       id: activeRequest.id,
-      status: activeRequest.matched_volume > 0 ? 'partial' : 'pending',
+      status: activeRequest.matched_volume > 0 ? 'partial' : 'matching',
     });
   };
 

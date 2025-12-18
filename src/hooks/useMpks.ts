@@ -301,7 +301,7 @@ export function useMpkRequestStats() {
         existing.total++;
         if (request.status === 'fulfilled') existing.fulfilled++;
         else if (request.status === 'partial') existing.partial++;
-        else if (request.status === 'pending') existing.pending++;
+        else if (request.status === 'submitted' || request.status === 'matching') existing.pending++;
         else if (request.status === 'cancelled') existing.cancelled++;
         
         statsMap.set(request.mpk_id, existing);
