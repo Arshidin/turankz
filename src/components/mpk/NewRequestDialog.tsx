@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,9 +30,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCreatePoolRequest } from '@/hooks/usePoolRequests';
-import { Loader2, Info } from 'lucide-react';
+import { useCurrentMatchingWindow } from '@/hooks/useMatchingWindows';
+import { Loader2, Info, AlertTriangle, Clock } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE, type AcceptanceCriteria } from '@/lib/livestock-criteria';
+import { canSubmitPoolRequest } from '@/lib/pool-request-lifecycle';
+import { calculateCountdown } from '@/lib/matching-window';
+import { format, parseISO } from 'date-fns';
 
 const REGIONS = [
   'Almaty',
@@ -94,7 +99,14 @@ interface NewRequestDialogProps {
 
 export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCriteria }: NewRequestDialogProps) {
   const createRequest = useCreatePoolRequest();
+  const { data: matchingWindow } = useCurrentMatchingWindow();
   const weekOptions = getTargetWeekOptions();
+  
+  // Check submission validation based on matching window
+  const submissionValidation = canSubmitPoolRequest(matchingWindow || null);
+  const countdown = matchingWindow?.lock_date 
+    ? calculateCountdown(matchingWindow.lock_date) 
+    : null;
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -102,7 +114,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
       required_volume: undefined,
       required_grade: '',
       regions: [],
-      target_week: '',
+      target_week: matchingWindow?.target_week || '',
       notes: '',
       accepted_breeds: defaultCriteria?.accepted_breeds || [],
       accepted_genders: defaultCriteria?.accepted_genders || [],
@@ -113,7 +125,19 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
     },
   });
 
+  // Update target week when matching window changes
+  useEffect(() => {
+    if (matchingWindow?.target_week && !form.getValues('target_week')) {
+      form.setValue('target_week', matchingWindow.target_week);
+    }
+  }, [matchingWindow, form]);
+
   const onSubmit = async (data: FormData) => {
+    // Double-check submission is still allowed
+    if (!submissionValidation.canSubmit) {
+      return;
+    }
+    
     await createRequest.mutateAsync({
       mpk_id: mpkId,
       mpk_name: mpkName,
@@ -148,6 +172,28 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
             Submit a new procurement request to the pool. Matching will begin automatically.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Submission Status Alert */}
+        {!submissionValidation.canSubmit ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {submissionValidation.reason}
+            </AlertDescription>
+          </Alert>
+        ) : countdown && !countdown.isExpired && (
+          <Alert className={countdown.days === 0 ? 'border-amber-500/50 bg-amber-500/5' : ''}>
+            <Clock className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                Submission deadline: {matchingWindow?.lock_date && format(parseISO(matchingWindow.lock_date), 'MMM d, yyyy')}
+              </span>
+              <span className={`font-mono font-semibold ${countdown.days === 0 ? 'text-amber-600' : 'text-primary'}`}>
+                {countdown.formattedShort}
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -487,9 +533,12 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createRequest.isPending}>
+              <Button 
+                type="submit" 
+                disabled={createRequest.isPending || !submissionValidation.canSubmit}
+              >
                 {createRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Request
+                {submissionValidation.canSubmit ? 'Create Request' : 'Submissions Closed'}
               </Button>
             </div>
           </form>
