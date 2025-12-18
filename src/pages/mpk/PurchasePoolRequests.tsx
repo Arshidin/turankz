@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,6 @@ import {
   Clock, 
   CheckCircle2, 
   AlertTriangle, 
-  Info, 
   MapPin, 
   Medal, 
   CalendarClock,
@@ -25,6 +24,7 @@ import { usePoolRequests, useCancelPoolRequest, type PoolRequest, type PoolReque
 import { useMpks } from '@/hooks/useMpks';
 import { NewRequestDialog } from '@/components/mpk/NewRequestDialog';
 import { EditRequestDialog } from '@/components/mpk/EditRequestDialog';
+import { MatchingWindowStatusBanner } from '@/components/mpk/MatchingWindowStatusBanner';
 import { format, parseISO } from 'date-fns';
 import {
   DropdownMenu,
@@ -49,13 +49,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
 import {
   canEditPoolRequest,
   getPoolRequestLockedTooltip,
   type PoolRequestLifecycleStatus,
   type PoolRequestRole,
 } from '@/lib/pool-request-lifecycle';
+import { type MatchingWindow } from '@/lib/matching-window';
 
 const statusConfig: Record<PoolRequestStatus, {
   label: string;
@@ -126,6 +126,14 @@ export default function PurchasePoolRequests() {
   const [newRequestOpen, setNewRequestOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState<string | null>(null);
   const [editRequest, setEditRequest] = useState<PoolRequest | null>(null);
+  const [canSubmitRequests, setCanSubmitRequests] = useState(false);
+  const [currentWindow, setCurrentWindow] = useState<MatchingWindow | null>(null);
+
+  // Callback to receive submission status from banner
+  const handleSubmissionStatusChange = useCallback((canSubmit: boolean, window: MatchingWindow | null) => {
+    setCanSubmitRequests(canSubmit);
+    setCurrentWindow(window);
+  }, []);
 
   // For demo, use first MPK or default values
   const currentMpk = mpks?.[0] || { id: 'demo', mpk_id: 'MPK-001', name: 'Demo MPK' };
@@ -191,28 +199,37 @@ export default function PurchasePoolRequests() {
         description="Monitor procurement progress and manage request parameters" 
       />
 
-      {/* Timing Context */}
-      <Card className="mb-6 border-primary/20 bg-primary/5">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">How Matching Works</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Matching continues until the start of the target week. Adjust request parameters to improve fill rates before the deadline.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Matching Window Status Banner */}
+      <MatchingWindowStatusBanner onSubmissionStatusChange={handleSubmissionStatusChange} />
 
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-medium">Active Requests</CardTitle>
-          <Button size="sm" onClick={() => setNewRequestOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Request
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setNewRequestOpen(true)}
+                    disabled={!canSubmitRequests}
+                  >
+                    {canSubmitRequests ? (
+                      <Plus className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Lock className="w-4 h-4 mr-2" />
+                    )}
+                    New Request
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!canSubmitRequests && (
+                <TooltipContent>
+                  <p>Submissions are closed. Wait for an active matching window.</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </CardHeader>
         <CardContent>
           {activeRequests.length === 0 ? (
@@ -222,12 +239,34 @@ export default function PurchasePoolRequests() {
               </div>
               <p className="font-medium text-foreground mb-1">No purchase requests created yet.</p>
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                Requests define your demand for upcoming matching windows.
+                {canSubmitRequests 
+                  ? 'Requests define your demand for upcoming matching windows.'
+                  : 'Wait for an active matching window to submit requests.'}
               </p>
-              <Button onClick={() => setNewRequestOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Pool Request
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button 
+                        onClick={() => setNewRequestOpen(true)}
+                        disabled={!canSubmitRequests}
+                      >
+                        {canSubmitRequests ? (
+                          <Plus className="w-4 h-4 mr-2" />
+                        ) : (
+                          <Lock className="w-4 h-4 mr-2" />
+                        )}
+                        Create Pool Request
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!canSubmitRequests && (
+                    <TooltipContent>
+                      <p>Submissions are closed. Wait for an active matching window.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           ) : (
             <div className="space-y-4">

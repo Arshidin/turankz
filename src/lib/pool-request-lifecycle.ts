@@ -6,7 +6,14 @@
  * 
  * Status Flow:
  * Draft → Submitted → Matching → Partial/Fulfilled → Closed
+ * 
+ * MATCHING WINDOW INTEGRATION:
+ * - Submissions only allowed during Active matching window
+ * - After lock_date, no new submissions allowed
+ * - Submitted requests auto-transition to Matching after lock_date
  */
+
+import { type MatchingWindow, type MatchingWindowStatus, calculateCountdown } from './matching-window';
 
 // Pool Request lifecycle statuses
 export type PoolRequestLifecycleStatus = 
@@ -362,4 +369,165 @@ export function getNextPoolRequestStatus(
   const available = getAvailableTransitions(currentStatus, role);
   // Return first non-cancel transition
   return available.find(s => s !== 'cancelled') || null;
+}
+
+// ============================================================================
+// MATCHING WINDOW INTEGRATION
+// ============================================================================
+
+export interface SubmissionValidation {
+  canSubmit: boolean;
+  reason: string;
+  reasonRu: string;
+  isLocked: boolean;
+  deadline: string | null;
+  countdownFormatted: string | null;
+}
+
+/**
+ * Check if pool request submission is allowed based on matching window status
+ */
+export function canSubmitPoolRequest(
+  matchingWindow: MatchingWindow | null
+): SubmissionValidation {
+  // No active window
+  if (!matchingWindow) {
+    return {
+      canSubmit: false,
+      reason: 'No active matching window. Submissions are currently closed.',
+      reasonRu: 'Нет активного окна сопоставления. Подача заявок закрыта.',
+      isLocked: true,
+      deadline: null,
+      countdownFormatted: null,
+    };
+  }
+
+  const { status, lock_date } = matchingWindow;
+  const countdown = calculateCountdown(lock_date);
+
+  // Window must be active for submissions
+  if (status === 'upcoming') {
+    return {
+      canSubmit: false,
+      reason: 'Matching window has not started yet. Wait for it to open.',
+      reasonRu: 'Окно сопоставления ещё не началось. Дождитесь открытия.',
+      isLocked: true,
+      deadline: lock_date,
+      countdownFormatted: null,
+    };
+  }
+
+  if (status === 'locked' || status === 'closed') {
+    return {
+      canSubmit: false,
+      reason: 'Matching window is locked. No new submissions allowed.',
+      reasonRu: 'Окно сопоставления заблокировано. Новые заявки не принимаются.',
+      isLocked: true,
+      deadline: lock_date,
+      countdownFormatted: countdown.formattedShort,
+    };
+  }
+
+  // Check if past lock_date even if window is still "active"
+  if (countdown.isExpired) {
+    return {
+      canSubmit: false,
+      reason: 'Submission deadline has passed. No new submissions allowed.',
+      reasonRu: 'Срок подачи заявок истёк. Новые заявки не принимаются.',
+      isLocked: true,
+      deadline: lock_date,
+      countdownFormatted: countdown.formattedShort,
+    };
+  }
+
+  // Active and before lock_date - submissions allowed
+  return {
+    canSubmit: true,
+    reason: `Submissions open. Deadline: ${countdown.formattedLong}`,
+    reasonRu: `Подача заявок открыта. ${countdown.formattedLong}`,
+    isLocked: false,
+    deadline: lock_date,
+    countdownFormatted: countdown.formattedShort,
+  };
+}
+
+/**
+ * Get window-based submission status message for UI display
+ */
+export function getSubmissionStatusMessage(
+  matchingWindow: MatchingWindow | null,
+  lang: 'en' | 'ru' = 'en'
+): { 
+  title: string; 
+  message: string; 
+  urgency: 'normal' | 'warning' | 'critical' | 'blocked';
+  showCountdown: boolean;
+} {
+  if (!matchingWindow) {
+    return {
+      title: lang === 'ru' ? 'Окно закрыто' : 'Window Closed',
+      message: lang === 'ru' 
+        ? 'Нет активного окна сопоставления. Подача заявок недоступна.' 
+        : 'No active matching window. Submissions are not available.',
+      urgency: 'blocked',
+      showCountdown: false,
+    };
+  }
+
+  const { status, lock_date, name } = matchingWindow;
+  const countdown = calculateCountdown(lock_date, lang);
+
+  if (status === 'upcoming') {
+    return {
+      title: lang === 'ru' ? 'Предстоящее окно' : 'Upcoming Window',
+      message: lang === 'ru'
+        ? `Окно "${name}" откроется скоро. Подготовьте ваши заявки.`
+        : `Window "${name}" will open soon. Prepare your requests.`,
+      urgency: 'normal',
+      showCountdown: false,
+    };
+  }
+
+  if (status === 'locked' || status === 'closed' || countdown.isExpired) {
+    return {
+      title: lang === 'ru' ? 'Подача заблокирована' : 'Submissions Locked',
+      message: lang === 'ru'
+        ? 'Срок подачи заявок истёк. Дождитесь следующего окна.'
+        : 'Submission deadline has passed. Wait for the next window.',
+      urgency: 'blocked',
+      showCountdown: false,
+    };
+  }
+
+  // Active window with countdown
+  if (countdown.days === 0 && countdown.hours < 6) {
+    return {
+      title: lang === 'ru' ? 'Срочно!' : 'Urgent!',
+      message: lang === 'ru'
+        ? `Осталось ${countdown.formattedShort} для подачи заявок.`
+        : `${countdown.formattedShort} left to submit requests.`,
+      urgency: 'critical',
+      showCountdown: true,
+    };
+  }
+
+  if (countdown.days === 0) {
+    return {
+      title: lang === 'ru' ? 'Скоро дедлайн' : 'Deadline Approaching',
+      message: lang === 'ru'
+        ? `${countdown.formattedLong} для подачи заявок.`
+        : `${countdown.formattedLong} to submit requests.`,
+      urgency: 'warning',
+      showCountdown: true,
+    };
+  }
+
+  return {
+    title: lang === 'ru' ? 'Окно открыто' : 'Window Open',
+    message: lang === 'ru'
+      ? `${countdown.formattedLong} для подачи заявок.`
+      : `${countdown.formattedLong} to submit requests.`,
+    urgency: 'normal',
+    showCountdown: true,
+  };
 }
