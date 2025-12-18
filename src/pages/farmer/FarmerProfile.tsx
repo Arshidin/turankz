@@ -39,7 +39,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useBatchStats } from '@/hooks/useBatches';
-import { useFarmers, useUpdateFarmerProfile, type FarmerGrading } from '@/hooks/useFarmers';
+import { useUpdateFarmerProfile, type FarmerGrading } from '@/hooks/useFarmers';
+import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
 
 const GRADING_CONFIG: Record<FarmerGrading, { 
   label: string; 
@@ -104,8 +105,7 @@ export default function FarmerProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const { t } = useTranslation();
   
-  const { data: farmers, isLoading: farmersLoading, error: farmersError } = useFarmers();
-  const farmer = farmers?.[0] || null;
+  const { data: farmer, isLoading: farmersLoading, error: farmersError } = useCurrentFarmer();
   
   const updateProfile = useUpdateFarmerProfile();
   const stats = useBatchStats();
