@@ -26,6 +26,9 @@ import {
 import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
 import { useIsObserver, useCanCreateBatches } from '@/hooks/useCurrentFarmer';
+import { useGlobalBatchLockStatus } from '@/hooks/useBatchTimeLock';
+import { getTimeLockedTooltip } from '@/lib/batch-time-lock';
+import { type BatchLifecycleStatus } from '@/lib/batch-lifecycle';
 import { PremiumBadge } from '@/components/premium';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -70,6 +73,7 @@ export default function LivestockBatches() {
   const { data: standardPremiums } = useStandardPremiums();
   const isObserver = useIsObserver();
   const canCreateBatches = useCanCreateBatches();
+  const { checkBatchLock } = useGlobalBatchLockStatus();
   
   const [withdrawBatchId, setWithdrawBatchId] = useState<string | null>(null);
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
@@ -263,6 +267,8 @@ export default function LivestockBatches() {
                     const hasCharacteristics = batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max;
                     const standardStatus = (batch as any).standard_status || 'non_standard';
                     const premiumValue = getPremiumByLevel(standardPremiums, standardStatus)?.premium_value ?? 0;
+                    const batchLockStatus = checkBatchLock(batch.status as BatchLifecycleStatus);
+                    const isTimeLocked = batchLockStatus.isLocked;
                     
                     return (
                       <TableRow 
@@ -273,7 +279,19 @@ export default function LivestockBatches() {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {batch.batch_number}
-                            {(stale || approaching) && (
+                            {isTimeLocked && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Lock className="w-4 h-4 text-amber-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{getTimeLockedTooltip()}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {!isTimeLocked && (stale || approaching) && (
                               <AlertTriangle className="w-4 h-4 text-amber-500" />
                             )}
                           </div>
