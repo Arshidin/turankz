@@ -13,7 +13,6 @@ import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Calend
 import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
 import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
 import { AttentionRequired } from '@/components/admin/AttentionRequired';
-import { MatchingWindowBanner } from '@/components/admin/MatchingWindowBanner';
 import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { ReliabilityPremiumCard } from '@/components/premium';
 import { useFarmers } from '@/hooks/useFarmers';
@@ -21,11 +20,6 @@ import { useMpks } from '@/hooks/useMpks';
 import { useBatches } from '@/hooks/useBatches';
 import { usePoolRequests } from '@/hooks/usePoolRequests';
 import { useCurrentFarmer, useIsObserver } from '@/hooks/useCurrentFarmer';
-
-const nextMatchingWindow = {
-  date: '20 декабря 2025',
-  daysRemaining: 3,
-};
 
 const stats = {
   farmer: [
@@ -220,13 +214,9 @@ export default function Overview() {
           description={t('admin.commandControl')} 
         />
 
-        {/* Matching Window Banner */}
+        {/* Matching Window Banner - Real data from database */}
         <div className="mb-6">
-          <MatchingWindowBanner
-            windowDate={nextMatchingWindow.date}
-            daysRemaining={nextMatchingWindow.daysRemaining}
-            currentPoolPeriod={`${t('admin.week')} 51, 2025`}
-          />
+          <CurrentMatchingWindowBanner />
         </div>
 
         {/* System Health Summary */}
