@@ -120,33 +120,51 @@ export default function SalesCalendar() {
   const nextMatchingWindow = getNextMatchingWindow();
   const dateLocale = i18n.language === 'ru' ? ru : undefined;
 
-  // Generate next 6 months
+  // Filter to only active batches (exclude closed/delivered)
+  const activeBatches = useMemo(() => {
+    if (!batches) return [];
+    return batches.filter(b => !['closed', 'delivered'].includes(b.status));
+  }, [batches]);
+
+  // Generate months based on actual batch data - show 6 months ahead from current or from earliest batch
   const months = useMemo(() => {
     const result: Date[] = [];
     const now = new Date();
+    const currentMonth = startOfMonth(now);
+    
+    // Find the earliest batch month from active batches
+    let startMonth = currentMonth;
+    if (activeBatches.length > 0) {
+      const batchMonths = activeBatches.map(b => getMonthFromTargetWeek(b.target_week));
+      const earliestBatch = batchMonths.reduce((min, date) => date < min ? date : min, batchMonths[0]);
+      // Use earlier of current month or earliest batch month
+      startMonth = earliestBatch < currentMonth ? earliestBatch : currentMonth;
+    }
+    
+    // Generate 6 months from start
     for (let i = 0; i < 6; i++) {
-      result.push(startOfMonth(addMonths(now, i)));
+      result.push(startOfMonth(addMonths(startMonth, i)));
     }
     return result;
-  }, []);
+  }, [activeBatches]);
 
   // Organize batches by month
   const monthData = useMemo((): MonthData[] => {
-    if (!batches) return months.map(month => ({
+    if (!activeBatches.length) return months.map(month => ({
       month,
       batches: [],
       totals: { heads: 0, forecast: 0, softCommitted: 0, confirmed: 0, batchCount: 0 }
     }));
 
     return months.map(month => {
-      const monthBatches = batches.filter(batch => {
+      const monthBatches = activeBatches.filter(batch => {
         const batchMonth = getMonthFromTargetWeek(batch.target_week);
         return isSameMonth(batchMonth, month);
       });
 
       const forecast = monthBatches.filter(b => b.status === 'forecast' || b.status === 'draft');
       const softCommitted = monthBatches.filter(b => b.status === 'soft_committed');
-      const confirmed = monthBatches.filter(b => b.status === 'confirmed' || b.status === 'matched' || b.status === 'closed');
+      const confirmed = monthBatches.filter(b => b.status === 'confirmed' || b.status === 'matched');
 
       return {
         month,
@@ -160,7 +178,7 @@ export default function SalesCalendar() {
         }
       };
     });
-  }, [batches, months]);
+  }, [activeBatches, months]);
 
   // Check if batch is approaching matching window
   const isApproachingWindow = (batch: Batch): boolean => {
@@ -441,9 +459,9 @@ export default function SalesCalendar() {
             <CardDescription>{t('calendar.sortedByTargetWeek')}</CardDescription>
           </CardHeader>
           <CardContent>
-            {batches && batches.length > 0 ? (
+            {activeBatches.length > 0 ? (
               <div className="space-y-3">
-                {batches
+                {activeBatches
                   .sort((a, b) => a.target_week.localeCompare(b.target_week))
                   .map((batch) => {
                     const approaching = isApproachingWindow(batch);
