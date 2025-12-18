@@ -55,6 +55,7 @@ import {
 import { useBatch, useConfirmBatch, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
+import { useRole } from '@/contexts/RoleContext';
 
 // Data integrity components
 import {
@@ -76,6 +77,7 @@ import {
 } from '@/lib/batch-lifecycle';
 import { useBatchTimeLock } from '@/hooks/useBatchTimeLock';
 import { getTimeLockedTooltip } from '@/lib/batch-time-lock';
+import { validateBatchEdit, formatValidationError } from '@/lib/batch-transition-guard';
 
 const REGIONS = [
   'Almaty',
@@ -162,6 +164,7 @@ export default function BatchDetail() {
   const confirmBatch = useConfirmBatch();
   const updateBatch = useUpdateBatch();
   const { trackBatchQuantityChange, trackReadinessChange, trackMonthChange } = useChangeTracking();
+  const { role } = useRole();
 
   // Check edit rules based on status
   const isStatusReadOnly = batch ? isBatchReadOnly(batch.status) : false;
@@ -170,7 +173,7 @@ export default function BatchDetail() {
   const editRules = batch ? getEditRulesForStatus(batch.status) : null;
 
   // Time-based locking from matching window
-  const { lockStatus: timeLockStatus, canEdit: canEditByTime, canTransition, bannerInfo: timeLockBanner } = 
+  const { lockStatus: timeLockStatus, canEdit: canEditByTime, canTransition, bannerInfo: timeLockBanner, matchingWindow } = 
     useBatchTimeLock(batch?.status || 'draft');
 
   // Combined lock status: locked by status OR locked by time
@@ -208,6 +211,23 @@ export default function BatchDetail() {
 
   const performSave = async (data: FormData, reason?: string) => {
     if (!batch) return;
+    
+    // UNIFIED EDIT GUARD: Validate BOTH status-based and time-based constraints
+    const editValidation = validateBatchEdit(
+      batch.status as BatchLifecycleStatus,
+      role as 'farmer' | 'admin' | 'mpk',
+      matchingWindow
+    );
+    
+    if (!editValidation.allowed) {
+      const errorInfo = formatValidationError(editValidation);
+      toast({
+        variant: 'destructive',
+        title: errorInfo.title,
+        description: errorInfo.description,
+      });
+      return;
+    }
     
     // Track changes
     if (data.heads !== batch.heads) {
@@ -838,6 +858,7 @@ export default function BatchDetail() {
             isTransitioning={updateBatch.isPending || confirmBatch.isPending}
             isTimeLocked={!canTransition}
             timeLockTooltip={timeLockStatus.lockReason || getTimeLockedTooltip()}
+            matchingWindow={matchingWindow}
           />
 
           {/* Quick Actions */}
