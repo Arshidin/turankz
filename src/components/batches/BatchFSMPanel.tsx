@@ -41,6 +41,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useRole } from '@/contexts/RoleContext';
+import { useToast } from '@/hooks/use-toast';
 import {
   BATCH_STATUSES,
   BATCH_STATUS_LABELS,
@@ -52,7 +53,7 @@ import {
   getDisabledTransitionTooltip,
   isBatchReadOnly,
   getLockedFieldTooltip,
-  validateTransition,
+  validateTransitionComplete,
   getStatusIndex,
 } from '@/lib/batch-lifecycle';
 
@@ -70,6 +71,7 @@ export function BatchFSMPanel({
   isTransitioning = false,
 }: BatchFSMPanelProps) {
   const { role } = useRole();
+  const { toast } = useToast();
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     toStatus: BatchLifecycleStatus | null;
@@ -90,8 +92,52 @@ export function BatchFSMPanel({
   // Get all allowed transitions for current user (array-based, no linear assumptions)
   const allowedTransitions = getAllowedTransitions(currentStatus, userRole);
 
+  /**
+   * MANDATORY PRE-TRANSITION VALIDATION
+   * Re-validates the transition immediately before execution to prevent:
+   * - Race conditions from stale state
+   * - Client-side bypasses
+   * - Unauthorized transitions
+   */
+  const executeValidatedTransition = async (toStatus: BatchLifecycleStatus): Promise<boolean> => {
+    // Re-run domain validation immediately before mutation
+    const validation = validateTransitionComplete(currentStatus, toStatus, userRole);
+    
+    if (!validation.valid) {
+      toast({
+        variant: 'destructive',
+        title: 'Transition Blocked',
+        description: validation.error || 'This status transition is not allowed.',
+      });
+      return false;
+    }
+    
+    try {
+      await onTransition(toStatus);
+      return true;
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Transition Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
+      });
+      return false;
+    }
+  };
+
   // Handle transition with confirmation for critical ones
-  const handleTransitionClick = (toStatus: BatchLifecycleStatus) => {
+  const handleTransitionClick = async (toStatus: BatchLifecycleStatus) => {
+    // Pre-validate before showing confirmation dialog
+    const preValidation = validateTransitionComplete(currentStatus, toStatus, userRole);
+    if (!preValidation.valid) {
+      toast({
+        variant: 'destructive',
+        title: 'Action Not Allowed',
+        description: preValidation.error || 'This transition is not permitted.',
+      });
+      return;
+    }
+
     // Soft Committed → Confirmed requires confirmation
     if (currentStatus === 'soft_committed' && toStatus === 'confirmed') {
       setConfirmDialog({
@@ -116,13 +162,26 @@ export function BatchFSMPanel({
       return;
     }
 
-    // Direct transition for non-critical ones
-    onTransition(toStatus);
+    // Confirmed → Closed (Admin only)
+    if (currentStatus === 'confirmed' && toStatus === 'closed') {
+      setConfirmDialog({
+        open: true,
+        toStatus,
+        title: 'Close Batch',
+        message: 'This will close the batch without matching.',
+        warning: 'This action is irreversible.',
+      });
+      return;
+    }
+
+    // Direct transition for non-critical ones (with validation)
+    await executeValidatedTransition(toStatus);
   };
 
   const handleConfirmTransition = async () => {
     if (confirmDialog.toStatus) {
-      await onTransition(confirmDialog.toStatus);
+      // Re-validate after confirmation dialog (prevents stale state)
+      await executeValidatedTransition(confirmDialog.toStatus);
     }
     setConfirmDialog({ open: false, toStatus: null, title: '', message: '' });
   };
@@ -158,14 +217,14 @@ export function BatchFSMPanel({
     reason: string;
     type: 'allowed' | 'admin_only' | 'blocked' | 'invalid';
   } => {
-    const validation = validateTransition(currentStatus, toStatus, userRole);
+    const validation = validateTransitionComplete(currentStatus, toStatus, userRole);
     
     if (validation.valid) {
       return { allowed: true, reason: '', type: 'allowed' };
     }
 
     // Check if it's just admin-only
-    const adminValidation = validateTransition(currentStatus, toStatus, 'admin');
+    const adminValidation = validateTransitionComplete(currentStatus, toStatus, 'admin');
     if (adminValidation.valid && userRole !== 'admin') {
       return { 
         allowed: false, 
