@@ -28,6 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   ArrowLeft, 
   CheckCircle2, 
@@ -40,7 +46,8 @@ import {
   Save,
   X,
   Loader2,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Lock
 } from 'lucide-react';
 import { useBatch, useConfirmBatch, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { toast } from '@/hooks/use-toast';
@@ -51,9 +58,16 @@ import {
   ChangeConfirmationDialog,
   EditHelperNote,
   ReadinessTransitionDialog,
+  SoftCommitEditDialog,
 } from '@/components/data-integrity';
 import { useChangeTracking } from '@/hooks/useChangeTracking';
 import { DEFAULT_CONSTRAINTS, requiresReadinessConfirmation } from '@/lib/change-constraints';
+import {
+  isBatchReadOnly,
+  requiresEditConfirmation,
+  getLockedFieldTooltip,
+  getEditRulesForStatus,
+} from '@/lib/batch-lifecycle';
 
 const REGIONS = [
   'Almaty',
@@ -133,12 +147,19 @@ export default function BatchDetail() {
   const [isEditing, setIsEditing] = useState(action === 'update');
   const [showQuantityConfirm, setShowQuantityConfirm] = useState(false);
   const [showReadinessDialog, setShowReadinessDialog] = useState(false);
+  const [showSoftCommitEditDialog, setShowSoftCommitEditDialog] = useState(false);
   const [pendingQuantityChange, setPendingQuantityChange] = useState<{ old: number; new: number } | null>(null);
   
   const { data: batch, isLoading, error } = useBatch(batchId ? `BTH-${batchId}` : undefined);
   const confirmBatch = useConfirmBatch();
   const updateBatch = useUpdateBatch();
   const { trackBatchQuantityChange, trackReadinessChange, trackMonthChange } = useChangeTracking();
+
+  // Check edit rules based on status
+  const isReadOnly = batch ? isBatchReadOnly(batch.status) : false;
+  const needsConfirmation = batch ? requiresEditConfirmation(batch.status) : false;
+  const lockedTooltip = batch ? getLockedFieldTooltip(batch.status) : '';
+  const editRules = batch ? getEditRulesForStatus(batch.status) : null;
 
   const weekOptions = getTargetWeekOptions();
 
@@ -335,10 +356,37 @@ export default function BatchDetail() {
           description={isEditing ? 'Edit batch information' : 'View and manage batch details'}
         />
         {!isEditing && (
-          <Button variant="outline" onClick={() => setIsEditing(true)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      if (needsConfirmation) {
+                        setShowSoftCommitEditDialog(true);
+                      } else {
+                        setIsEditing(true);
+                      }
+                    }}
+                    disabled={isReadOnly}
+                  >
+                    {isReadOnly ? (
+                      <Lock className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Edit className="w-4 h-4 mr-2" />
+                    )}
+                    Edit
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isReadOnly && (
+                <TooltipContent>
+                  <p>{lockedTooltip}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
@@ -516,12 +564,20 @@ export default function BatchDetail() {
                       )}
                     />
 
-                    {/* Data integrity helper note */}
-                    <EditHelperNote
-                      variant="info"
-                      message="Frequent changes reduce matching priority."
-                      className="mt-2"
-                    />
+                    {/* Data integrity helper note - varies by status */}
+                    {needsConfirmation ? (
+                      <EditHelperNote
+                        variant="warning"
+                        message="This batch is Soft Committed. Changes may affect your matching priority and buyer trust."
+                        className="mt-2"
+                      />
+                    ) : (
+                      <EditHelperNote
+                        variant="info"
+                        message="Frequent changes reduce matching priority."
+                        className="mt-2"
+                      />
+                    )}
 
                     <div className="flex justify-end gap-3 pt-4">
                       <Button 
@@ -760,10 +816,38 @@ export default function BatchDetail() {
                 <CardTitle className="text-base font-medium">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" onClick={() => setIsEditing(true)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Details
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-start" 
+                          onClick={() => {
+                            if (needsConfirmation) {
+                              setShowSoftCommitEditDialog(true);
+                            } else {
+                              setIsEditing(true);
+                            }
+                          }}
+                          disabled={isReadOnly}
+                        >
+                          {isReadOnly ? (
+                            <Lock className="w-4 h-4 mr-2" />
+                          ) : (
+                            <Edit className="w-4 h-4 mr-2" />
+                          )}
+                          Edit Details
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {isReadOnly && (
+                      <TooltipContent>
+                        <p>{lockedTooltip}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <Button 
                   variant="outline" 
                   className="w-full justify-start" 
@@ -797,6 +881,16 @@ export default function BatchDetail() {
         batchNumber={batch?.batch_number || ''}
         currentStatus={mapStatus(batch?.status || 'forecast')}
         onConfirm={handleReadinessChange}
+      />
+
+      <SoftCommitEditDialog
+        open={showSoftCommitEditDialog}
+        onOpenChange={setShowSoftCommitEditDialog}
+        onConfirm={() => {
+          setShowSoftCommitEditDialog(false);
+          setIsEditing(true);
+        }}
+        onCancel={() => setShowSoftCommitEditDialog(false)}
       />
     </MainLayout>
   );

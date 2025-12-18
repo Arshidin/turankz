@@ -6,3 +6,4 @@ export {
   ChangeIndicator 
 } from './EditHelperNote';
 export { ReadinessTransitionDialog } from './ReadinessTransitionDialog';
+export { SoftCommitEditDialog } from './SoftCommitEditDialog';

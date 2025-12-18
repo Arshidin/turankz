@@ -137,12 +137,100 @@ export function getAllNextStatuses(
     .map(t => t.to);
 }
 
+// Editable fields for batch
+export const BATCH_EDITABLE_FIELDS = [
+  'heads',
+  'target_week',
+  'breed',
+  'gender',
+  'age_min',
+  'age_max',
+  'weight_min',
+  'weight_max',
+] as const;
+
+export type BatchEditableField = typeof BATCH_EDITABLE_FIELDS[number];
+
+// Edit rules by status
+export type BatchEditRule = 'editable' | 'editable_with_confirmation' | 'read_only';
+
+export interface BatchEditRules {
+  rule: BatchEditRule;
+  fields: BatchEditableField[];
+  confirmationMessage?: string;
+  lockedMessage?: string;
+}
+
+/**
+ * Get edit rules for a specific status
+ */
+export function getEditRulesForStatus(status: BatchLifecycleStatus): BatchEditRules {
+  switch (status) {
+    case 'draft':
+    case 'forecast':
+      return {
+        rule: 'editable',
+        fields: [...BATCH_EDITABLE_FIELDS],
+      };
+    case 'soft_committed':
+      return {
+        rule: 'editable_with_confirmation',
+        fields: [...BATCH_EDITABLE_FIELDS],
+        confirmationMessage: 'Changing batch details after Soft Commitment may affect matching priority.',
+      };
+    case 'confirmed':
+    case 'matched':
+    case 'closed':
+      return {
+        rule: 'read_only',
+        fields: [],
+        lockedMessage: 'Batch is Confirmed and cannot be edited.',
+      };
+    default:
+      return {
+        rule: 'read_only',
+        fields: [],
+        lockedMessage: 'Batch cannot be edited at this status.',
+      };
+  }
+}
+
+/**
+ * Check if a specific field is editable for a given status
+ */
+export function isFieldEditable(status: BatchLifecycleStatus, field: BatchEditableField): boolean {
+  const rules = getEditRulesForStatus(status);
+  return rules.rule !== 'read_only' && rules.fields.includes(field);
+}
+
+/**
+ * Check if editing requires confirmation
+ */
+export function requiresEditConfirmation(status: BatchLifecycleStatus): boolean {
+  return getEditRulesForStatus(status).rule === 'editable_with_confirmation';
+}
+
+/**
+ * Get the locked field tooltip message
+ */
+export function getLockedFieldTooltip(status: BatchLifecycleStatus): string {
+  const rules = getEditRulesForStatus(status);
+  return rules.lockedMessage || 'This field cannot be edited.';
+}
+
 /**
  * Check if status can be edited (batch data changes)
- * Only draft and forecast batches can have their data edited
+ * Draft, forecast, and soft_committed batches can have their data edited
  */
 export function canEditBatchData(status: BatchLifecycleStatus): boolean {
-  return status === 'draft' || status === 'forecast';
+  return status === 'draft' || status === 'forecast' || status === 'soft_committed';
+}
+
+/**
+ * Check if batch is fully read-only
+ */
+export function isBatchReadOnly(status: BatchLifecycleStatus): boolean {
+  return status === 'confirmed' || status === 'matched' || status === 'closed';
 }
 
 /**
