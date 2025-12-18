@@ -329,7 +329,7 @@ export function useCreateMatching() {
 }
 
 /**
- * Hook for finalizing matchings
+ * Hook for finalizing matchings with premium locking
  */
 export function useFinalizeMatching() {
   const { toast } = useToast();
@@ -340,9 +340,23 @@ export function useFinalizeMatching() {
     mutationFn: async ({
       matchId,
       note,
+      premiumBreakdown,
     }: {
       matchId: string;
       note?: string;
+      premiumBreakdown?: {
+        basePricePerKg: number;
+        premiums: Array<{
+          type: string;
+          levelKey: string;
+          levelName: string;
+          value: number;
+          eligible: boolean;
+          reason: string;
+        }>;
+        totalPremium: number;
+        totalPricePerKg: number;
+      };
     }) => {
       if (role !== 'admin') {
         throw new Error('Only admins can finalize matchings');
@@ -363,13 +377,38 @@ export function useFinalizeMatching() {
         throw new Error(validation.error);
       }
 
+      // Build update object
+      const updateData: Record<string, unknown> = {
+        status: 'finalized',
+        finalized_at: new Date().toISOString(),
+      };
+
+      // If premium breakdown provided, lock the premiums
+      if (premiumBreakdown) {
+        const standardPremium = premiumBreakdown.premiums.find(p => p.type === 'standard');
+        const predictabilityPremium = premiumBreakdown.premiums.find(p => p.type === 'predictability');
+        const volumeConsistencyPremium = premiumBreakdown.premiums.find(p => p.type === 'volume_consistency');
+        const reliabilityPremium = premiumBreakdown.premiums.find(p => p.type === 'reliability');
+
+        updateData.base_price_per_kg = premiumBreakdown.basePricePerKg;
+        updateData.standard_premium = standardPremium?.eligible ? standardPremium.value : 0;
+        updateData.predictability_premium = predictabilityPremium?.eligible ? predictabilityPremium.value : 0;
+        updateData.volume_consistency_premium = volumeConsistencyPremium?.eligible ? volumeConsistencyPremium.value : 0;
+        updateData.reliability_premium = reliabilityPremium?.eligible ? reliabilityPremium.value : 0;
+        updateData.total_premium = premiumBreakdown.totalPremium;
+        updateData.total_price_per_kg = premiumBreakdown.totalPricePerKg;
+        updateData.premium_locked = true;
+        updateData.premium_locked_at = new Date().toISOString();
+        updateData.premium_breakdown = {
+          premiums: premiumBreakdown.premiums,
+          calculatedAt: new Date().toISOString(),
+        };
+      }
+
       // Update status
       const { data, error } = await supabase
         .from('pool_matches')
-        .update({
-          status: 'finalized',
-          finalized_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', matchId)
         .select()
         .single();
@@ -383,7 +422,7 @@ export function useFinalizeMatching() {
         previous_value: current.status,
         new_value: 'finalized',
         performed_by: `${roleName} (${role})`,
-        note: note || null,
+        note: note || (premiumBreakdown ? `Premiums locked: ${premiumBreakdown.totalPremium} ₸/kg` : null),
       });
 
       return data as Matching;
@@ -391,7 +430,7 @@ export function useFinalizeMatching() {
     onSuccess: () => {
       toast({
         title: 'Matching Finalized',
-        description: 'The matching has been finalized.',
+        description: 'The matching has been finalized and premiums locked.',
       });
       queryClient.invalidateQueries({ queryKey: ['matchings'] });
     },

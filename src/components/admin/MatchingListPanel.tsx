@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   useMatchingsWithDetails,
   useFinalizeMatching,
   useCancelMatching,
@@ -36,6 +42,8 @@ import {
 } from '@/hooks/useMatchings';
 import { ReallocateVolumeDialog } from './ReallocateVolumeDialog';
 import { MatchingAuditHistory } from './MatchingAuditHistory';
+import { MatchingPremiumPanel, InlinePremiumSummary } from '@/components/premium';
+import { PremiumBreakdown } from '@/lib/premium-eligibility';
 import {
   MATCHING_STATUS_LABELS,
   type MatchingLifecycleStatus,
@@ -50,6 +58,8 @@ import {
   MoreHorizontal,
   ArrowLeftRight,
   History,
+  Calculator,
+  Lock,
 } from 'lucide-react';
 
 interface MatchingListPanelProps {
@@ -95,9 +105,25 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
   const [cancelReason, setCancelReason] = useState('');
   const [reallocateMatching, setReallocateMatching] = useState<MatchingWithDetails | null>(null);
   const [auditMatchId, setAuditMatchId] = useState<string | null>(null);
+  const [premiumDialog, setPremiumDialog] = useState<MatchingWithDetails | null>(null);
+  const [pendingPremiumBreakdown, setPendingPremiumBreakdown] = useState<PremiumBreakdown | null>(null);
+
+  const handlePremiumCalculated = useCallback((breakdown: PremiumBreakdown) => {
+    setPendingPremiumBreakdown(breakdown);
+  }, []);
 
   const handleFinalize = (matchId: string) => {
-    finalizeMatching.mutate({ matchId });
+    // If we have premium breakdown, include it in finalization
+    if (pendingPremiumBreakdown) {
+      finalizeMatching.mutate({ 
+        matchId, 
+        premiumBreakdown: pendingPremiumBreakdown 
+      });
+    } else {
+      finalizeMatching.mutate({ matchId });
+    }
+    setPremiumDialog(null);
+    setPendingPremiumBreakdown(null);
   };
 
   const handleCancelConfirm = () => {
@@ -177,6 +203,7 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
               <TableRow>
                 <TableHead className="text-xs">Batch</TableHead>
                 <TableHead className="text-xs">Heads</TableHead>
+                <TableHead className="text-xs">Price</TableHead>
                 <TableHead className="text-xs">Date</TableHead>
                 <TableHead className="text-xs">Status</TableHead>
                 <TableHead className="text-xs text-right">Actions</TableHead>
@@ -200,6 +227,28 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
                   <TableCell className="py-2 font-medium">
                     {matching.heads_matched}
                   </TableCell>
+                  <TableCell className="py-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <InlinePremiumSummary
+                              matchId={matching.id}
+                              isFinalized={matching.status === 'finalized'}
+                              totalPricePerKg={(matching as any).total_price_per_kg}
+                              totalPremium={(matching as any).total_premium}
+                              premiumLocked={(matching as any).premium_locked}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {matching.status === 'finalized' && (matching as any).premium_locked
+                            ? 'Premium locked at finalization'
+                            : 'Click finalize to lock premiums'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   <TableCell className="py-2 text-sm text-muted-foreground">
                     {format(parseISO(matching.matching_date), 'MMM d')}
                   </TableCell>
@@ -213,11 +262,11 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => handleFinalize(matching.id)}
+                          onClick={() => setPremiumDialog(matching)}
                           disabled={finalizeMatching.isPending}
                         >
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Finalize
+                          <Calculator className="h-3 w-3 mr-1" />
+                          Review & Finalize
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -338,6 +387,50 @@ export function MatchingListPanel({ requestId, compact = false }: MatchingListPa
             </DialogTitle>
           </DialogHeader>
           <MatchingAuditHistory matchId={auditMatchId} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Premium Review & Finalize Dialog */}
+      <Dialog 
+        open={!!premiumDialog} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setPremiumDialog(null);
+            setPendingPremiumBreakdown(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              Review Premium Eligibility
+            </DialogTitle>
+            <DialogDescription>
+              Review the calculated premiums before finalizing. Premiums will be locked after finalization.
+            </DialogDescription>
+          </DialogHeader>
+          {premiumDialog && (
+            <MatchingPremiumPanel
+              matchId={premiumDialog.id}
+              batchId={premiumDialog.batch_id}
+              farmerId=""
+              isFinalized={false}
+              onCalculateComplete={handlePremiumCalculated}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPremiumDialog(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => premiumDialog && handleFinalize(premiumDialog.id)}
+              disabled={finalizeMatching.isPending}
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              {finalizeMatching.isPending ? 'Finalizing...' : 'Finalize & Lock Premiums'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
