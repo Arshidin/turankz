@@ -10,8 +10,8 @@ import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Введите корректный email адрес'),
+  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
 });
 
 export default function Login() {
@@ -52,13 +52,13 @@ export default function Login() {
       if (error) {
         if (error.message.includes('already registered')) {
           toast({
-            title: 'Account exists',
-            description: 'An account with this email already exists. Please sign in.',
+            title: 'Аккаунт существует',
+            description: 'Аккаунт с этим email уже существует. Пожалуйста, войдите.',
             variant: 'destructive',
           });
         } else {
           toast({
-            title: 'Registration failed',
+            title: 'Ошибка регистрации',
             description: error.message,
             variant: 'destructive',
           });
@@ -67,8 +67,8 @@ export default function Login() {
       }
 
       toast({
-        title: 'Account created',
-        description: 'You can now sign in with your credentials.',
+        title: 'Аккаунт создан',
+        description: 'Теперь вы можете войти с вашими данными.',
       });
       setIsSignUp(false);
       return;
@@ -80,13 +80,13 @@ export default function Login() {
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
         toast({
-          title: 'Login failed',
-          description: 'Invalid email or password. Please try again.',
+          title: 'Ошибка входа',
+          description: 'Неверный email или пароль. Попробуйте снова.',
           variant: 'destructive',
         });
       } else {
         toast({
-          title: 'Login failed',
+          title: 'Ошибка входа',
           description: error.message,
           variant: 'destructive',
         });
@@ -95,8 +95,8 @@ export default function Login() {
     }
 
     toast({
-      title: 'Welcome back',
-      description: 'You have successfully signed in.',
+      title: 'Добро пожаловать',
+      description: 'Вы успешно вошли в систему.',
     });
     navigate('/overview');
   };
@@ -105,11 +105,11 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
+          <CardTitle className="text-2xl">{isSignUp ? 'Создать аккаунт' : 'Вход'}</CardTitle>
           <CardDescription>
             {isSignUp 
-              ? 'Create your account to access Turan Standard Pool'
-              : 'Enter your credentials to access Turan Standard Pool'}
+              ? 'Создайте аккаунт для доступа к Turan Standard Pool'
+              : 'Введите данные для входа в Turan Standard Pool'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -119,7 +119,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="example@mail.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 disabled={isLoading}
@@ -128,7 +128,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Пароль</Label>
               <Input
                 id="password"
                 type="password"
@@ -144,31 +144,31 @@ export default function Login() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isSignUp ? 'Creating account...' : 'Signing in...'}
+                  {isSignUp ? 'Создание аккаунта...' : 'Вход...'}
                 </>
               ) : (
-                isSignUp ? 'Create Account' : 'Sign In'
+                isSignUp ? 'Создать аккаунт' : 'Войти'
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isSignUp ? 'Уже есть аккаунт?' : 'Нет аккаунта?'}{' '}
               <Button 
                 variant="link" 
                 className="p-0 h-auto" 
                 onClick={() => setIsSignUp(!isSignUp)}
               >
-                {isSignUp ? 'Sign in' : 'Create account'}
+                {isSignUp ? 'Войти' : 'Создать аккаунт'}
               </Button>
             </p>
             
             {!isSignUp && (
               <p className="text-sm text-muted-foreground">
-                New to the platform?{' '}
+                Новый пользователь?{' '}
                 <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/auth')}>
-                  Register as Farmer or MPK
+                  Зарегистрироваться как Фермер или МПК
                 </Button>
               </p>
             )}
