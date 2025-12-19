@@ -60,6 +60,10 @@ export const en = {
     priceGridManagement: 'Reference Price Grid Management',
     premiumRulesIncentives: 'Premium Rules & Incentives',
     activityLog: 'Activity Log',
+    nationalHerd: 'National Herd Structure',
+    herdStructure: 'Herd Structure',
+    marketIntent: 'Market Intent',
+    regionalOutlook: 'Regional Outlook',
     groups: {
       overview: 'Overview',
       participation: 'Market Participation',

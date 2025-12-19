@@ -60,6 +60,10 @@ export const ru = {
     priceGridManagement: 'Управление справочной ценовой сеткой',
     premiumRulesIncentives: 'Правила премий и стимулы',
     activityLog: 'Журнал активности',
+    nationalHerd: 'Структура национального поголовья',
+    herdStructure: 'Структура поголовья',
+    marketIntent: 'Намерения на рынке',
+    regionalOutlook: 'Региональный прогноз',
     groups: {
       overview: 'Обзор',
       participation: 'Участие на рынке',

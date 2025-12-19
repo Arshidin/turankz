@@ -60,6 +60,10 @@ export const kk = {
     priceGridManagement: 'Анықтамалық баға торын басқару',
     premiumRulesIncentives: 'Сыйлықақы ережелері мен ынталандырулар',
     activityLog: 'Әрекеттер журналы',
+    nationalHerd: 'Ұлттық мал санының құрылымы',
+    herdStructure: 'Мал санының құрылымы',
+    marketIntent: 'Нарық ниеттері',
+    regionalOutlook: 'Аймақтық болжам',
     groups: {
       overview: 'Шолу',
       participation: 'Нарыққа қатысу',
