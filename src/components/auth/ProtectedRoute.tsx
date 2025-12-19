@@ -57,7 +57,7 @@ export function ProtectedRoute({
   // If registration is still pending, allow read-only routes (dashboard + price grid + herd overview)
   // and redirect everything else to the Pending page.
   if (role !== 'admin' && registrationStatus === 'pending') {
-    const readOnlyAllowedPaths = new Set<string>(['/overview', '/price-grid', '/herd-overview', '/pending', '/welcome']);
+    const readOnlyAllowedPaths = new Set<string>(['/overview', '/price-grid', '/herd-overview', '/market-signals', '/pending', '/welcome']);
     if (!readOnlyAllowedPaths.has(location.pathname)) {
       return <Navigate to="/pending" replace />;
     }

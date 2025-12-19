@@ -20,7 +20,8 @@ import {
   Grid3X3,
   Beef,
   Info,
-  ChevronRight
+  ChevronRight,
+  TrendingUp
 } from 'lucide-react';
 
 interface ObserverDashboardProps {
@@ -40,6 +41,12 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
       title: 'Ознакомиться с ценовыми ориентирами',
       description: 'Референсная ценовая сетка, используемая в системе. Данные носят ориентировочный характер.',
       path: '/price-grid',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Рыночные индикативные сигналы',
+      description: 'Агрегированный спрос по периодам и регионам. Без данных о конкретных покупателях.',
+      path: '/market-signals',
     },
     {
       icon: Beef,
