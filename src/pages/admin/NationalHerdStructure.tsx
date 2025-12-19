@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Beef, MapPin, Users, BarChart3, TrendingUp, AlertTriangle, Info, Settings, ShieldCheck, History } from 'lucide-react';
+import { Beef, MapPin, Users, BarChart3, TrendingUp, AlertTriangle, Info, Settings, ShieldCheck, History, Eye } from 'lucide-react';
 import { 
   useAggregatedHerdStructure, 
   useAllHerdSnapshotsForAdmin,
@@ -27,9 +27,18 @@ import { ConfidenceBadge, ConfidenceLegend } from '@/components/data-integrity/C
 import { ALL_REGIONS } from '@/lib/defaults';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
 
 export default function NationalHerdStructure() {
   const { t } = useTranslation();
+  const { role, registrationStatus } = useAuthContext();
+  const { data: currentFarmer } = useCurrentFarmer();
+  const isAdmin = role === 'admin';
+  const isFarmer = role === 'farmer';
+  const isObserver = isFarmer && currentFarmer?.grading === 'observer';
+  const isActivatedFarmer = isFarmer && registrationStatus === 'active';
+  
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
   
@@ -39,9 +48,13 @@ export default function NationalHerdStructure() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [confidenceFilter, setConfidenceFilter] = useState<string>('all');
   
+  // Only admin can view aggregated data
   const { data: aggregatedData, isLoading } = useAggregatedHerdStructure(selectedYear, selectedQuarter);
+  // Only admin can view all snapshots for verification
   const { data: allSnapshots, isLoading: snapshotsLoading } = useAllHerdSnapshotsForAdmin();
+  // Forecast data - read-only for all roles (admin can view aggregated, others see indicative only)
   const { data: forecastData, isLoading: forecastLoading } = useIndicativeForecast(selectedYear, selectedQuarter);
+  // Only admin can view/edit coefficients
   const { data: coefficients } = useForecastCoefficients();
   const updateCoefficient = useUpdateForecastCoefficient();
   const updateConfidence = useUpdateSnapshotConfidence();
@@ -138,12 +151,37 @@ export default function NationalHerdStructure() {
           description={t('herdStructure.nationalDescription', 'Aggregated structural capacity data — indicative, voluntary reporting')}
         />
 
-        <Tabs defaultValue="structure" className="space-y-4">
+        {/* Read-only mode banner for non-admin */}
+        {!isAdmin && (
+          <div className="flex items-start gap-3 p-4 rounded-lg border border-muted bg-muted/50">
+            <Eye className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-foreground">
+                {t('herdStructure.readOnlyMode', 'Read-Only View')}
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                {t('herdStructure.readOnlyDescription', 'You are viewing the National Herd Structure in read-only mode. Aggregated data and management tools are available to administrators only.')}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <Tabs defaultValue="forecast" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="structure">Herd Structure</TabsTrigger>
-            <TabsTrigger value="verification">Data Verification</TabsTrigger>
+            {/* Structure tab - Admin only (contains aggregated data) */}
+            {isAdmin && (
+              <TabsTrigger value="structure">Herd Structure</TabsTrigger>
+            )}
+            {/* Verification tab - Admin only */}
+            {isAdmin && (
+              <TabsTrigger value="verification">Data Verification</TabsTrigger>
+            )}
+            {/* Forecast tab - All roles can view (read-only) */}
             <TabsTrigger value="forecast">Indicative Forecast</TabsTrigger>
-            <TabsTrigger value="coefficients">Coefficients</TabsTrigger>
+            {/* Coefficients tab - Admin only */}
+            {isAdmin && (
+              <TabsTrigger value="coefficients">Coefficients</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="structure" className="space-y-4">
@@ -536,92 +574,121 @@ export default function NationalHerdStructure() {
               </div>
             </div>
 
-            {forecastLoading ? (
-              <div className="grid grid-cols-3 gap-4">
-                {[1, 2, 3].map(i => (
-                  <Card key={i}>
-                    <CardContent className="p-6">
-                      <Skeleton className="h-8 w-24 mb-2" />
-                      <Skeleton className="h-4 w-32" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : !forecastData?.length ? (
-              <EmptyState
-                icon={TrendingUp}
-                message="No forecast data"
-                helperText="No breeding cow data available for the selected period."
-              />
-            ) : (
-              <>
-                {/* National Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground mb-1">Breeding Cows</div>
-                      <div className="text-2xl font-bold">{totalBreedingCows.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">national total</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground mb-1">Reference Rate</div>
-                      <div className="text-2xl font-bold">{((calvingRateCoeff?.coefficient_value || 0.85) * 100).toFixed(0)}%</div>
-                      <div className="text-xs text-muted-foreground">calving rate</div>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground mb-1">Estimated Calves</div>
-                      <div className="text-2xl font-bold text-primary">{Math.round(totalEstimatedCalves).toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">indicative</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground mb-1">Farmers</div>
-                      <div className="text-2xl font-bold">{totalForecastFarmers.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">contributing</div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* By Region */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      Regional Indicative Forecast
-                    </CardTitle>
-                    <CardDescription>Aggregated, non-binding projections by region</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {forecastData
-                        .sort((a, b) => b.estimated_calves - a.estimated_calves)
-                        .map((row, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
-                            <div className="flex items-center gap-3">
-                              <Badge variant="outline">{row.region}</Badge>
-                              <span className="text-sm text-muted-foreground">
-                                {row.breeding_cows_count.toLocaleString()} cows · {row.farmer_count} farmers
-                              </span>
-                              {row.data_confidence && (
-                                <ConfidenceBadge level={row.data_confidence} />
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold text-primary">
-                                ~{Math.round(row.estimated_calves).toLocaleString()}
-                              </div>
-                              <div className="text-xs text-muted-foreground">est. calves</div>
-                            </div>
-                          </div>
-                        ))}
+            {/* Non-admin: Show limited view with reference calving rate only */}
+            {!isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                    Reference Calving Rate
+                  </CardTitle>
+                  <CardDescription>
+                    System-wide reference coefficient used for indicative forecasting
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 rounded-lg border bg-card">
+                    <div className="text-sm text-muted-foreground mb-1">Reference Calving Rate</div>
+                    <div className="text-2xl font-bold">{((calvingRateCoeff?.coefficient_value || 0.85) * 100).toFixed(0)}%</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      This rate is used for indicative forecast calculations. Aggregated regional data is available to administrators only.
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Admin: Show full aggregated forecast data */}
+            {isAdmin && (
+              <>
+                {forecastLoading ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    {[1, 2, 3].map(i => (
+                      <Card key={i}>
+                        <CardContent className="p-6">
+                          <Skeleton className="h-8 w-24 mb-2" />
+                          <Skeleton className="h-4 w-32" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : !forecastData?.length ? (
+                  <EmptyState
+                    icon={TrendingUp}
+                    message="No forecast data"
+                    helperText="No breeding cow data available for the selected period."
+                  />
+                ) : (
+                  <>
+                    {/* National Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="text-sm text-muted-foreground mb-1">Breeding Cows</div>
+                          <div className="text-2xl font-bold">{totalBreedingCows.toLocaleString()}</div>
+                          <div className="text-xs text-muted-foreground">national total</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="text-sm text-muted-foreground mb-1">Reference Rate</div>
+                          <div className="text-2xl font-bold">{((calvingRateCoeff?.coefficient_value || 0.85) * 100).toFixed(0)}%</div>
+                          <div className="text-xs text-muted-foreground">calving rate</div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="p-6">
+                          <div className="text-sm text-muted-foreground mb-1">Estimated Calves</div>
+                          <div className="text-2xl font-bold text-primary">{Math.round(totalEstimatedCalves).toLocaleString()}</div>
+                          <div className="text-xs text-muted-foreground">indicative</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="text-sm text-muted-foreground mb-1">Farmers</div>
+                          <div className="text-2xl font-bold">{totalForecastFarmers.toLocaleString()}</div>
+                          <div className="text-xs text-muted-foreground">contributing</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* By Region */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                          Regional Indicative Forecast
+                        </CardTitle>
+                        <CardDescription>Aggregated, non-binding projections by region</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {forecastData
+                            .sort((a, b) => b.estimated_calves - a.estimated_calves)
+                            .map((row, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline">{row.region}</Badge>
+                                  <span className="text-sm text-muted-foreground">
+                                    {row.breeding_cows_count.toLocaleString()} cows · {row.farmer_count} farmers
+                                  </span>
+                                  {row.data_confidence && (
+                                    <ConfidenceBadge level={row.data_confidence} />
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-semibold text-primary">
+                                    ~{Math.round(row.estimated_calves).toLocaleString()}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">est. calves</div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
               </>
             )}
           </TabsContent>
