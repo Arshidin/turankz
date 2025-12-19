@@ -100,15 +100,15 @@ export default function MarketIntent() {
           </Button>
         </div>
 
-        {/* Non-Binding Disclaimer */}
+        {/* System Guardrail: Data & Outlook section disclaimer */}
         <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/50">
           <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-blue-800 dark:text-blue-200">
-              {t('marketIntent.disclaimer.title', 'Non-Binding Intent')}
+              {t('marketIntent.disclaimer.title', 'Data & Outlook — Non-Binding Intent')}
             </p>
             <p className="text-blue-700 dark:text-blue-300 mt-0.5">
-              {t('marketIntent.disclaimer.text', 'Market intents are voluntary signals only. They do not create batches, commitments, or participate in matching. Only confirmed batches are eligible for pool matching.')}
+              {t('marketIntent.disclaimer.text', 'Market intents are voluntary signals only. They do not create batches or participate in matching. To commit livestock to the pool, create a batch in Market Operations → Livestock Batches.')}
             </p>
           </div>
         </div>

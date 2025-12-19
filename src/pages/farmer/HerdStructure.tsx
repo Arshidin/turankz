@@ -81,15 +81,15 @@ export default function HerdStructure() {
           </TabsList>
 
           <TabsContent value="snapshots" className="space-y-4">
-            {/* Structural Data Disclaimer */}
+            {/* System Guardrail: Data & Outlook section disclaimer */}
             <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <p className="font-medium text-amber-800 dark:text-amber-200">
-                  {t('herdStructure.disclaimer.title', 'Structural Data Only')}
+                  {t('herdStructure.disclaimer.title', 'Data & Outlook — Structural Data Only')}
                 </p>
                 <p className="text-amber-700 dark:text-amber-300 mt-0.5">
-                  {t('herdStructure.disclaimer.text', 'Structural livestock data does not imply market availability. Only confirmed batches are eligible for matching.')}
+                  {t('herdStructure.disclaimer.text', 'Herd structure data does not create batches or market commitments. To participate in matching, create a batch in Market Operations → Livestock Batches.')}
                 </p>
               </div>
             </div>

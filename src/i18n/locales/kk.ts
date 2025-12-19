@@ -60,6 +60,18 @@ export const kk = {
     priceGridManagement: 'Анықтамалық баға торын басқару',
     premiumRulesIncentives: 'Сыйлықақы ережелері мен ынталандырулар',
     activityLog: 'Әрекеттер журналы',
+    groups: {
+      overview: 'Шолу',
+      participation: 'Нарыққа қатысу',
+      dataOutlook: 'Деректер мен болжам',
+      marketOperations: 'Нарықтық операциялар',
+      demand: 'Сұраныс сигнализациясы',
+      execution: 'Орындау',
+      account: 'Тіркелгі',
+      matching: 'Пул сәйкестендіру',
+      participants: 'Қатысушылар',
+      governance: 'Басқару',
+    },
   },
   
   roles: {
