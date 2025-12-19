@@ -21,7 +21,8 @@ import {
   Beef,
   Info,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  GraduationCap
 } from 'lucide-react';
 
 interface ObserverDashboardProps {
@@ -35,6 +36,12 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
       title: 'Изучить правила работы платформы',
       description: 'Этапы, роли участников и правила работы Turan Standard Pool.',
       path: '/welcome',
+    },
+    {
+      icon: GraduationCap,
+      title: 'Как работает рынок',
+      description: 'Уровни поставщика, жизненный цикл партии и требования к стандарту.',
+      path: '/market-workflow',
     },
     {
       icon: Grid3X3,
