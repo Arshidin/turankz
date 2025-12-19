@@ -5,13 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useActivePriceGrid, AGE_CATEGORIES, SEX_OPTIONS, BREED_GROUPS } from '@/hooks/usePriceGrid';
 import { useRole } from '@/contexts/RoleContext';
+import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { format, parseISO } from 'date-fns';
-import { Info, CircleDot, Calendar, CheckCircle2 } from 'lucide-react';
+import { Info, CircleDot, Calendar, CheckCircle2, Eye } from 'lucide-react';
 
 export default function PriceGrid() {
   const { role } = useRole();
+  const { isObserver } = useAccountStatus();
   const { data: activeGrid, isLoading, error } = useActivePriceGrid();
 
   const getAgeCategoryLabel = (value: string) => 
@@ -43,6 +46,27 @@ export default function PriceGrid() {
         title="Turan Reference Price Grid" 
         description="Indicative market benchmarks for live cattle pricing"
       />
+
+      {/* Observer Badge */}
+      {isObserver && (
+        <div className="mb-6">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-300 gap-1.5 py-1.5 px-3">
+                  <Eye className="h-3.5 w-3.5" />
+                  Ориентиры · Не цена сделки
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="text-sm">
+                  Ценовая сетка используется как ориентир и не гарантирует цену реализации.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
 
       {/* Mandatory Disclaimer */}
       <Card className="mb-6 border-primary/20 bg-primary/5">
