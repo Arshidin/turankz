@@ -7,6 +7,7 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
+import Landing from "./pages/Landing";
 import Overview from "./pages/Overview";
 import FarmerProfile from "./pages/farmer/FarmerProfile";
 import LivestockBatches from "./pages/farmer/LivestockBatches";
@@ -50,6 +51,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Public Landing Page */}
+              <Route path="/welcome" element={<Landing />} />
+              
               {/* Auth Routes - Public */}
               <Route path="/auth" element={<RoleSelection />} />
               <Route path="/auth/login" element={<Login />} />

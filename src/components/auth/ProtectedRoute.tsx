@@ -39,9 +39,9 @@ export function ProtectedRoute({
     );
   }
 
-  // Not logged in - redirect to auth
+  // Not logged in - redirect to landing page
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/welcome" state={{ from: location }} replace />;
   }
 
   // Role is still loading (user exists but role hasn't been fetched yet)
