@@ -32,7 +32,7 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
       icon: BookOpen,
       title: 'Изучить правила работы платформы',
       description: 'Этапы, роли участников и правила работы Turan Standard Pool.',
-      path: '/overview',
+      path: '/welcome',
     },
     {
       icon: Grid3X3,
@@ -44,7 +44,7 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
       icon: Beef,
       title: 'Подготовить структуру поголовья',
       description: 'Добровольные индикативные данные о поголовье. Используются только в агрегированном виде.',
-      path: '/admin/herd-structure',
+      path: '/herd-overview',
     },
   ];
 
