@@ -12,18 +12,21 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Beef, MapPin, Users, BarChart3, TrendingUp, AlertTriangle, Info, Settings, ShieldCheck, History, Eye } from 'lucide-react';
+import { Beef, MapPin, Users, BarChart3, TrendingUp, AlertTriangle, Info, Settings, ShieldCheck, History, Eye, Plus, Calendar, FileText, Lock } from 'lucide-react';
 import { 
   useAggregatedHerdStructure, 
   useAllHerdSnapshotsForAdmin,
   useUpdateSnapshotConfidence,
+  useMyHerdSnapshots,
   LIVESTOCK_CATEGORIES,
   CONFIDENCE_LEVELS,
   type LivestockCategory,
-  type DataConfidenceLevel
+  type DataConfidenceLevel,
+  type HerdStructureSnapshot
 } from '@/hooks/useHerdStructure';
 import { useIndicativeForecast, useForecastCoefficients, useUpdateForecastCoefficient } from '@/hooks/useForecast';
 import { ConfidenceBadge, ConfidenceLegend } from '@/components/data-integrity/ConfidenceBadge';
+import { HerdSnapshotWizard } from '@/components/herd/HerdSnapshotWizard';
 import { ALL_REGIONS } from '@/lib/defaults';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -52,6 +55,8 @@ export default function NationalHerdStructure() {
   const { data: aggregatedData, isLoading } = useAggregatedHerdStructure(selectedYear, selectedQuarter);
   // Only admin can view all snapshots for verification
   const { data: allSnapshots, isLoading: snapshotsLoading } = useAllHerdSnapshotsForAdmin();
+  // Farmer's own herd snapshots
+  const { data: mySnapshots, isLoading: mySnapshotsLoading } = useMyHerdSnapshots();
   // Forecast data - read-only for all roles (admin can view aggregated, others see indicative only)
   const { data: forecastData, isLoading: forecastLoading } = useIndicativeForecast(selectedYear, selectedQuarter);
   // Only admin can view/edit coefficients
@@ -60,7 +65,36 @@ export default function NationalHerdStructure() {
   const updateConfidence = useUpdateSnapshotConfidence();
   
   const [editingCalvingRate, setEditingCalvingRate] = useState<string>('');
+  const [wizardOpen, setWizardOpen] = useState(false);
   const calvingRateCoeff = coefficients?.find(c => c.coefficient_type === 'calving_rate' && c.coefficient_key === 'default');
+
+  // Group farmer's snapshots by period
+  const groupSnapshotsByPeriod = (snapshots: HerdStructureSnapshot[]) => {
+    const groups: Record<string, HerdStructureSnapshot[]> = {};
+    
+    snapshots.forEach(snapshot => {
+      const key = `${snapshot.reporting_year}-${snapshot.reporting_quarter ?? 'annual'}`;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(snapshot);
+    });
+    
+    return Object.entries(groups).map(([key, items]) => ({
+      key,
+      period: items[0].reporting_period_type === 'annual' 
+        ? `${items[0].reporting_year}` 
+        : `Q${items[0].reporting_quarter} ${items[0].reporting_year}`,
+      periodType: items[0].reporting_period_type,
+      year: items[0].reporting_year,
+      quarter: items[0].reporting_quarter,
+      items,
+      totalCount: items.reduce((sum, s) => sum + s.count, 0),
+      createdAt: items[0].created_at,
+    }));
+  };
+
+  const groupedMySnapshots = mySnapshots ? groupSnapshotsByPeriod(mySnapshots) : [];
 
   // Filter aggregated data
   const filteredData = aggregatedData?.filter(row => {
@@ -166,8 +200,12 @@ export default function NationalHerdStructure() {
           </div>
         )}
 
-        <Tabs defaultValue="forecast" className="space-y-4">
+        <Tabs defaultValue={isFarmer ? "myherd" : "forecast"} className="space-y-4">
           <TabsList>
+            {/* My Herd Data tab - Farmer only */}
+            {isFarmer && (
+              <TabsTrigger value="myherd">My Herd Data</TabsTrigger>
+            )}
             {/* Structure tab - Admin only (contains aggregated data) */}
             {isAdmin && (
               <TabsTrigger value="structure">Herd Structure</TabsTrigger>
@@ -183,6 +221,144 @@ export default function NationalHerdStructure() {
               <TabsTrigger value="coefficients">Coefficients</TabsTrigger>
             )}
           </TabsList>
+
+          {/* My Herd Data - Farmer only */}
+          {isFarmer && (
+            <TabsContent value="myherd" className="space-y-4">
+              {/* Non-binding Disclaimer */}
+              <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800 dark:text-amber-200">
+                    {t('herdStructure.myHerd.disclaimer.title', 'Indicative / Non-binding Data')}
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+                    {t('herdStructure.myHerd.disclaimer.text', 'Herd structure data is voluntary and does NOT create batches, pricing, or market commitments. It is used only for indicative national forecasting. To sell livestock, create a batch in Market Operations.')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Observer restriction banner */}
+              {isObserver && (
+                <div className="flex items-start gap-3 p-4 rounded-lg border border-muted bg-muted/50">
+                  <Lock className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">
+                      {t('herdStructure.myHerd.observerRestriction.title', 'Observer Mode — Read Only')}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {t('herdStructure.myHerd.observerRestriction.text', 'As an Observer, you cannot submit herd structure data. Complete activation to enable data input.')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Header with action button for activated farmers */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">{t('herdStructure.myHerd.title', 'My Herd Snapshots')}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t('herdStructure.myHerd.description', 'Declare your herd composition by period for national capacity planning')}
+                  </p>
+                </div>
+                {isActivatedFarmer && !isObserver && (
+                  <Button onClick={() => setWizardOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('herdStructure.newSnapshot', 'New Snapshot')}
+                  </Button>
+                )}
+              </div>
+
+              {/* Info about what data is collected */}
+              <Card className="bg-muted/50 border-muted">
+                <CardContent className="py-4">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
+                    <div className="text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground mb-1">
+                        {t('herdStructure.myHerd.aboutTitle', 'About Herd Structure Data')}
+                      </p>
+                      <p>
+                        {t('herdStructure.myHerd.aboutDescription', 'Submit periodic snapshots of your herd composition: breeding cows, bulls, young stock, and breed information. This data helps with national capacity planning but creates no market obligations.')}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Snapshots list */}
+              {mySnapshotsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2].map(i => (
+                    <Card key={i}>
+                      <CardHeader>
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                      </CardHeader>
+                      <CardContent>
+                        <Skeleton className="h-24 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : groupedMySnapshots.length === 0 ? (
+                <EmptyState
+                  icon={Calendar}
+                  message={t('herdStructure.myHerd.noSnapshots', 'No herd snapshots')}
+                  helperText={
+                    isObserver 
+                      ? t('herdStructure.myHerd.noSnapshotsObserver', 'Complete activation to submit your first herd structure snapshot.')
+                      : t('herdStructure.myHerd.noSnapshotsDescription', 'Create your first herd structure snapshot to contribute to national capacity planning.')
+                  }
+                  actionLabel={isActivatedFarmer && !isObserver ? t('herdStructure.createFirst', 'Create First Snapshot') : undefined}
+                  onAction={isActivatedFarmer && !isObserver ? () => setWizardOpen(true) : undefined}
+                />
+              ) : (
+                <div className="space-y-4">
+                  {groupedMySnapshots.map(group => (
+                    <Card key={group.key}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              {group.period}
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {group.periodType === 'annual' ? 'Annual' : 'Quarterly'}
+                              </Badge>
+                            </CardTitle>
+                            <CardDescription>
+                              {t('herdStructure.submittedOn', 'Submitted on')} {format(new Date(group.createdAt), 'MMM d, yyyy')}
+                            </CardDescription>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-semibold">{group.totalCount.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">{t('common.heads', 'heads')}</div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {group.items.map(snapshot => (
+                            <div key={snapshot.id} className="p-3 rounded-lg border bg-card">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium">
+                                  {LIVESTOCK_CATEGORIES[snapshot.category]?.label || snapshot.category}
+                                </span>
+                                <ConfidenceBadge level={snapshot.data_confidence_level} />
+                              </div>
+                              <div className="text-xl font-semibold">{snapshot.count.toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">{snapshot.breed}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
 
           <TabsContent value="structure" className="space-y-4">
             {/* Structural Data Disclaimer */}
@@ -743,6 +919,11 @@ export default function NationalHerdStructure() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Herd Snapshot Wizard - only for activated farmers */}
+        {isFarmer && (
+          <HerdSnapshotWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+        )}
       </div>
     </MainLayout>
   );
