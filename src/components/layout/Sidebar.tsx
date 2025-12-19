@@ -67,7 +67,7 @@ const farmerNavGroups: NavGroup[] = [
     key: 'overview',
     labelKey: 'nav.groups.overview',
     items: [
-      { labelKey: 'nav.overview', path: '/', icon: Home, requiredStatus: ['observer', 'active'] },
+      { labelKey: 'nav.overview', path: '/overview', icon: Home, requiredStatus: ['observer', 'active'] },
       { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
@@ -146,7 +146,7 @@ const adminNavGroups: NavGroup[] = [
     key: 'overview',
     labelKey: 'nav.groups.overview',
     items: [
-      { labelKey: 'nav.platformOverview', path: '/', icon: Home },
+      { labelKey: 'nav.platformOverview', path: '/overview', icon: Home },
       { labelKey: 'nav.matchingWindows', path: '/admin/windows', icon: CalendarClock },
     ],
   },
@@ -252,8 +252,8 @@ export function Sidebar() {
 
   // Check if path matches
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
+    if (path === '/overview') {
+      return location.pathname === '/overview';
     }
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
