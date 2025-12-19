@@ -88,6 +88,16 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
           );
         })}
       </div>
+
+      {/* Informational note - no CTA */}
+      <div className="text-center py-4 px-6">
+        <p className="text-sm text-muted-foreground">
+          Для участия в закупочных пулах и создания партий требуется активация профиля.
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          После проверки администратором вы получите расширенный доступ.
+        </p>
+      </div>
     </div>
   );
 }
