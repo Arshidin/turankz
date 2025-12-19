@@ -11,15 +11,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Beef, MapPin, Users, BarChart3, TrendingUp, CheckCircle2, Clock, AlertCircle, AlertTriangle, Info, Settings } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Beef, MapPin, Users, BarChart3, TrendingUp, AlertTriangle, Info, Settings, ShieldCheck, History } from 'lucide-react';
 import { 
   useAggregatedHerdStructure, 
-  LIVESTOCK_CATEGORIES, 
-  type LivestockCategory 
+  useAllHerdSnapshotsForAdmin,
+  useUpdateSnapshotConfidence,
+  LIVESTOCK_CATEGORIES,
+  CONFIDENCE_LEVELS,
+  type LivestockCategory,
+  type DataConfidenceLevel
 } from '@/hooks/useHerdStructure';
 import { useIndicativeForecast, useForecastCoefficients, useUpdateForecastCoefficient } from '@/hooks/useForecast';
+import { ConfidenceBadge, ConfidenceLegend } from '@/components/data-integrity/ConfidenceBadge';
 import { ALL_REGIONS } from '@/lib/defaults';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export default function NationalHerdStructure() {
   const { t } = useTranslation();
@@ -30,19 +37,30 @@ export default function NationalHerdStructure() {
   const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(undefined);
   const [regionFilter, setRegionFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [confidenceFilter, setConfidenceFilter] = useState<string>('all');
   
   const { data: aggregatedData, isLoading } = useAggregatedHerdStructure(selectedYear, selectedQuarter);
+  const { data: allSnapshots, isLoading: snapshotsLoading } = useAllHerdSnapshotsForAdmin();
   const { data: forecastData, isLoading: forecastLoading } = useIndicativeForecast(selectedYear, selectedQuarter);
   const { data: coefficients } = useForecastCoefficients();
   const updateCoefficient = useUpdateForecastCoefficient();
+  const updateConfidence = useUpdateSnapshotConfidence();
   
   const [editingCalvingRate, setEditingCalvingRate] = useState<string>('');
   const calvingRateCoeff = coefficients?.find(c => c.coefficient_type === 'calving_rate' && c.coefficient_key === 'default');
 
-  // Filter data
+  // Filter aggregated data
   const filteredData = aggregatedData?.filter(row => {
     if (regionFilter !== 'all' && row.region !== regionFilter) return false;
     if (categoryFilter !== 'all' && row.category !== categoryFilter) return false;
+    return true;
+  }) || [];
+
+  // Filter snapshots for verification
+  const filteredSnapshots = allSnapshots?.filter(row => {
+    if (regionFilter !== 'all' && row.farmer_region !== regionFilter) return false;
+    if (categoryFilter !== 'all' && row.category !== categoryFilter) return false;
+    if (confidenceFilter !== 'all' && row.data_confidence_level !== confidenceFilter) return false;
     return true;
   }) || [];
 
@@ -50,6 +68,12 @@ export default function NationalHerdStructure() {
   const totalHeads = filteredData.reduce((sum, row) => sum + row.total_count, 0);
   const totalFarmers = new Set(filteredData.flatMap(row => row.farmer_count)).size;
   const uniqueRegions = new Set(filteredData.map(row => row.region)).size;
+
+  // Confidence breakdown
+  const confidenceBreakdown = allSnapshots?.reduce((acc, row) => {
+    acc[row.data_confidence_level] = (acc[row.data_confidence_level] || 0) + 1;
+    return acc;
+  }, {} as Record<DataConfidenceLevel, number>) || {};
 
   // Forecast totals
   const totalBreedingCows = forecastData?.reduce((sum, r) => sum + r.breeding_cows_count, 0) || 0;
@@ -59,13 +83,13 @@ export default function NationalHerdStructure() {
   // Group by region
   const byRegion = filteredData.reduce((acc, row) => {
     if (!acc[row.region]) {
-      acc[row.region] = { total: 0, farmers: 0, categories: {} as Record<LivestockCategory, number> };
+      acc[row.region] = { total: 0, farmers: 0, categories: {} as Record<LivestockCategory, number>, confidence: row.avg_confidence };
     }
     acc[row.region].total += row.total_count;
     acc[row.region].farmers = Math.max(acc[row.region].farmers, row.farmer_count);
     acc[row.region].categories[row.category] = (acc[row.region].categories[row.category] || 0) + row.total_count;
     return acc;
-  }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number> }>);
+  }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number>; confidence: DataConfidenceLevel }>);
 
   // Group by category
   const byCategory = filteredData.reduce((acc, row) => {
@@ -96,6 +120,16 @@ export default function NationalHerdStructure() {
     );
   };
 
+  const handleUpdateConfidence = (id: string, newLevel: DataConfidenceLevel) => {
+    updateConfidence.mutate(
+      { id, confidence_level: newLevel },
+      {
+        onSuccess: () => toast.success(`Marked as ${CONFIDENCE_LEVELS[newLevel].label}`),
+        onError: () => toast.error('Failed to update confidence level'),
+      }
+    );
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -107,8 +141,9 @@ export default function NationalHerdStructure() {
         <Tabs defaultValue="structure" className="space-y-4">
           <TabsList>
             <TabsTrigger value="structure">Herd Structure</TabsTrigger>
-            <TabsTrigger value="forecast">National Indicative Forecast</TabsTrigger>
-            <TabsTrigger value="coefficients">Reference Coefficients</TabsTrigger>
+            <TabsTrigger value="verification">Data Verification</TabsTrigger>
+            <TabsTrigger value="forecast">Indicative Forecast</TabsTrigger>
+            <TabsTrigger value="coefficients">Coefficients</TabsTrigger>
           </TabsList>
 
           <TabsContent value="structure" className="space-y-4">
@@ -124,6 +159,9 @@ export default function NationalHerdStructure() {
                 </p>
               </div>
             </div>
+
+            {/* Confidence Legend */}
+            <ConfidenceLegend />
 
             {/* Filters */}
             <Card>
@@ -291,7 +329,7 @@ export default function NationalHerdStructure() {
                   </CardContent>
                 </Card>
 
-                {/* By Region */}
+                {/* By Region with Confidence */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
@@ -311,6 +349,7 @@ export default function NationalHerdStructure() {
                                 <span className="text-xs text-muted-foreground">
                                   {data.farmers} farmers
                                 </span>
+                                <ConfidenceBadge level={data.confidence} />
                               </div>
                               <div className="text-lg font-bold">{data.total.toLocaleString()} heads</div>
                             </div>
@@ -330,6 +369,156 @@ export default function NationalHerdStructure() {
                   </CardContent>
                 </Card>
               </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="verification" className="space-y-4">
+            {/* Admin Note */}
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/50">
+              <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-blue-800 dark:text-blue-200">
+                  Data Verification
+                </p>
+                <p className="text-blue-700 dark:text-blue-300 mt-0.5">
+                  Review and update confidence levels for farmer-submitted data. You can mark data as Reviewed or Verified but cannot edit the underlying farmer data.
+                </p>
+              </div>
+            </div>
+
+            {/* Confidence Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(['self_declared', 'reviewed', 'verified'] as DataConfidenceLevel[]).map((level) => (
+                <Card key={level}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <ConfidenceBadge level={level} size="md" />
+                      <div className="text-2xl font-bold">{confidenceBreakdown[level] || 0}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">snapshots</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex flex-wrap gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Region</Label>
+                    <Select value={regionFilter} onValueChange={setRegionFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="All regions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All regions</SelectItem>
+                        {ALL_REGIONS.map(r => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Confidence</Label>
+                    <Select value={confidenceFilter} onValueChange={setConfidenceFilter}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="All levels" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All levels</SelectItem>
+                        {Object.entries(CONFIDENCE_LEVELS).map(([key, { label }]) => (
+                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {snapshotsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : filteredSnapshots.length === 0 ? (
+              <EmptyState icon={History} message="No snapshots to verify" />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Individual Snapshots</CardTitle>
+                  <CardDescription>
+                    {filteredSnapshots.length} snapshots · Click actions to update confidence level
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Farmer</TableHead>
+                          <TableHead>Region</TableHead>
+                          <TableHead>Period</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Breed</TableHead>
+                          <TableHead className="text-right">Count</TableHead>
+                          <TableHead>Confidence</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSnapshots.slice(0, 50).map((snapshot) => (
+                          <TableRow key={snapshot.id}>
+                            <TableCell className="font-medium">{snapshot.farmer_name}</TableCell>
+                            <TableCell>{snapshot.farmer_region}</TableCell>
+                            <TableCell>
+                              {snapshot.reporting_quarter ? `Q${snapshot.reporting_quarter} ` : ''}{snapshot.reporting_year}
+                            </TableCell>
+                            <TableCell>{LIVESTOCK_CATEGORIES[snapshot.category]?.label}</TableCell>
+                            <TableCell>{snapshot.breed}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {snapshot.count.toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <ConfidenceBadge level={snapshot.data_confidence_level} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {snapshot.data_confidence_level !== 'reviewed' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleUpdateConfidence(snapshot.id, 'reviewed')}
+                                    disabled={updateConfidence.isPending}
+                                  >
+                                    Mark Reviewed
+                                  </Button>
+                                )}
+                                {snapshot.data_confidence_level !== 'verified' && (
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleUpdateConfidence(snapshot.id, 'verified')}
+                                    disabled={updateConfidence.isPending}
+                                  >
+                                    Verify
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {filteredSnapshots.length > 50 && (
+                      <div className="text-center py-3 text-sm text-muted-foreground">
+                        Showing 50 of {filteredSnapshots.length} snapshots
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
@@ -417,6 +606,9 @@ export default function NationalHerdStructure() {
                               <span className="text-sm text-muted-foreground">
                                 {row.breeding_cows_count.toLocaleString()} cows · {row.farmer_count} farmers
                               </span>
+                              {row.data_confidence && (
+                                <ConfidenceBadge level={row.data_confidence} />
+                              )}
                             </div>
                             <div className="text-right">
                               <div className="font-semibold text-primary">
@@ -485,22 +677,5 @@ export default function NationalHerdStructure() {
         </Tabs>
       </div>
     </MainLayout>
-  );
-}
-
-function ConfidenceBadge({ level }: { level: string }) {
-  const config: Record<string, { label: string; icon: typeof CheckCircle2; color: string }> = {
-    self_declared: { label: 'Self-Declared', icon: Clock, color: 'text-muted-foreground' },
-    reviewed: { label: 'Reviewed', icon: AlertCircle, color: 'text-amber-600' },
-    verified: { label: 'Verified', icon: CheckCircle2, color: 'text-emerald-600' },
-  };
-  
-  const { label, icon: Icon, color } = config[level] || config.self_declared;
-  
-  return (
-    <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-      <Icon className={`w-3 h-3 mr-1 ${color}`} />
-      {label}
-    </Badge>
   );
 }
