@@ -416,6 +416,9 @@ export type Database = {
           id: string
           non_binding: boolean
           notes: string | null
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           breed: string
@@ -427,6 +430,9 @@ export type Database = {
           id?: string
           non_binding?: boolean
           notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           breed?: string
@@ -438,6 +444,9 @@ export type Database = {
           id?: string
           non_binding?: boolean
           notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -1363,6 +1372,43 @@ export type Database = {
           intent_count: number
           region: string
           total_estimated_heads: number
+        }[]
+      }
+      get_all_herd_snapshots_for_admin: {
+        Args: never
+        Returns: {
+          breed: string
+          category: Database["public"]["Enums"]["livestock_category"]
+          count: number
+          created_at: string
+          data_confidence_level: Database["public"]["Enums"]["data_confidence_level"]
+          farmer_id: string
+          farmer_name: string
+          farmer_region: string
+          id: string
+          notes: string
+          reporting_period_type: Database["public"]["Enums"]["reporting_period_type"]
+          reporting_quarter: number
+          reporting_year: number
+        }[]
+      }
+      get_all_market_intents_for_admin: {
+        Args: never
+        Returns: {
+          breed: string
+          confidence_level: Database["public"]["Enums"]["intent_confidence_level"]
+          created_at: string
+          estimated_heads: number
+          farmer_id: string
+          farmer_name: string
+          farmer_region: string
+          horizon: Database["public"]["Enums"]["market_intent_horizon"]
+          id: string
+          non_binding: boolean
+          notes: string
+          verification_status: string
+          verified_at: string
+          verified_by: string
         }[]
       }
       get_user_role: {

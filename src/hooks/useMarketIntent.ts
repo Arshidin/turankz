@@ -17,6 +17,9 @@ export interface MarketAvailabilityIntent {
   non_binding: boolean;
   notes: string | null;
   created_at: string;
+  verification_status?: string;
+  verified_at?: string | null;
+  verified_by?: string | null;
 }
 
 export interface CreateIntentInput {
@@ -34,6 +37,24 @@ export interface AggregatedIntentData {
   total_estimated_heads: number;
   intent_count: number;
   avg_confidence: IntentConfidenceLevel;
+}
+
+// Admin view of individual intents with farmer info
+export interface AdminMarketIntent {
+  id: string;
+  farmer_id: string;
+  farmer_name: string;
+  farmer_region: string;
+  horizon: MarketIntentHorizon;
+  breed: string;
+  estimated_heads: number;
+  confidence_level: IntentConfidenceLevel;
+  verification_status: string;
+  verified_at: string | null;
+  verified_by: string | null;
+  non_binding: boolean;
+  notes: string | null;
+  created_at: string;
 }
 
 // Horizon labels
@@ -146,6 +167,8 @@ export function useDeleteMarketIntent() {
 
 /**
  * Hook for MPK/Admin to view aggregated market intent (no farmer details)
+ * MPK sees ONLY aggregated data: by region, breed, horizon
+ * No farmer names, no farm-level data, no confidence attribution per farmer
  */
 export function useAggregatedMarketIntent(horizon?: MarketIntentHorizon) {
   const { role } = useAuthContext();
@@ -162,5 +185,58 @@ export function useAggregatedMarketIntent(horizon?: MarketIntentHorizon) {
       return data as AggregatedIntentData[];
     },
     enabled: role === 'admin' || role === 'mpk',
+  });
+}
+
+/**
+ * Hook for admin to view all market intents with farmer info (for verification)
+ * Uses secure RPC function
+ */
+export function useAllMarketIntentsForAdmin() {
+  const { role } = useAuthContext();
+
+  return useQuery({
+    queryKey: ['all-market-intents-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_all_market_intents_for_admin');
+      if (error) throw error;
+      return data as AdminMarketIntent[];
+    },
+    enabled: role === 'admin',
+  });
+}
+
+/**
+ * Hook for admin to update verification status
+ * Admin can ONLY update verification status - not farmer-submitted data
+ */
+export function useUpdateIntentVerification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, verification_status, verified_by }: { 
+      id: string; 
+      verification_status: string;
+      verified_by: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('market_availability_intents')
+        .update({ 
+          verification_status,
+          verified_at: new Date().toISOString(),
+          verified_by,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['market-intents'] });
+      queryClient.invalidateQueries({ queryKey: ['all-market-intents-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['aggregated-market-intent'] });
+    },
   });
 }

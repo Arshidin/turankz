@@ -134,7 +134,8 @@ export function useCreateHerdSnapshot() {
 }
 
 /**
- * Hook for admin to view aggregated national herd structure
+ * Hook for admin/MPK to view aggregated national herd structure
+ * MPK sees only aggregated data, no farmer-level details
  */
 export function useAggregatedHerdStructure(year?: number, quarter?: number) {
   const { role } = useAuthContext();
@@ -151,50 +152,55 @@ export function useAggregatedHerdStructure(year?: number, quarter?: number) {
       if (error) throw error;
       return data as AggregatedHerdData[];
     },
-    enabled: role === 'admin',
+    // Both admin and MPK can view aggregated data
+    enabled: role === 'admin' || role === 'mpk',
   });
 }
 
+export interface AdminHerdSnapshot {
+  id: string;
+  farmer_id: string;
+  farmer_name: string;
+  farmer_region: string;
+  reporting_period_type: ReportingPeriodType;
+  reporting_year: number;
+  reporting_quarter: number | null;
+  breed: string;
+  category: LivestockCategory;
+  count: number;
+  data_confidence_level: DataConfidenceLevel;
+  notes: string | null;
+  created_at: string;
+}
+
 /**
- * Hook for admin to view all snapshots (for detailed inspection)
+ * Hook for admin to view all snapshots with farmer info (for verification)
+ * Uses secure RPC function that enforces admin-only access
  */
-export function useAllHerdSnapshots(filters?: { year?: number; quarter?: number }) {
+export function useAllHerdSnapshotsForAdmin() {
   const { role } = useAuthContext();
 
   return useQuery({
-    queryKey: ['all-herd-snapshots', filters],
+    queryKey: ['all-herd-snapshots-admin'],
     queryFn: async () => {
-      let query = supabase
-        .from('herd_structure_snapshots')
-        .select(`
-          *,
-          farmers!inner(name, region, farmer_id)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (filters?.year) {
-        query = query.eq('reporting_year', filters.year);
-      }
-      if (filters?.quarter) {
-        query = query.eq('reporting_quarter', filters.quarter);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc('get_all_herd_snapshots_for_admin');
       if (error) throw error;
-      return data;
+      return data as AdminHerdSnapshot[];
     },
     enabled: role === 'admin',
   });
 }
 
 /**
- * Hook for admin to update confidence level
+ * Hook for admin to update verification status (confidence level)
+ * Admin can ONLY update verification status - not farmer-submitted data
  */
 export function useUpdateSnapshotConfidence() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, confidence_level }: { id: string; confidence_level: DataConfidenceLevel }) => {
+      // Admin can only update the data_confidence_level field (verification status)
       const { data, error } = await supabase
         .from('herd_structure_snapshots')
         .update({ data_confidence_level: confidence_level })
@@ -207,7 +213,7 @@ export function useUpdateSnapshotConfidence() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['herd-snapshots'] });
-      queryClient.invalidateQueries({ queryKey: ['all-herd-snapshots'] });
+      queryClient.invalidateQueries({ queryKey: ['all-herd-snapshots-admin'] });
       queryClient.invalidateQueries({ queryKey: ['aggregated-herd-structure'] });
     },
   });
