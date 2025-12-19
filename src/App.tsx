@@ -15,6 +15,7 @@ import BatchDetail from "./pages/farmer/BatchDetail";
 import SalesCalendar from "./pages/farmer/SalesCalendar";
 import HerdStructure from "./pages/farmer/HerdStructure";
 import MarketIntent from "./pages/farmer/MarketIntent";
+import MarketSignals from "./pages/farmer/MarketSignals";
 import FarmerExecutions from "./pages/farmer/FarmerExecutions";
 import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
@@ -219,6 +220,13 @@ const App = () => (
               <Route path="/price-grid" element={
                 <ProtectedRoute>
                   <PriceGrid />
+                </ProtectedRoute>
+              } />
+              
+              {/* Market Signals - read-only for observers */}
+              <Route path="/market-signals" element={
+                <ProtectedRoute>
+                  <MarketSignals />
                 </ProtectedRoute>
               } />
               
