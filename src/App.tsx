@@ -14,12 +14,14 @@ import LivestockBatches from "./pages/farmer/LivestockBatches";
 import BatchDetail from "./pages/farmer/BatchDetail";
 import SalesCalendar from "./pages/farmer/SalesCalendar";
 import HerdStructure from "./pages/farmer/HerdStructure";
+import MarketIntent from "./pages/farmer/MarketIntent";
 import FarmerExecutions from "./pages/farmer/FarmerExecutions";
 import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
 import PurchasePoolRequests from "./pages/mpk/PurchasePoolRequests";
 import MpkProfile from "./pages/mpk/MpkProfile";
 import MpkExecutions from "./pages/mpk/MpkExecutions";
+import RegionalOutlook from "./pages/mpk/RegionalOutlook";
 import FarmersManagement from "./pages/admin/FarmersManagement";
 import MpkManagement from "./pages/admin/MpkManagement";
 import GradingStatus from "./pages/admin/GradingStatus";
@@ -31,6 +33,7 @@ import PremiumManagement from "./pages/admin/PremiumManagement";
 import ExecutionManagement from "./pages/admin/ExecutionManagement";
 import MatchingWindowsManagement from "./pages/admin/MatchingWindowsManagement";
 import NationalHerdStructure from "./pages/admin/NationalHerdStructure";
+import MarketIntentOverview from "./pages/admin/MarketIntentOverview";
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 import AccessRestricted from "./pages/AccessRestricted";
@@ -102,6 +105,11 @@ const App = () => (
                   <HerdStructure />
                 </ProtectedRoute>
               } />
+              <Route path="/farmer/intent" element={
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
+                  <MarketIntent />
+                </ProtectedRoute>
+              } />
               
               {/* MPK Routes - requireActive blocks observer/suspended */}
               <Route path="/mpk/profile" element={
@@ -127,6 +135,11 @@ const App = () => (
               <Route path="/mpk/executions" element={
                 <ProtectedRoute allowedRoles={['mpk', 'admin']} requireActive>
                   <MpkExecutions />
+                </ProtectedRoute>
+              } />
+              <Route path="/mpk/outlook" element={
+                <ProtectedRoute allowedRoles={['mpk', 'admin']}>
+                  <RegionalOutlook />
                 </ProtectedRoute>
               } />
               
@@ -184,6 +197,11 @@ const App = () => (
               <Route path="/admin/herd-structure" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <NationalHerdStructure />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/market-intent" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <MarketIntentOverview />
                 </ProtectedRoute>
               } />
               

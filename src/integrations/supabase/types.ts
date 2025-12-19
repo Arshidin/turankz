@@ -405,6 +405,50 @@ export type Database = {
           },
         ]
       }
+      market_availability_intents: {
+        Row: {
+          breed: string
+          confidence_level: Database["public"]["Enums"]["intent_confidence_level"]
+          created_at: string
+          estimated_heads: number
+          farmer_id: string
+          horizon: Database["public"]["Enums"]["market_intent_horizon"]
+          id: string
+          non_binding: boolean
+          notes: string | null
+        }
+        Insert: {
+          breed: string
+          confidence_level?: Database["public"]["Enums"]["intent_confidence_level"]
+          created_at?: string
+          estimated_heads: number
+          farmer_id: string
+          horizon: Database["public"]["Enums"]["market_intent_horizon"]
+          id?: string
+          non_binding?: boolean
+          notes?: string | null
+        }
+        Update: {
+          breed?: string
+          confidence_level?: Database["public"]["Enums"]["intent_confidence_level"]
+          created_at?: string
+          estimated_heads?: number
+          farmer_id?: string
+          horizon?: Database["public"]["Enums"]["market_intent_horizon"]
+          id?: string
+          non_binding?: boolean
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_availability_intents_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matching_activity_log: {
         Row: {
           action_type: string
@@ -1308,6 +1352,19 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_aggregated_market_intent: {
+        Args: {
+          p_horizon?: Database["public"]["Enums"]["market_intent_horizon"]
+        }
+        Returns: {
+          avg_confidence: Database["public"]["Enums"]["intent_confidence_level"]
+          breed: string
+          horizon: Database["public"]["Enums"]["market_intent_horizon"]
+          intent_count: number
+          region: string
+          total_estimated_heads: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1360,11 +1417,13 @@ export type Database = {
         | "closed"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
+      intent_confidence_level: "low" | "medium" | "high"
       livestock_category:
         | "breeding_cows"
         | "replacement_heifers"
         | "bulls"
         | "calves"
+      market_intent_horizon: "3m" | "6m" | "12m"
       matching_status: "active" | "finalized" | "cancelled"
       matching_window_status: "upcoming" | "active" | "locked" | "closed"
       mpk_status: "active" | "restricted" | "inactive"
@@ -1558,12 +1617,14 @@ export const Constants = {
       ],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
+      intent_confidence_level: ["low", "medium", "high"],
       livestock_category: [
         "breeding_cows",
         "replacement_heifers",
         "bulls",
         "calves",
       ],
+      market_intent_horizon: ["3m", "6m", "12m"],
       matching_status: ["active", "finalized", "cancelled"],
       matching_window_status: ["upcoming", "active", "locked", "closed"],
       mpk_status: ["active", "restricted", "inactive"],
