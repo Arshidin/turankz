@@ -10,14 +10,16 @@
     --background: 210 20% 98%;
 
     /* ===========================================
-       LANDING PAGE - INSTITUTIONAL DARK THEME
+       LANDING PAGE - MCKINSEY INSTITUTIONAL THEME
        =========================================== */
-    --landing-background: 220 25% 12%;
-    --landing-foreground: 210 15% 95%;
-    --landing-muted: 210 10% 70%;
-    --landing-subtle: 210 10% 50%;
-    --landing-accent: 210 15% 60%;
-    --landing-border: 210 15% 35%;
+    --landing-background: 215 45% 13%;
+    --landing-foreground: 0 0% 100%;
+    --landing-muted: 210 20% 80%;
+    --landing-subtle: 210 15% 60%;
+    --landing-accent: 210 60% 55%;
+    --landing-border: 210 30% 30%;
+    --landing-card: 215 40% 18%;
+    --landing-card-hover: 215 45% 22%;
     --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
