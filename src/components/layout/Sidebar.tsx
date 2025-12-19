@@ -33,7 +33,8 @@ import {
   Eye,
   Lock,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Beef
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +75,7 @@ const farmerNavGroups: NavGroup[] = [
     items: [
       { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
       { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
+      { labelKey: 'nav.herdStructure', path: '/farmer/herd', icon: Beef, requiredStatus: ['active'] },
     ],
   },
   {
@@ -158,6 +160,7 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { labelKey: 'nav.priceGridManagement', path: '/admin/price-grid', icon: Grid3X3 },
       { labelKey: 'nav.premiumRulesIncentives', path: '/admin/premiums', icon: Award },
+      { labelKey: 'nav.nationalHerd', path: '/admin/herd-structure', icon: Beef },
       { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
     ],
     collapsible: true,

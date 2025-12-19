@@ -355,6 +355,56 @@ export type Database = {
         }
         Relationships: []
       }
+      herd_structure_snapshots: {
+        Row: {
+          breed: string
+          category: Database["public"]["Enums"]["livestock_category"]
+          count: number
+          created_at: string
+          data_confidence_level: Database["public"]["Enums"]["data_confidence_level"]
+          farmer_id: string
+          id: string
+          notes: string | null
+          reporting_period_type: Database["public"]["Enums"]["reporting_period_type"]
+          reporting_quarter: number | null
+          reporting_year: number
+        }
+        Insert: {
+          breed: string
+          category: Database["public"]["Enums"]["livestock_category"]
+          count: number
+          created_at?: string
+          data_confidence_level?: Database["public"]["Enums"]["data_confidence_level"]
+          farmer_id: string
+          id?: string
+          notes?: string | null
+          reporting_period_type: Database["public"]["Enums"]["reporting_period_type"]
+          reporting_quarter?: number | null
+          reporting_year: number
+        }
+        Update: {
+          breed?: string
+          category?: Database["public"]["Enums"]["livestock_category"]
+          count?: number
+          created_at?: string
+          data_confidence_level?: Database["public"]["Enums"]["data_confidence_level"]
+          farmer_id?: string
+          id?: string
+          notes?: string | null
+          reporting_period_type?: Database["public"]["Enums"]["reporting_period_type"]
+          reporting_quarter?: number | null
+          reporting_year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "herd_structure_snapshots_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matching_activity_log: {
         Row: {
           action_type: string
@@ -1247,6 +1297,17 @@ export type Database = {
           weight_min: number
         }[]
       }
+      get_aggregated_herd_structure: {
+        Args: { p_quarter?: number; p_year?: number }
+        Returns: {
+          avg_confidence: Database["public"]["Enums"]["data_confidence_level"]
+          breed: string
+          category: Database["public"]["Enums"]["livestock_category"]
+          farmer_count: number
+          region: string
+          total_count: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1288,6 +1349,7 @@ export type Database = {
         | "matched"
         | "closed"
         | "delivered"
+      data_confidence_level: "self_declared" | "reviewed" | "verified"
       delivery_period: "short_term" | "mid_term" | "long_term"
       execution_status:
         | "matched"
@@ -1298,6 +1360,11 @@ export type Database = {
         | "closed"
       farmer_grading: "observer" | "declared_supplier" | "standard_supplier"
       farmer_reliability: "high" | "medium" | "low"
+      livestock_category:
+        | "breeding_cows"
+        | "replacement_heifers"
+        | "bulls"
+        | "calves"
       matching_status: "active" | "finalized" | "cancelled"
       matching_window_status: "upcoming" | "active" | "locked" | "closed"
       mpk_status: "active" | "restricted" | "inactive"
@@ -1321,6 +1388,7 @@ export type Database = {
         | "fulfilled"
         | "closed"
         | "cancelled"
+      reporting_period_type: "annual" | "quarterly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1478,6 +1546,7 @@ export const Constants = {
         "closed",
         "delivered",
       ],
+      data_confidence_level: ["self_declared", "reviewed", "verified"],
       delivery_period: ["short_term", "mid_term", "long_term"],
       execution_status: [
         "matched",
@@ -1489,6 +1558,12 @@ export const Constants = {
       ],
       farmer_grading: ["observer", "declared_supplier", "standard_supplier"],
       farmer_reliability: ["high", "medium", "low"],
+      livestock_category: [
+        "breeding_cows",
+        "replacement_heifers",
+        "bulls",
+        "calves",
+      ],
       matching_status: ["active", "finalized", "cancelled"],
       matching_window_status: ["upcoming", "active", "locked", "closed"],
       mpk_status: ["active", "restricted", "inactive"],
@@ -1514,6 +1589,7 @@ export const Constants = {
         "closed",
         "cancelled",
       ],
+      reporting_period_type: ["annual", "quarterly"],
     },
   },
 } as const
