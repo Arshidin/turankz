@@ -25,7 +25,7 @@ export default function Landing() {
             
             {/* Subheadline with arrow */}
             <div className="mt-8 md:mt-10 flex items-start gap-6 max-w-lg">
-              <p className="text-base md:text-lg text-landing-muted font-light leading-relaxed">A governed market coordination platform for live cattle supply. Designed to ensure predictability, standards, and year-round supply for the beef industry.</p>
+              <p className="text-base md:text-lg text-landing-muted font-light leading-relaxed">Управляемая платформа координации рынка живого скота. Создана для обеспечения предсказуемости, стандартов и круглогодичных поставок для мясной отрасли.</p>
               
             </div>
             
@@ -45,11 +45,11 @@ export default function Landing() {
               <div className="col-span-2 bg-landing-card hover:bg-landing-card-hover transition-colors duration-300 cursor-default">
                 <div className="aspect-[2/1] p-8 flex flex-col justify-between">
                   <span className="text-[11px] tracking-[0.2em] uppercase text-landing-accent font-medium">
-                    Market Infrastructure
+                    Рыночная инфраструктура
                   </span>
                   <div>
                     <h3 className="font-serif text-2xl text-landing-foreground italic leading-tight">
-                      Governed supply coordination for agricultural commodities
+                      Управляемая координация поставок сельскохозяйственных товаров
                     </h3>
                   </div>
                 </div>
@@ -59,7 +59,7 @@ export default function Landing() {
               <div className="bg-landing-card hover:bg-landing-card-hover transition-colors duration-300 cursor-default">
                 <div className="aspect-[4/3] p-6 flex flex-col justify-between">
                   <span className="text-[10px] tracking-[0.2em] uppercase text-landing-subtle font-medium">
-                    Standards
+                    Стандарты
                   </span>
                   <div className="space-y-2">
                     <div className="h-px w-full bg-landing-border" />
@@ -73,7 +73,7 @@ export default function Landing() {
               <div className="bg-landing-card hover:bg-landing-card-hover transition-colors duration-300 cursor-default">
                 <div className="aspect-[4/3] p-6 flex flex-col justify-between">
                   <span className="text-[10px] tracking-[0.2em] uppercase text-landing-subtle font-medium">
-                    Predictability
+                    Предсказуемость
                   </span>
                   <div className="flex items-end justify-between">
                     <span className="text-[9px] tracking-wider uppercase text-landing-subtle/70">2024–2025</span>
