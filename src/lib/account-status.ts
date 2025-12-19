@@ -116,6 +116,7 @@ export const FARMER_NAV_PERMISSIONS: NavPermission[] = [
   { path: '/farmer/calendar', requiredStatus: ['active'] },
   { path: '/farmer/executions', requiredStatus: ['active'] },
   { path: '/price-grid', requiredStatus: ['observer', 'active'], readOnly: true },
+  { path: '/market-workflow', requiredStatus: ['observer', 'active'], readOnly: true },
   { path: '/farmer/profile', requiredStatus: ['active'] },
 ];
 

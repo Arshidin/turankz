@@ -35,7 +35,8 @@ import {
   ChevronDown,
   ChevronRight,
   Beef,
-  TrendingUp
+  TrendingUp,
+  GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +73,7 @@ const farmerNavGroups: NavGroup[] = [
     items: [
       { labelKey: 'nav.overview', path: '/overview', icon: Home, requiredStatus: ['observer', 'active'] },
       { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
+      { labelKey: 'nav.marketWorkflow', path: '/market-workflow', icon: GraduationCap, requiredStatus: ['observer', 'active'], readOnly: true },
       // National Herd Structure - read-only for observers (uses public route)
       { labelKey: 'nav.nationalHerd', path: '/herd-overview', icon: Beef, requiredStatus: ['observer', 'active'], readOnly: true },
     ],

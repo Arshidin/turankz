@@ -61,6 +61,7 @@ export const kk = {
     premiumRulesIncentives: 'Сыйлықақы ережелері мен ынталандырулар',
     activityLog: 'Әрекеттер журналы',
     nationalHerd: 'Ұлттық мал санының құрылымы',
+    marketWorkflow: 'Нарық қалай жұмыс істейді',
     herdStructure: 'Мал санының құрылымы',
     marketIntent: 'Нарық ниеттері',
     regionalOutlook: 'Аймақтық болжам',

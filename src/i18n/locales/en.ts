@@ -61,6 +61,7 @@ export const en = {
     premiumRulesIncentives: 'Premium Rules & Incentives',
     activityLog: 'Activity Log',
     nationalHerd: 'National Herd Structure',
+    marketWorkflow: 'How Market Works',
     herdStructure: 'Herd Structure',
     marketIntent: 'Market Intent',
     regionalOutlook: 'Regional Outlook',
