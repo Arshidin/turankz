@@ -10,9 +10,9 @@ export default function RoleSelection() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Join Turan Standard Pool</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Присоединиться к Turan Standard Pool</h1>
           <p className="text-muted-foreground">
-            A governed platform for coordinated livestock supply between farmers and meat processing plants.
+            Управляемая платформа для координации поставок скота между фермерами и мясоперерабатывающими предприятиями.
           </p>
         </div>
 
@@ -25,15 +25,15 @@ export default function RoleSelection() {
               <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                 <Wheat className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle className="text-xl">Register as Farmer</CardTitle>
+              <CardTitle className="text-xl">Регистрация как Фермер</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <CardDescription className="text-sm">
-                Declare livestock batches and participate in purchase pools.
-                Access depends on batch declarations and compliance with standards.
+                Декларируйте партии скота и участвуйте в закупочных пулах.
+                Доступ зависит от деклараций партий и соответствия стандартам.
               </CardDescription>
               <Button className="mt-4 w-full" variant="outline">
-                Continue as Farmer
+                Продолжить как Фермер
               </Button>
             </CardContent>
           </Card>
@@ -46,15 +46,15 @@ export default function RoleSelection() {
               <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                 <Factory className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle className="text-xl">Register as MPK</CardTitle>
+              <CardTitle className="text-xl">Регистрация как МПК</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <CardDescription className="text-sm">
-                Create purchase pool requests and coordinate livestock procurement.
-                Consistent demand behavior affects access priority.
+                Создавайте заявки на закупочные пулы и координируйте закупки скота.
+                Стабильность спроса влияет на приоритет доступа.
               </CardDescription>
               <Button className="mt-4 w-full" variant="outline">
-                Continue as MPK
+                Продолжить как МПК
               </Button>
             </CardContent>
           </Card>
@@ -62,17 +62,17 @@ export default function RoleSelection() {
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
+            Уже есть аккаунт?{' '}
             <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/auth/login')}>
-              Sign in
+              Войти
             </Button>
           </p>
         </div>
 
         <div className="text-center text-xs text-muted-foreground border-t pt-4">
           <p>
-            Turan Standard Pool is a pilot program. Registration does not guarantee participation.
-            All access is subject to Admin review and platform governance.
+            Turan Standard Pool — это пилотная программа. Регистрация не гарантирует участие.
+            Весь доступ подлежит проверке Администратором и управлению платформой.
           </p>
         </div>
       </div>
