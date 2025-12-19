@@ -113,6 +113,8 @@ export default {
           subtle: "hsl(var(--landing-subtle))",
           accent: "hsl(var(--landing-accent))",
           border: "hsl(var(--landing-border))",
+          card: "hsl(var(--landing-card))",
+          "card-hover": "hsl(var(--landing-card-hover))",
         },
       },
       borderRadius: {

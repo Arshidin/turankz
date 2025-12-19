@@ -1,106 +1,100 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 export default function Landing() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-landing-background relative overflow-hidden">
-      {/* Subtle architectural background grid */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Vertical grid lines */}
-        <div className="absolute top-0 left-[25%] w-px h-full bg-landing-accent opacity-[0.03]" />
-        <div className="absolute top-0 left-[50%] w-px h-full bg-landing-accent opacity-[0.04]" />
-        <div className="absolute top-0 left-[75%] w-px h-full bg-landing-accent opacity-[0.03]" />
-        {/* Horizontal grid lines */}
-        <div className="absolute top-[33%] left-0 w-full h-px bg-landing-accent opacity-[0.02]" />
-        <div className="absolute top-[66%] left-0 w-full h-px bg-landing-accent opacity-[0.02]" />
+      {/* Subtle background grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
+        <div className="absolute top-0 left-[20%] w-px h-full bg-white" />
+        <div className="absolute top-0 left-[40%] w-px h-full bg-white" />
+        <div className="absolute top-0 left-[60%] w-px h-full bg-white" />
+        <div className="absolute top-0 left-[80%] w-px h-full bg-white" />
       </div>
 
-      {/* Right-side institutional insight panels */}
-      <div className="absolute top-0 right-0 w-1/2 h-full pointer-events-none hidden lg:block">
-        {/* Panel 1 - Primary insight tile */}
-        <div className="absolute top-[18%] right-[12%] w-72 border border-landing-border/40 bg-landing-background/50">
-          <div className="p-6">
-            <span className="text-[10px] tracking-[0.2em] uppercase text-landing-subtle/70 font-light">
-              Market Infrastructure
-            </span>
-            <div className="mt-4 space-y-2">
-              <div className="h-px w-full bg-landing-accent/20" />
-              <div className="h-px w-3/4 bg-landing-accent/15" />
-              <div className="h-px w-1/2 bg-landing-accent/10" />
-            </div>
-            <div className="mt-6 flex justify-between items-end">
-              <span className="text-[9px] tracking-wider uppercase text-landing-subtle/50">Q4 2024</span>
-              <div className="w-8 h-px bg-landing-accent/30" />
-            </div>
-          </div>
-        </div>
-
-        {/* Panel 2 - Secondary tile (offset, slightly overlapping) */}
-        <div className="absolute top-[42%] right-[22%] w-56 border border-landing-border/30 bg-landing-background/30">
-          <div className="p-5">
-            <span className="text-[9px] tracking-[0.2em] uppercase text-landing-subtle/60 font-light">
-              Supply Governance
-            </span>
-            <div className="mt-3 space-y-1.5">
-              <div className="h-px w-full bg-landing-accent/15" />
-              <div className="h-px w-2/3 bg-landing-accent/10" />
-            </div>
-          </div>
-        </div>
-
-        {/* Panel 3 - Tertiary accent tile */}
-        <div className="absolute top-[62%] right-[8%] w-48 border border-landing-border/20 bg-landing-background/20">
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[8px] tracking-[0.15em] uppercase text-landing-subtle/50 font-light">
-                Standards
-              </span>
-              <div className="w-6 h-px bg-landing-accent/20" />
-            </div>
-            <div className="mt-3">
-              <div className="h-px w-full bg-landing-accent/10" />
-            </div>
-          </div>
-        </div>
-
-        {/* Connecting architectural lines */}
-        <div className="absolute top-[35%] right-[35%] w-px h-20 bg-landing-accent/10" />
-        <div className="absolute top-[58%] right-[18%] w-12 h-px bg-landing-accent/8" />
-      </div>
-
-      {/* Main content - left aligned editorial grid */}
-      <div className="relative z-10 min-h-screen flex items-center">
-        <div className="w-full max-w-7xl mx-auto px-8 md:px-16 lg:px-24">
-          <div className="max-w-xl lg:max-w-2xl pt-8">
-            {/* Headline */}
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal tracking-tight text-landing-foreground leading-[1.1]">
+      {/* Main grid layout */}
+      <div className="relative z-10 min-h-screen">
+        <div className="w-full max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16 xl:px-24 min-h-screen flex">
+          
+          {/* Left content column */}
+          <div className="flex-1 flex flex-col justify-center py-16 lg:py-24 pr-8 lg:pr-16">
+            {/* Headline - McKinsey style italic serif */}
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal tracking-tight text-landing-foreground leading-[1.05] italic">
               Turan Standard Pool
             </h1>
             
-            {/* Subheadline */}
-            <p className="mt-10 md:mt-12 text-lg md:text-xl text-landing-muted font-light leading-relaxed tracking-wide">
-              A governed market coordination platform for live cattle supply.
-            </p>
+            {/* Subheadline with arrow */}
+            <div className="mt-8 md:mt-10 flex items-start gap-6 max-w-lg">
+              <p className="text-base md:text-lg text-landing-muted font-light leading-relaxed">
+                A governed market coordination platform for live cattle supply. Designed to ensure predictability, standards, and year-round supply for the beef industry.
+              </p>
+              <button 
+                onClick={() => navigate('/auth/login')}
+                className="flex-shrink-0 w-14 h-14 rounded-full border border-landing-border flex items-center justify-center text-landing-foreground hover:bg-landing-card hover:border-landing-accent transition-all duration-300"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
             
-            {/* Editorial divider */}
-            <div className="mt-8 w-16 h-px bg-landing-accent opacity-30" />
-            
-            {/* Supporting line */}
-            <p className="mt-8 text-sm md:text-base text-landing-subtle font-light leading-relaxed">
-              Designed to ensure predictability, standards, and year-round supply for the beef industry.
-            </p>
-            
-            {/* Primary action */}
-            <div className="mt-16 md:mt-20">
+            {/* CTA button */}
+            <div className="mt-12 md:mt-16">
               <Button 
                 onClick={() => navigate('/auth/login')}
                 variant="ghost"
-                className="h-14 px-10 text-sm md:text-base font-normal tracking-wide border border-landing-border text-landing-foreground hover:bg-landing-foreground/[0.03] hover:border-landing-accent/50 rounded-none transition-all duration-500"
+                className="h-12 px-0 text-sm md:text-base font-normal tracking-wide text-landing-foreground hover:bg-transparent hover:text-landing-accent rounded-none transition-colors duration-300 group"
               >
                 Sign in to platform
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
+            </div>
+          </div>
+
+          {/* Right side - McKinsey style cards */}
+          <div className="hidden lg:flex flex-1 items-center">
+            <div className="w-full grid grid-cols-2 gap-4">
+              {/* Featured card - larger */}
+              <div className="col-span-2 bg-landing-card hover:bg-landing-card-hover transition-colors duration-300 cursor-default">
+                <div className="aspect-[2/1] p-8 flex flex-col justify-between">
+                  <span className="text-[11px] tracking-[0.2em] uppercase text-landing-accent font-medium">
+                    Market Infrastructure
+                  </span>
+                  <div>
+                    <h3 className="font-serif text-2xl text-landing-foreground italic leading-tight">
+                      Governed supply coordination for agricultural commodities
+                    </h3>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Card 2 */}
+              <div className="bg-landing-card hover:bg-landing-card-hover transition-colors duration-300 cursor-default">
+                <div className="aspect-[4/3] p-6 flex flex-col justify-between">
+                  <span className="text-[10px] tracking-[0.2em] uppercase text-landing-subtle font-medium">
+                    Standards
+                  </span>
+                  <div className="space-y-2">
+                    <div className="h-px w-full bg-landing-border" />
+                    <div className="h-px w-3/4 bg-landing-border/60" />
+                    <div className="h-px w-1/2 bg-landing-border/30" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Card 3 */}
+              <div className="bg-landing-card hover:bg-landing-card-hover transition-colors duration-300 cursor-default">
+                <div className="aspect-[4/3] p-6 flex flex-col justify-between">
+                  <span className="text-[10px] tracking-[0.2em] uppercase text-landing-subtle font-medium">
+                    Predictability
+                  </span>
+                  <div className="flex items-end justify-between">
+                    <span className="text-[9px] tracking-wider uppercase text-landing-subtle/70">2024–2025</span>
+                    <div className="w-8 h-px bg-landing-accent/50" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
