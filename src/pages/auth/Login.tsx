@@ -98,7 +98,7 @@ export default function Login() {
       title: 'Welcome back',
       description: 'You have successfully signed in.',
     });
-    navigate('/');
+    navigate('/overview');
   };
 
   return (
