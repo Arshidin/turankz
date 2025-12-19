@@ -88,7 +88,7 @@ export default function RegionalOutlook() {
       <div className="space-y-6">
         <PageHeader
           title={t('regionalOutlook.title', 'Regional Supply Outlook')}
-          description={t('regionalOutlook.description', 'Aggregated market availability signals from farmers')}
+          description={t('regionalOutlook.description', 'Aggregated, indicative supply signals — voluntary, non-binding data')}
         />
 
         {/* MPK visibility notice */}
@@ -186,8 +186,8 @@ export default function RegionalOutlook() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Aggregated Supply Outlook</CardTitle>
-                    <CardDescription>Estimated future supply by region — no farmer data</CardDescription>
+                    <CardTitle className="text-base">Aggregated Indicative Outlook</CardTitle>
+                    <CardDescription>Indicative future supply by region — voluntary, non-binding</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -242,7 +242,7 @@ export default function RegionalOutlook() {
                   <Card><CardContent className="p-6"><div className="text-2xl font-bold">{uniqueRegions}</div><div className="text-sm text-muted-foreground">Regions</div></CardContent></Card>
                 </div>
                 <Card>
-                  <CardHeader><CardTitle className="text-base">Regional Breakdown</CardTitle><CardDescription>Aggregated by region — no farmer data</CardDescription></CardHeader>
+                  <CardHeader><CardTitle className="text-base">Regional Breakdown</CardTitle><CardDescription>Aggregated indicative data — voluntary, non-binding</CardDescription></CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {Object.entries(byRegion).sort(([, a], [, b]) => b.total - a.total).map(([region, data]) => (
@@ -276,7 +276,7 @@ export default function RegionalOutlook() {
                   <Card><CardContent className="p-6"><div className="text-2xl font-bold">{herdUniqueRegions}</div><div className="text-sm text-muted-foreground">Regions</div></CardContent></Card>
                 </div>
                 <Card>
-                  <CardHeader><CardTitle className="text-base">Regional Herd Structure</CardTitle><CardDescription>Aggregated by region — no farmer data</CardDescription></CardHeader>
+                  <CardHeader><CardTitle className="text-base">Regional Herd Structure</CardTitle><CardDescription>Aggregated structural data — indicative capacity only</CardDescription></CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {Object.entries(herdByRegion).sort(([, a], [, b]) => b.total - a.total).map(([region, data]) => (

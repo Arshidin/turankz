@@ -59,20 +59,24 @@
 
 export const GUARDRAIL_MESSAGES = {
   herdStructure: {
-    title: 'Structural Data Only',
-    message: 'Structural livestock data does not imply market availability. Only confirmed batches are eligible for matching.',
+    title: 'Structural Data — Indicative Only',
+    message: 'Herd structure is voluntary, indicative capacity data. It does not represent market availability or supply commitments. Only confirmed batches participate in pool matching.',
   },
   marketIntent: {
-    title: 'Non-Binding Intent',
-    message: 'Market intents are voluntary signals only. They do not create batches, commitments, or participate in matching. Only confirmed batches are eligible for pool matching.',
+    title: 'Voluntary, Non-Binding Intent',
+    message: 'Market intents are voluntary, non-binding signals. They do not create batches, commitments, or participate in matching. Only confirmed batches are eligible for pool matching.',
   },
   forecast: {
     title: 'Indicative / Non-binding Forecast',
-    message: 'This forecast is based on structural data and reference coefficients. It does not create any market commitments and is not linked to pricing or matching.',
+    message: 'Forecasts are derived from aggregated structural data and reference coefficients. They are indicative only, do not represent commitments, and are not linked to pricing or matching.',
   },
   batchCreation: {
-    title: 'Creating a Market Commitment',
-    message: 'By creating a batch, you are declaring market availability. Confirmed batches become eligible for pool matching.',
+    title: 'Creating a Market Declaration',
+    message: 'By creating a batch, you are declaring indicative market availability. Confirmed batches become eligible for pool matching.',
+  },
+  aggregatedData: {
+    title: 'Aggregated Data Only',
+    message: 'This view shows aggregated, anonymized data. Individual farmer details are not visible. All figures are indicative and voluntary.',
   },
 } as const;
 
