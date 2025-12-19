@@ -1,12 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-
 export default function Landing() {
   const navigate = useNavigate();
-
-  return (
-    <div className="min-h-screen bg-landing-background relative overflow-hidden">
+  return <div className="min-h-screen bg-landing-background relative overflow-hidden">
       {/* Subtle background grid */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
         <div className="absolute top-0 left-[20%] w-px h-full bg-white" />
@@ -28,24 +25,13 @@ export default function Landing() {
             
             {/* Subheadline with arrow */}
             <div className="mt-8 md:mt-10 flex items-start gap-6 max-w-lg">
-              <p className="text-base md:text-lg text-landing-muted font-light leading-relaxed">
-                A governed market coordination platform for live cattle supply. Designed to ensure predictability, standards, and year-round supply for the beef industry.
-              </p>
-              <button 
-                onClick={() => navigate('/auth/login')}
-                className="flex-shrink-0 w-14 h-14 rounded-full border border-landing-border flex items-center justify-center text-landing-foreground hover:bg-landing-card hover:border-landing-accent transition-all duration-300"
-              >
-                <ArrowRight className="w-5 h-5" />
-              </button>
+              <p className="text-base md:text-lg text-landing-muted font-light leading-relaxed">A governed market coordination platform for live cattle supply. Designed to ensure predictability, standards, and year-round supply for the beef industry.</p>
+              
             </div>
             
             {/* CTA button */}
             <div className="mt-12 md:mt-16">
-              <Button 
-                onClick={() => navigate('/auth/login')}
-                variant="ghost"
-                className="h-12 px-0 text-sm md:text-base font-normal tracking-wide text-landing-foreground hover:bg-transparent hover:text-landing-accent rounded-none transition-colors duration-300 group"
-              >
+              <Button onClick={() => navigate('/auth/login')} variant="ghost" className="h-12 px-0 text-sm md:text-base font-normal tracking-wide text-landing-foreground hover:bg-transparent hover:text-landing-accent rounded-none transition-colors duration-300 group">
                 Sign in to platform
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
@@ -99,6 +85,5 @@ export default function Landing() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
