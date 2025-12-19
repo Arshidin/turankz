@@ -1,28 +1,19 @@
 /**
  * OBSERVER DASHBOARD
  * 
- * Lightweight activation overview for Farmer users with Observer status.
- * Designed to reduce cognitive load and clearly communicate:
- * - Current status (profile under review)
- * - Why access is limited
- * - What actions are available now
- * 
- * No operational complexity, no empty states, no zero-value metrics.
- * Links ONLY to existing pages with read-only access.
+ * Simplified dashboard for Farmer users with Observer status.
+ * Three focused blocks: Market Signals, Price Orientation, Participation Rules.
+ * No KPIs, counters, or action widgets.
  */
 
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ObserverModeBanner } from '@/components/access';
 import { 
-  Clock, 
-  BookOpen,
-  Grid3X3,
-  Beef,
-  Info,
-  ChevronRight,
   TrendingUp,
-  GraduationCap
+  Grid3X3,
+  GraduationCap,
+  ChevronRight
 } from 'lucide-react';
 
 interface ObserverDashboardProps {
@@ -30,126 +21,73 @@ interface ObserverDashboardProps {
 }
 
 export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
-  const availableActions = [
+  const blocks = [
     {
-      icon: BookOpen,
-      title: 'Изучить правила работы платформы',
-      description: 'Этапы, роли участников и правила работы Turan Standard Pool.',
-      path: '/welcome',
-    },
-    {
-      icon: GraduationCap,
-      title: 'Как работает рынок',
-      description: 'Уровни поставщика, жизненный цикл партии и требования к стандарту.',
-      path: '/market-workflow',
+      icon: TrendingUp,
+      title: 'Рыночные сигналы',
+      description: 'Посмотрите, как формируется спрос на рынке',
+      path: '/market-signals',
+      color: 'blue',
     },
     {
       icon: Grid3X3,
-      title: 'Ознакомиться с ценовыми ориентирами',
-      description: 'Референсная ценовая сетка, используемая в системе. Данные носят ориентировочный характер.',
+      title: 'Ценовые ориентиры',
+      description: 'Ознакомьтесь с ценовыми ориентирами',
       path: '/price-grid',
+      color: 'emerald',
     },
     {
-      icon: TrendingUp,
-      title: 'Рыночные индикативные сигналы',
-      description: 'Агрегированный спрос по периодам и регионам. Без данных о конкретных покупателях.',
-      path: '/market-signals',
-    },
-    {
-      icon: Beef,
-      title: 'Подготовить структуру поголовья',
-      description: 'Добровольные индикативные данные о поголовье. Используются только в агрегированном виде.',
-      path: '/herd-overview',
+      icon: GraduationCap,
+      title: 'Правила участия',
+      description: 'Узнайте, как перейти к участию',
+      path: '/market-workflow',
+      color: 'violet',
     },
   ];
 
-  const limitations = [
-    'создание партий скота',
-    'участие в закупочных пулах',
-    'просмотр заявок мясокомбинатов',
-  ];
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, { bg: string; text: string; border: string }> = {
+      blue: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20' },
+      emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20' },
+      violet: { bg: 'bg-violet-500/10', text: 'text-violet-600', border: 'border-violet-500/20' },
+    };
+    return colorMap[color] || colorMap.blue;
+  };
 
   return (
     <div className="space-y-6">
       {/* Observer Mode Banner */}
       <ObserverModeBanner />
 
-      {/* Main Status Card - Single unified status block */}
-      <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-amber-500/[0.02]">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-              <Clock className="w-7 h-7 text-amber-600" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                Профиль на проверке
-              </h2>
-              <p className="text-muted-foreground mb-3">
-                Администратор рассматривает вашу заявку. На этом этапе доступен только режим просмотра.
-              </p>
-              <p className="text-sm text-muted-foreground/70">
-                Обычно проверка занимает 1–2 рабочих дня.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* What You Can Do Now - Exactly 3 items with links */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-medium text-muted-foreground uppercase tracking-wide">
-            Что вы можете сделать на этом этапе
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {availableActions.map((action, index) => (
-              <Link
-                key={index}
-                to={action.path}
-                className="flex items-start gap-4 p-4 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 hover:border-border transition-colors group"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <action.icon className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                    {action.title}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {action.description}
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-2" />
-              </Link>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Limitations Notice - Informational, not warning */}
-      <Card className="bg-muted/30 border-border/50">
-        <CardContent className="p-5">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                На этом этапе недоступно:
-              </p>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                {limitations.map((item, index) => (
-                  <li key={index}>– {item}</li>
-                ))}
-              </ul>
-              <p className="text-sm text-muted-foreground mt-3">
-                Эти функции откроются после активации профиля.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Three focused blocks */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {blocks.map((block) => {
+          const colors = getColorClasses(block.color);
+          return (
+            <Link key={block.path} to={block.path}>
+              <Card className={`h-full border ${colors.border} hover:shadow-md transition-all group cursor-pointer`}>
+                <CardContent className="p-6">
+                  <div className="flex flex-col h-full">
+                    <div className={`w-12 h-12 rounded-xl ${colors.bg} flex items-center justify-center mb-4`}>
+                      <block.icon className={`w-6 h-6 ${colors.text}`} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                      {block.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground flex-1">
+                      {block.description}
+                    </p>
+                    <div className="flex items-center gap-1 mt-4 text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                      <span>Перейти</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
