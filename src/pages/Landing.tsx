@@ -6,11 +6,16 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-landing-background relative overflow-hidden">
-      {/* Subtle abstract geometric element */}
+      {/* Right-side architectural grid elements */}
       <div className="absolute top-0 right-0 w-1/2 h-full pointer-events-none">
-        <div className="absolute top-1/4 right-12 w-px h-48 bg-landing-accent opacity-20" />
-        <div className="absolute top-1/3 right-24 w-32 h-px bg-landing-accent opacity-15" />
-        <div className="absolute bottom-1/4 right-16 w-px h-32 bg-landing-accent opacity-10" />
+        {/* Primary vertical line */}
+        <div className="absolute top-0 right-[20%] w-px h-full bg-landing-accent opacity-[0.06]" />
+        {/* Secondary vertical line */}
+        <div className="absolute top-0 right-[40%] w-px h-full bg-landing-accent opacity-[0.03]" />
+        {/* Horizontal accent */}
+        <div className="absolute top-1/3 right-12 w-24 h-px bg-landing-accent opacity-[0.08]" />
+        {/* Corner detail */}
+        <div className="absolute bottom-24 right-[20%] w-px h-16 bg-landing-accent opacity-[0.05]" />
       </div>
 
       {/* Main content - left aligned editorial grid */}
@@ -23,24 +28,24 @@ export default function Landing() {
             </h1>
             
             {/* Subheadline */}
-            <p className="mt-8 md:mt-10 text-lg md:text-xl text-landing-muted font-light leading-relaxed tracking-wide">
+            <p className="mt-10 md:mt-12 text-lg md:text-xl text-landing-muted font-light leading-relaxed tracking-wide">
               A governed market coordination platform for live cattle supply.
             </p>
             
-            {/* Divider */}
-            <div className="mt-6 w-12 h-px bg-landing-accent opacity-40" />
+            {/* Editorial divider */}
+            <div className="mt-8 w-16 h-px bg-landing-accent opacity-30" />
             
             {/* Supporting line */}
-            <p className="mt-6 text-sm md:text-base text-landing-subtle font-light leading-relaxed">
+            <p className="mt-8 text-sm md:text-base text-landing-subtle font-light leading-relaxed">
               Designed to ensure predictability, standards, and year-round supply for the beef industry.
             </p>
             
             {/* Primary action */}
-            <div className="mt-14 md:mt-16">
+            <div className="mt-16 md:mt-20">
               <Button 
                 onClick={() => navigate('/auth/login')}
                 variant="ghost"
-                className="h-12 px-8 text-sm md:text-base font-normal tracking-wide border border-landing-border text-landing-foreground hover:bg-landing-foreground/5 hover:border-landing-foreground/40 rounded-none transition-colors duration-300"
+                className="h-14 px-10 text-sm md:text-base font-normal tracking-wide border border-landing-border text-landing-foreground hover:bg-landing-foreground/[0.03] hover:border-landing-accent/50 rounded-none transition-all duration-500"
               >
                 Sign in to platform
               </Button>
