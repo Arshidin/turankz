@@ -106,6 +106,14 @@ export default {
           cancelled: "hsl(var(--pool-cancelled))",
           "cancelled-bg": "hsl(var(--pool-cancelled-bg))",
         },
+        landing: {
+          background: "hsl(var(--landing-background))",
+          foreground: "hsl(var(--landing-foreground))",
+          muted: "hsl(var(--landing-muted))",
+          subtle: "hsl(var(--landing-subtle))",
+          accent: "hsl(var(--landing-accent))",
+          border: "hsl(var(--landing-border))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

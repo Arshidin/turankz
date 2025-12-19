@@ -8,6 +8,16 @@
 @layer base {
   :root {
     --background: 210 20% 98%;
+
+    /* ===========================================
+       LANDING PAGE - INSTITUTIONAL DARK THEME
+       =========================================== */
+    --landing-background: 220 25% 12%;
+    --landing-foreground: 210 15% 95%;
+    --landing-muted: 210 10% 70%;
+    --landing-subtle: 210 10% 50%;
+    --landing-accent: 210 15% 60%;
+    --landing-border: 210 15% 35%;
     --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
