@@ -57,7 +57,7 @@ export function ProtectedRoute({
   // If registration is still pending, allow read-only routes (dashboard + price grid)
   // and redirect everything else to the Pending page.
   if (role !== 'admin' && registrationStatus === 'pending') {
-    const readOnlyAllowedPaths = new Set<string>(['/', '/price-grid', '/pending']);
+    const readOnlyAllowedPaths = new Set<string>(['/overview', '/price-grid', '/pending']);
     if (!readOnlyAllowedPaths.has(location.pathname)) {
       return <Navigate to="/pending" replace />;
     }
@@ -67,8 +67,8 @@ export function ProtectedRoute({
   if (allowedRoles && !allowedRoles.includes(role)) {
     // Redirect to appropriate home based on role
     const roleHomePaths: Record<AppRole, string> = {
-      admin: '/',
-      farmer: '/',
+      admin: '/overview',
+      farmer: '/overview',
       mpk: '/mpk/market',
     };
     return <Navigate to={roleHomePaths[role]} replace />;
