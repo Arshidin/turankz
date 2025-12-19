@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, FileText, Calendar, CheckCircle2, Clock, AlertCircle, AlertTriangle, TrendingUp, Info } from 'lucide-react';
+import { Plus, FileText, Calendar, AlertTriangle, TrendingUp, Info } from 'lucide-react';
 import { useMyHerdSnapshots, LIVESTOCK_CATEGORIES, type HerdStructureSnapshot } from '@/hooks/useHerdStructure';
 import { useFarmerForecast, useForecastCoefficients } from '@/hooks/useForecast';
+import { ConfidenceBadge } from '@/components/data-integrity/ConfidenceBadge';
 import { HerdSnapshotWizard } from '@/components/herd/HerdSnapshotWizard';
 import { format } from 'date-fns';
 
@@ -272,21 +273,5 @@ export default function HerdStructure() {
         <HerdSnapshotWizard open={wizardOpen} onOpenChange={setWizardOpen} />
       </div>
     </MainLayout>
-  );
-}
-
-function ConfidenceBadge({ level }: { level: string }) {
-  const config = {
-    self_declared: { icon: Clock, variant: 'secondary' as const, color: 'text-muted-foreground' },
-    reviewed: { icon: AlertCircle, variant: 'outline' as const, color: 'text-amber-600' },
-    verified: { icon: CheckCircle2, variant: 'default' as const, color: 'text-emerald-600' },
-  };
-  
-  const { icon: Icon, variant, color } = config[level as keyof typeof config] || config.self_declared;
-  
-  return (
-    <Badge variant={variant} className="text-[10px] px-1.5 py-0">
-      <Icon className={`w-3 h-3 ${color}`} />
-    </Badge>
   );
 }
