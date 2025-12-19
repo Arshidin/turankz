@@ -63,6 +63,8 @@ export const en = {
     groups: {
       overview: 'Overview',
       participation: 'Market Participation',
+      dataOutlook: 'Data & Outlook',
+      marketOperations: 'Market Operations',
       demand: 'Demand Signaling',
       execution: 'Execution',
       account: 'Account',

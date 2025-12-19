@@ -60,7 +60,8 @@ interface NavGroup {
   defaultOpen?: boolean;
 }
 
-// FARMER navigation - grouped by intent
+// FARMER navigation - grouped by intent with clear separation between
+// "Data & Outlook" (informational, non-binding) and "Market Operations" (binding actions)
 const farmerNavGroups: NavGroup[] = [
   {
     key: 'overview',
@@ -70,14 +71,22 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
+  // DATA & OUTLOOK: Informational only - never auto-generates batches
   {
-    key: 'participation',
-    labelKey: 'nav.groups.participation',
+    key: 'data-outlook',
+    labelKey: 'nav.groups.dataOutlook',
+    items: [
+      { labelKey: 'nav.herdStructure', path: '/farmer/herd', icon: Beef, requiredStatus: ['active'] },
+      { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
+    ],
+  },
+  // MARKET OPERATIONS: Binding actions - batches are the gateway to matching
+  {
+    key: 'market-operations',
+    labelKey: 'nav.groups.marketOperations',
     items: [
       { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
       { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
-      { labelKey: 'nav.herdStructure', path: '/farmer/herd', icon: Beef, requiredStatus: ['active'] },
-      { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
     ],
   },
   {

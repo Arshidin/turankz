@@ -60,6 +60,18 @@ export const ru = {
     priceGridManagement: 'Управление справочной ценовой сеткой',
     premiumRulesIncentives: 'Правила премий и стимулы',
     activityLog: 'Журнал активности',
+    groups: {
+      overview: 'Обзор',
+      participation: 'Участие на рынке',
+      dataOutlook: 'Данные и прогноз',
+      marketOperations: 'Рыночные операции',
+      demand: 'Сигнализация спроса',
+      execution: 'Исполнение',
+      account: 'Аккаунт',
+      matching: 'Сопоставление пулов',
+      participants: 'Участники',
+      governance: 'Управление',
+    },
   },
   
   roles: {
