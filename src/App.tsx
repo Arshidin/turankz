@@ -203,6 +203,12 @@ const App = () => (
                   <NationalHerdStructure />
                 </ProtectedRoute>
               } />
+              {/* Public Herd Overview - read-only for observers */}
+              <Route path="/herd-overview" element={
+                <ProtectedRoute>
+                  <NationalHerdStructure />
+                </ProtectedRoute>
+              } />
               <Route path="/admin/market-intent" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <MarketIntentOverview />
