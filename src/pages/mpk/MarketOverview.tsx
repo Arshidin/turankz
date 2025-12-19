@@ -26,40 +26,6 @@ const statusDescriptions = {
   forecast: 'Forecast batches are indicative plans, not yet committed by farmers.',
 };
 
-// Mock data fallback when database is empty
-const mockData = {
-  summary: { confirmed: 487, softCommitted: 512, forecast: 257 },
-  regions: [
-    { region: 'Almaty Oblast', confirmed: 142, softCommitted: 134, forecast: 69, total: 345 },
-    { region: 'Akmola Oblast', confirmed: 98, softCommitted: 127, forecast: 64, total: 289 },
-    { region: 'East Kazakhstan', confirmed: 112, softCommitted: 102, forecast: 53, total: 267 },
-    { region: 'Karaganda Oblast', confirmed: 78, softCommitted: 85, forecast: 35, total: 198 },
-    { region: 'Kostanay Oblast', confirmed: 57, softCommitted: 64, forecast: 36, total: 157 },
-  ],
-  batches: [
-    { id: '1', batch_number: 'BTH-2847', region: 'Almaty', heads: 45, grade: 'A', status: 'confirmed' as BatchStatus, target_week: '2025-W52', breed: 'Angus', gender: 'Male', age_min: 14, age_max: 16, weight_min: 320, weight_max: 360 },
-    { id: '2', batch_number: 'BTH-2851', region: 'Akmola', heads: 38, grade: 'A', status: 'soft_committed' as BatchStatus, target_week: '2025-W52', breed: 'Hereford', gender: 'Male', age_min: 12, age_max: 14, weight_min: 300, weight_max: 340 },
-    { id: '3', batch_number: 'BTH-2856', region: 'Karaganda', heads: 52, grade: 'B', status: 'forecast' as BatchStatus, target_week: '2026-W01', breed: 'Mixed/Crossbred', gender: 'Mixed', age_min: 15, age_max: 18, weight_min: 280, weight_max: 320 },
-    { id: '4', batch_number: 'BTH-2859', region: 'East KZ', heads: 30, grade: 'A', status: 'forecast' as BatchStatus, target_week: '2026-W01', breed: 'Kazakh Whiteheaded', gender: 'Male', age_min: 13, age_max: 15, weight_min: 310, weight_max: 350 },
-    { id: '5', batch_number: 'BTH-2863', region: 'Almaty', heads: 28, grade: 'B', status: 'forecast' as BatchStatus, target_week: '2026-W02', breed: 'Simmental', gender: 'Male', age_min: 16, age_max: 18, weight_min: 340, weight_max: 380 },
-  ] as Partial<Batch>[],
-};
-
-// Filter mock batches by criteria
-function filterMockBatches(batches: Partial<Batch>[], filters: CriteriaFilterState) {
-  if (!hasActiveFilters(filters)) return batches;
-  
-  return batches.filter(batch => {
-    if (filters.breeds.length > 0 && batch.breed && !filters.breeds.includes(batch.breed)) return false;
-    if (filters.genders.length > 0 && batch.gender && !filters.genders.includes(batch.gender)) return false;
-    if (filters.ageMin !== null && batch.age_max && batch.age_max < filters.ageMin) return false;
-    if (filters.ageMax !== null && batch.age_min && batch.age_min > filters.ageMax) return false;
-    if (filters.weightMin !== null && batch.weight_max && batch.weight_max < filters.weightMin) return false;
-    if (filters.weightMax !== null && batch.weight_min && batch.weight_min > filters.weightMax) return false;
-    return true;
-  });
-}
-
 export default function MarketOverview() {
   const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
   const [gradeFilter, setGradeFilter] = useState<string>('all');
@@ -68,18 +34,13 @@ export default function MarketOverview() {
   // Fetch premium settings for display
   const { data: standardPremiums } = useStandardPremiums();
   
-  // Fetch real data
+  // Fetch real data only - no mock data fallback
   const { batches: realBatches, summary: realSummary, regions: realRegions, isLoading, hasData } = useFilteredMarketData(criteriaFilters);
   
-  // Use real data if available, otherwise use filtered mock data
-  const filteredMockBatches = filterMockBatches(mockData.batches, criteriaFilters);
-  const displayBatches = hasData ? realBatches : filteredMockBatches;
-  const displaySummary = hasData ? realSummary : {
-    confirmed: isFiltered ? Math.round(mockData.summary.confirmed * (filteredMockBatches.length / mockData.batches.length)) : mockData.summary.confirmed,
-    softCommitted: isFiltered ? Math.round(mockData.summary.softCommitted * (filteredMockBatches.length / mockData.batches.length)) : mockData.summary.softCommitted,
-    forecast: isFiltered ? Math.round(mockData.summary.forecast * (filteredMockBatches.length / mockData.batches.length)) : mockData.summary.forecast,
-  };
-  const displayRegions = hasData ? realRegions : mockData.regions;
+  // Use real data only
+  const displayBatches = realBatches;
+  const displaySummary = realSummary;
+  const displayRegions = realRegions;
   
   // Apply grade filter to displayed batches
   const gradedBatches = gradeFilter === 'all' 
