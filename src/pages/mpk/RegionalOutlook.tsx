@@ -9,25 +9,26 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, MapPin, Info, Clock, AlertTriangle, Layers, Beef, Shield } from 'lucide-react';
+import { TrendingUp, MapPin, AlertTriangle, Beef, Shield, Info } from 'lucide-react';
 import { 
   useAggregatedMarketIntent, 
   HORIZON_OPTIONS, 
-  CONFIDENCE_OPTIONS,
-  type MarketIntentHorizon,
-  type IntentConfidenceLevel 
+  type MarketIntentHorizon 
 } from '@/hooks/useMarketIntent';
 import { useAggregatedHerdStructure, LIVESTOCK_CATEGORIES, type LivestockCategory } from '@/hooks/useHerdStructure';
+import { useIndicativeForecast, useForecastCoefficients } from '@/hooks/useForecast';
 import { ALL_REGIONS } from '@/lib/defaults';
 
 export default function RegionalOutlook() {
   const { t } = useTranslation();
-  const [selectedHorizon, setSelectedHorizon] = useState<MarketIntentHorizon | undefined>(undefined);
   const [regionFilter, setRegionFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'intent' | 'herd'>('intent');
   
-  const { data: aggregatedData, isLoading } = useAggregatedMarketIntent(selectedHorizon);
+  const { data: aggregatedData, isLoading } = useAggregatedMarketIntent();
   const { data: herdData, isLoading: isLoadingHerd } = useAggregatedHerdStructure();
+  const { data: forecastData, isLoading: forecastLoading } = useIndicativeForecast();
+  const { data: coefficients } = useForecastCoefficients();
+
+  const calvingRate = coefficients?.find(c => c.coefficient_type === 'calving_rate')?.coefficient_value || 0.85;
 
   // Filter intent data by region
   const filteredData = aggregatedData?.filter(row => {
@@ -41,6 +42,12 @@ export default function RegionalOutlook() {
     return true;
   }) || [];
 
+  // Filter forecast data by region
+  const filteredForecastData = forecastData?.filter(row => {
+    if (regionFilter !== 'all' && row.region !== regionFilter) return false;
+    return true;
+  }) || [];
+
   // Calculate intent totals
   const totalHeads = filteredData.reduce((sum, row) => sum + row.total_estimated_heads, 0);
   const totalIntents = filteredData.reduce((sum, row) => sum + row.intent_count, 0);
@@ -49,6 +56,10 @@ export default function RegionalOutlook() {
   // Calculate herd totals
   const totalHerdHeads = filteredHerdData.reduce((sum, row) => sum + row.total_count, 0);
   const herdUniqueRegions = new Set(filteredHerdData.map(row => row.region)).size;
+
+  // Calculate forecast totals
+  const totalBreedingCows = filteredForecastData.reduce((sum, r) => sum + r.breeding_cows_count, 0);
+  const totalEstimatedCalves = filteredForecastData.reduce((sum, r) => sum + r.estimated_calves, 0);
 
   // Group intent by region
   const byRegion = filteredData.reduce((acc, row) => {
@@ -93,19 +104,6 @@ export default function RegionalOutlook() {
           </div>
         </div>
 
-        {/* Non-Binding Disclaimer */}
-        <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
-          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800 dark:text-amber-200">
-              {t('regionalOutlook.disclaimer.title', 'Indicative Data Only')}
-            </p>
-            <p className="text-amber-700 dark:text-amber-300 mt-0.5">
-              {t('regionalOutlook.disclaimer.text', 'Market intents are voluntary, non-binding signals. They do not represent confirmed availability. Only confirmed batches participate in pool matching.')}
-            </p>
-          </div>
-        </div>
-
         {/* Region Filter */}
         <Card>
           <CardContent className="py-4">
@@ -126,10 +124,14 @@ export default function RegionalOutlook() {
           </CardContent>
         </Card>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'intent' | 'herd')}>
+        <Tabs defaultValue="forecast">
           <TabsList>
-            <TabsTrigger value="intent" className="flex items-center gap-2">
+            <TabsTrigger value="forecast" className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
+              Supply Outlook
+            </TabsTrigger>
+            <TabsTrigger value="intent" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
               Market Intent
             </TabsTrigger>
             <TabsTrigger value="herd" className="flex items-center gap-2">
@@ -138,7 +140,96 @@ export default function RegionalOutlook() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="intent" className="space-y-6 mt-6">
+          <TabsContent value="forecast" className="space-y-4 mt-6">
+            {/* Indicative Disclaimer */}
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+              <Info className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  Indicative / Non-binding Forecast
+                </p>
+                <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+                  These forecasts are derived from herd structure × reference calving rates. They do not imply farmer commitments and are not linked to pricing or matching.
+                </p>
+              </div>
+            </div>
+
+            {forecastLoading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : !filteredForecastData?.length ? (
+              <EmptyState icon={TrendingUp} message="No forecast data available" />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-sm text-muted-foreground mb-1">Breeding Cows</div>
+                      <div className="text-2xl font-bold">{totalBreedingCows.toLocaleString()}</div>
+                      <div className="text-xs text-muted-foreground">regional total</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-sm text-muted-foreground mb-1">Reference Rate</div>
+                      <div className="text-2xl font-bold">{(calvingRate * 100).toFixed(0)}%</div>
+                      <div className="text-xs text-muted-foreground">calving rate</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardContent className="p-6">
+                      <div className="text-sm text-muted-foreground mb-1">Estimated Calves</div>
+                      <div className="text-2xl font-bold text-primary">{Math.round(totalEstimatedCalves).toLocaleString()}</div>
+                      <div className="text-xs text-muted-foreground">indicative</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Aggregated Supply Outlook</CardTitle>
+                    <CardDescription>Estimated future supply by region — no farmer data</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {filteredForecastData
+                        .sort((a, b) => b.estimated_calves - a.estimated_calves)
+                        .map((row, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">{row.region}</Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {row.breeding_cows_count.toLocaleString()} breeding cows
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold text-primary">
+                                ~{Math.round(row.estimated_calves).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-muted-foreground">est. calves</div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="intent" className="space-y-4 mt-6">
+            {/* Non-Binding Disclaimer */}
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  {t('regionalOutlook.disclaimer.title', 'Indicative Data Only')}
+                </p>
+                <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+                  {t('regionalOutlook.disclaimer.text', 'Market intents are voluntary, non-binding signals. They do not represent confirmed availability. Only confirmed batches participate in pool matching.')}
+                </p>
+              </div>
+            </div>
+
             {isLoading ? (
               <Skeleton className="h-32 w-full" />
             ) : filteredData.length === 0 ? (
@@ -173,7 +264,7 @@ export default function RegionalOutlook() {
             )}
           </TabsContent>
 
-          <TabsContent value="herd" className="space-y-6 mt-6">
+          <TabsContent value="herd" className="space-y-4 mt-6">
             {isLoadingHerd ? (
               <Skeleton className="h-32 w-full" />
             ) : filteredHerdData.length === 0 ? (
