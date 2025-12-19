@@ -13,26 +13,26 @@ import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
 
-const REGIONS = ['Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktobe', 'Taraz', 'Pavlodar', 'Semey'];
-const VOLUME_RANGES = ['Under 100', '100-250', '250-500', '500-1000', '1000+'];
-const INTAKE_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const REGIONS = ['Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 'Тараз', 'Павлодар', 'Семей'];
+const VOLUME_RANGES = ['До 100', '100-250', '250-500', '500-1000', '1000+'];
+const INTAKE_MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
 const step1Schema = z.object({
-  companyName: z.string().min(2, 'Company name must be at least 2 characters').max(100),
-  contactPerson: z.string().min(2, 'Contact name must be at least 2 characters').max(100),
-  email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(10, 'Please enter a valid phone number').max(20),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  companyName: z.string().min(2, 'Название компании должно содержать минимум 2 символа').max(100),
+  contactPerson: z.string().min(2, 'Имя контактного лица должно содержать минимум 2 символа').max(100),
+  email: z.string().email('Введите корректный email адрес'),
+  phone: z.string().min(10, 'Введите корректный номер телефона').max(20),
+  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
 });
 
 const step2Schema = z.object({
-  intakeRegions: z.array(z.string()).min(1, 'Please select at least one intake region'),
-  typicalVolume: z.string().min(1, 'Please select typical monthly volume'),
+  intakeRegions: z.array(z.string()).min(1, 'Выберите хотя бы один регион приема'),
+  typicalVolume: z.string().min(1, 'Выберите типичный месячный объем'),
   ageRangeMin: z.string().optional(),
   ageRangeMax: z.string().optional(),
   weightRangeMin: z.string().optional(),
   weightRangeMax: z.string().optional(),
-  intakeMonths: z.array(z.string()).min(1, 'Please select at least one intake month'),
+  intakeMonths: z.array(z.string()).min(1, 'Выберите хотя бы один месяц приема'),
 });
 
 export default function MpkRegistration() {
@@ -128,13 +128,13 @@ export default function MpkRegistration() {
       if (authError) {
         if (authError.message.includes('already registered')) {
           toast({
-            title: 'Account exists',
-            description: 'An account with this email already exists. Please sign in instead.',
+            title: 'Аккаунт существует',
+            description: 'Аккаунт с этим email уже существует. Пожалуйста, войдите.',
             variant: 'destructive',
           });
         } else {
           toast({
-            title: 'Registration failed',
+            title: 'Ошибка регистрации',
             description: authError.message,
             variant: 'destructive',
           });
@@ -145,8 +145,8 @@ export default function MpkRegistration() {
 
       if (!authData.user) {
         toast({
-          title: 'Registration failed',
-          description: 'Unable to create account. Please try again.',
+          title: 'Ошибка регистрации',
+          description: 'Не удалось создать аккаунт. Попробуйте снова.',
           variant: 'destructive',
         });
         setIsLoading(false);
@@ -164,7 +164,7 @@ export default function MpkRegistration() {
 
       // Parse volume range
       const volumeMap: Record<string, { min: number; max: number }> = {
-        'Under 100': { min: 0, max: 100 },
+        'До 100': { min: 0, max: 100 },
         '100-250': { min: 100, max: 250 },
         '250-500': { min: 250, max: 500 },
         '500-1000': { min: 500, max: 1000 },
@@ -194,8 +194,8 @@ export default function MpkRegistration() {
       if (profileError) {
         console.error('Profile creation error:', profileError);
         toast({
-          title: 'Profile creation failed',
-          description: 'Account created but profile setup failed. Please contact support.',
+          title: 'Ошибка создания профиля',
+          description: 'Аккаунт создан, но настройка профиля не удалась. Свяжитесь с поддержкой.',
           variant: 'destructive',
         });
         setIsLoading(false);
@@ -206,8 +206,8 @@ export default function MpkRegistration() {
     } catch (error) {
       console.error('Registration error:', error);
       toast({
-        title: 'Registration failed',
-        description: 'An unexpected error occurred. Please try again.',
+        title: 'Ошибка регистрации',
+        description: 'Произошла непредвиденная ошибка. Попробуйте снова.',
         variant: 'destructive',
       });
     }
@@ -223,19 +223,19 @@ export default function MpkRegistration() {
             <Button variant="ghost" size="icon" onClick={() => step === 1 ? navigate('/auth') : setStep(step - 1)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm text-muted-foreground">Step {Math.min(step, 3)} of 3</span>
+            <span className="text-sm text-muted-foreground">Шаг {Math.min(step, 3)} из 3</span>
           </div>
           <CardTitle className="text-2xl">
-            {step === 1 && 'Company Details'}
-            {step === 2 && 'Intake Profile'}
-            {step === 3 && 'Review & Submit'}
-            {step === 4 && 'Registration Submitted'}
+            {step === 1 && 'Данные компании'}
+            {step === 2 && 'Профиль приема'}
+            {step === 3 && 'Проверка и отправка'}
+            {step === 4 && 'Заявка отправлена'}
           </CardTitle>
           <CardDescription>
-            {step === 1 && 'Create your MPK account to join Turan Standard Pool'}
-            {step === 2 && 'Define your typical intake parameters'}
-            {step === 3 && 'Review the access conditions before submitting'}
-            {step === 4 && 'Your application is pending review'}
+            {step === 1 && 'Создайте аккаунт МПК для присоединения к Turan Standard Pool'}
+            {step === 2 && 'Укажите ваши типичные параметры приема'}
+            {step === 3 && 'Проверьте условия доступа перед отправкой'}
+            {step === 4 && 'Ваша заявка ожидает рассмотрения'}
           </CardDescription>
         </CardHeader>
 
@@ -243,10 +243,10 @@ export default function MpkRegistration() {
           {step === 1 && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
+                <Label htmlFor="companyName">Название компании</Label>
                 <Input
                   id="companyName"
-                  placeholder="Meat Processing Plant name"
+                  placeholder="Название мясоперерабатывающего предприятия"
                   value={formData.companyName}
                   onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                 />
@@ -254,10 +254,10 @@ export default function MpkRegistration() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contactPerson">Contact Person</Label>
+                <Label htmlFor="contactPerson">Контактное лицо</Label>
                 <Input
                   id="contactPerson"
-                  placeholder="Primary contact name"
+                  placeholder="Имя основного контакта"
                   value={formData.contactPerson}
                   onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                 />
@@ -277,7 +277,7 @@ export default function MpkRegistration() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Телефон</Label>
                 <Input
                   id="phone"
                   placeholder="+7 XXX XXX XXXX"
@@ -288,7 +288,7 @@ export default function MpkRegistration() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Пароль</Label>
                 <Input
                   id="password"
                   type="password"
@@ -300,7 +300,7 @@ export default function MpkRegistration() {
               </div>
 
               <Button className="w-full" onClick={handleNext}>
-                Continue <ChevronRight className="ml-2 h-4 w-4" />
+                Продолжить <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </>
           )}
@@ -308,7 +308,7 @@ export default function MpkRegistration() {
           {step === 2 && (
             <>
               <div className="space-y-2">
-                <Label>Intake Regions</Label>
+                <Label>Регионы приема</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {REGIONS.map(region => (
                     <div key={region} className="flex items-center space-x-2">
@@ -325,13 +325,13 @@ export default function MpkRegistration() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="typicalVolume">Typical Monthly Volume</Label>
+                <Label htmlFor="typicalVolume">Типичный месячный объем</Label>
                 <Select value={formData.typicalVolume} onValueChange={(v) => setFormData({ ...formData, typicalVolume: v })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select volume range" />
+                    <SelectValue placeholder="Выберите диапазон объема" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VOLUME_RANGES.map(v => <SelectItem key={v} value={v}>{v} head/month</SelectItem>)}
+                    {VOLUME_RANGES.map(v => <SelectItem key={v} value={v}>{v} голов/месяц</SelectItem>)}
                   </SelectContent>
                 </Select>
                 {errors.typicalVolume && <p className="text-sm text-destructive">{errors.typicalVolume}</p>}
@@ -339,21 +339,21 @@ export default function MpkRegistration() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ageRangeMin">Age Range Min (months)</Label>
+                  <Label htmlFor="ageRangeMin">Мин. возраст (мес.)</Label>
                   <Input
                     id="ageRangeMin"
                     type="number"
-                    placeholder="e.g. 18"
+                    placeholder="напр. 18"
                     value={formData.ageRangeMin}
                     onChange={(e) => setFormData({ ...formData, ageRangeMin: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ageRangeMax">Age Range Max (months)</Label>
+                  <Label htmlFor="ageRangeMax">Макс. возраст (мес.)</Label>
                   <Input
                     id="ageRangeMax"
                     type="number"
-                    placeholder="e.g. 30"
+                    placeholder="напр. 30"
                     value={formData.ageRangeMax}
                     onChange={(e) => setFormData({ ...formData, ageRangeMax: e.target.value })}
                   />
@@ -362,21 +362,21 @@ export default function MpkRegistration() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="weightRangeMin">Weight Range Min (kg)</Label>
+                  <Label htmlFor="weightRangeMin">Мин. вес (кг)</Label>
                   <Input
                     id="weightRangeMin"
                     type="number"
-                    placeholder="e.g. 400"
+                    placeholder="напр. 400"
                     value={formData.weightRangeMin}
                     onChange={(e) => setFormData({ ...formData, weightRangeMin: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weightRangeMax">Weight Range Max (kg)</Label>
+                  <Label htmlFor="weightRangeMax">Макс. вес (кг)</Label>
                   <Input
                     id="weightRangeMax"
                     type="number"
-                    placeholder="e.g. 550"
+                    placeholder="напр. 550"
                     value={formData.weightRangeMax}
                     onChange={(e) => setFormData({ ...formData, weightRangeMax: e.target.value })}
                   />
@@ -384,7 +384,7 @@ export default function MpkRegistration() {
               </div>
 
               <div className="space-y-2">
-                <Label>Primary Intake Months</Label>
+                <Label>Основные месяцы приема</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {INTAKE_MONTHS.map(month => (
                     <div key={month} className="flex items-center space-x-2">
@@ -401,7 +401,7 @@ export default function MpkRegistration() {
               </div>
 
               <Button className="w-full" onClick={handleNext}>
-                Continue <ChevronRight className="ml-2 h-4 w-4" />
+                Продолжить <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </>
           )}
@@ -411,18 +411,18 @@ export default function MpkRegistration() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Purchase Pool Requests are subject to Admin approval.
-                  Consistent demand behavior affects access priority.
+                  Заявки на закупочные пулы подлежат одобрению Администратором.
+                  Стабильность спроса влияет на приоритет доступа.
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Company</span>
+                  <span className="text-muted-foreground">Компания</span>
                   <span>{formData.companyName}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Contact</span>
+                  <span className="text-muted-foreground">Контакт</span>
                   <span>{formData.contactPerson}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
@@ -430,11 +430,11 @@ export default function MpkRegistration() {
                   <span>{formData.email}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Intake Regions</span>
+                  <span className="text-muted-foreground">Регионы приема</span>
                   <span>{formData.intakeRegions.join(', ')}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Monthly Volume</span>
+                  <span className="text-muted-foreground">Месячный объем</span>
                   <span>{formData.typicalVolume}</span>
                 </div>
               </div>
@@ -443,10 +443,10 @@ export default function MpkRegistration() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
+                    Отправка...
                   </>
                 ) : (
-                  'Submit for Review'
+                  'Отправить на проверку'
                 )}
               </Button>
             </>
@@ -459,15 +459,15 @@ export default function MpkRegistration() {
               </div>
               
               <div className="space-y-2">
-                <p className="font-medium text-lg">Inactive — Pending activation</p>
+                <p className="font-medium text-lg">Неактивен — Ожидает активации</p>
                 <p className="text-sm text-muted-foreground">
-                  Your registration has been submitted for review.
-                  You will have read-only access until Admin approval.
+                  Ваша регистрация отправлена на рассмотрение.
+                  У вас будет доступ только для чтения до одобрения Администратором.
                 </p>
               </div>
 
-              <Button className="w-full" onClick={() => navigate('/')}>
-                Continue to Dashboard
+              <Button className="w-full" onClick={() => navigate('/overview')}>
+                Перейти к панели управления
               </Button>
             </div>
           )}
