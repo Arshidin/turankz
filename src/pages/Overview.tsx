@@ -7,9 +7,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRole } from '@/contexts/RoleContext';
-import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Calendar, Shield, Info, Lock, Eye } from 'lucide-react';
+import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Shield, Info, Lock, Eye } from 'lucide-react';
 import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
 import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
 import { AttentionRequired } from '@/components/admin/AttentionRequired';
@@ -20,20 +19,9 @@ import { useMpks } from '@/hooks/useMpks';
 import { useBatches } from '@/hooks/useBatches';
 import { usePoolRequests } from '@/hooks/usePoolRequests';
 import { useCurrentFarmer, useIsObserver } from '@/hooks/useCurrentFarmer';
-
-const stats = {
-  farmer: [
-    { label: 'Активные партии', value: '12', icon: Boxes, description: 'Всего партий в системе' },
-    { label: 'Требуют действия', value: '2', icon: AlertCircle, highlight: true, description: 'Требуют внимания' },
-    { label: 'Подтверждённые', value: '4', icon: CheckCircle2, description: 'Готовы к поставке' },
-  ],
-  mpk: [
-    { label: 'Доступные партии', value: '156', icon: Boxes },
-    { label: 'В отслеживании', value: '23', icon: CheckCircle2 },
-    { label: 'Активные заявки', value: '7', icon: Clock },
-    { label: 'Заполнение пула', value: '72%', icon: TrendingUp },
-  ],
-};
+import { useCurrentMpk } from '@/hooks/useCurrentMpk';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useMemo } from 'react';
 
 const getGradingConfig = (grading: string | null | undefined) => {
   switch (grading) {
@@ -88,39 +76,72 @@ const getGradingConfig = (grading: string | null | undefined) => {
   }
 };
 
-const recentActivity = [
-  { id: 1, batchId: '2847', description: 'Партия #2847 готова к подтверждению', status: 'forecast' as const, time: '2 часа назад', action: 'confirm', actionLabel: 'Подтвердить', priority: 'high' },
-  { id: 2, batchId: 'mpk-04', description: 'Приглашение от МПК-04 ожидает ответа', status: 'soft-committed' as const, time: '4 часа назад', action: 'review', actionLabel: 'Просмотр', priority: 'high' },
-  { id: 3, batchId: '2845', description: 'Данные партии #2845 неполные', status: 'forecast' as const, time: '6 часов назад', action: 'update', actionLabel: 'Обновить', priority: 'medium' },
-  { id: 4, batchId: '2843', description: 'Грейдинг завершён для партии #2843', status: 'confirmed' as const, time: '1 день назад', action: null, actionLabel: null, priority: 'info' },
-  { id: 5, batchId: '2840', description: 'Партия #2840 успешно доставлена', status: 'confirmed' as const, time: '3 дня назад', action: null, actionLabel: null, priority: 'info' },
-];
+// Helper to format relative time
+const formatRelativeTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffHours < 1) return 'Только что';
+  if (diffHours < 24) return `${diffHours}ч назад`;
+  if (diffDays === 1) return '1 день назад';
+  return `${diffDays} дн. назад`;
+};
+
+// Helper to get current week info
+const getCurrentWeekInfo = () => {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const days = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+  const weekNum = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+  return `Week ${weekNum}, ${now.getFullYear()}`;
+};
 
 export default function Overview() {
   const { t } = useTranslation();
-  const { role, roleName } = useRole();
+  const { role } = useRole();
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   
-  // Fetch current farmer data
+  // Fetch current farmer/mpk data
   const { data: currentFarmer } = useCurrentFarmer();
+  const { data: currentMpk } = useCurrentMpk();
   const isObserver = useIsObserver();
   
   // Get farmer status config based on grading
   const farmerStatus = getGradingConfig(currentFarmer?.grading);
   
-  // Fetch real data for Admin dashboard
+  // Fetch real data
   const { data: farmers = [] } = useFarmers();
   const { data: mpks = [] } = useMpks();
   const { data: batches = [] } = useBatches();
   const { data: poolRequests = [] } = usePoolRequests();
 
-  const handleActionClick = (batchId: string, action: string) => {
-    navigate(`/farmer/batch/${batchId}?action=${action}`);
+  // Filter batches for current user (farmer role)
+  const userBatches = useMemo(() => {
+    if (role === 'farmer' && user?.id) {
+      return batches.filter(b => b.user_id === user.id);
+    }
+    return batches;
+  }, [batches, role, user?.id]);
+
+  // Filter requests for current MPK
+  const mpkRequests = useMemo(() => {
+    if (role === 'mpk' && currentMpk?.mpk_id) {
+      return poolRequests.filter(r => r.mpk_id === currentMpk.mpk_id);
+    }
+    return poolRequests;
+  }, [poolRequests, role, currentMpk?.mpk_id]);
+
+  const handleActionClick = (batchNumber: string, action: string) => {
+    navigate(`/farmer/batch/${batchNumber}?action=${action}`);
   };
 
   // Calculate admin metrics from real data
-  const activeFarmers = farmers.filter(f => !f.is_restricted).length;
-  const activeMpks = mpks.filter(m => m.status === 'active').length;
+  const activeFarmers = farmers.filter(f => f.registration_status === 'active').length;
+  const activeMpks = mpks.filter(m => m.registration_status === 'active').length;
   const totalDeclaredVolume = batches.reduce((sum, b) => sum + b.heads, 0);
   const activePoolRequests = poolRequests.filter(r => r.status === 'submitted' || r.status === 'matching' || r.status === 'partial').length;
 
@@ -146,27 +167,54 @@ export default function Overview() {
     demand: poolRequests.filter(r => r.regions.includes(region)).reduce((sum, r) => sum + r.required_volume, 0),
   })).filter(r => r.supply > 0 || r.demand > 0);
 
-  // Calculate monthly breakdown (simplified - using static months)
-  const byMonth = [
-    {
-      month: 'January 2026',
-      supply: { forecast: 320, softCommitted: 180, confirmed: 85 },
-      demand: { submitted: 250, partial: 120, fulfilled: 80 },
-    },
-    {
-      month: 'February 2026',
-      supply: { forecast: 280, softCommitted: 150, confirmed: 60 },
-      demand: { submitted: 200, partial: 100, fulfilled: 50 },
-    },
-    {
-      month: 'March 2026',
-      supply: { forecast: 350, softCommitted: 120, confirmed: 40 },
-      demand: { submitted: 180, partial: 80, fulfilled: 30 },
-    },
-  ];
+  // Calculate monthly breakdown from real data based on target_week
+  const byMonth = useMemo(() => {
+    const monthData: Record<string, { 
+      supply: { forecast: number; softCommitted: number; confirmed: number }; 
+      demand: { submitted: number; partial: number; fulfilled: number };
+    }> = {};
 
-  // Generate attention items
-  const attentionItems = [
+    batches.forEach(batch => {
+      // Parse target_week (e.g., "2025-W01" or "Week 1, 2025")
+      const monthKey = batch.target_week?.slice(0, 7) || 'Unknown';
+      
+      if (!monthData[monthKey]) {
+        monthData[monthKey] = {
+          supply: { forecast: 0, softCommitted: 0, confirmed: 0 },
+          demand: { submitted: 0, partial: 0, fulfilled: 0 },
+        };
+      }
+      
+      if (batch.status === 'forecast') monthData[monthKey].supply.forecast += batch.heads;
+      if (batch.status === 'soft_committed') monthData[monthKey].supply.softCommitted += batch.heads;
+      if (batch.status === 'confirmed') monthData[monthKey].supply.confirmed += batch.heads;
+    });
+
+    poolRequests.forEach(request => {
+      const monthKey = request.target_week?.slice(0, 7) || 'Unknown';
+      
+      if (!monthData[monthKey]) {
+        monthData[monthKey] = {
+          supply: { forecast: 0, softCommitted: 0, confirmed: 0 },
+          demand: { submitted: 0, partial: 0, fulfilled: 0 },
+        };
+      }
+      
+      if (request.status === 'submitted' || request.status === 'matching') {
+        monthData[monthKey].demand.submitted += request.required_volume;
+      }
+      if (request.status === 'partial') monthData[monthKey].demand.partial += request.required_volume;
+      if (request.status === 'fulfilled') monthData[monthKey].demand.fulfilled += request.required_volume;
+    });
+
+    return Object.entries(monthData)
+      .map(([month, data]) => ({ month, ...data }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(0, 6); // Show up to 6 months
+  }, [batches, poolRequests]);
+
+  // Generate attention items from real data
+  const attentionItems = useMemo(() => [
     ...poolRequests
       .filter(r => (r.status === 'submitted' || r.status === 'matching') && r.matched_volume < r.required_volume * 0.3)
       .slice(0, 2)
@@ -203,7 +251,114 @@ export default function Overview() {
         linkTo: '/admin/mpks',
         linkLabel: 'Review',
       })),
-  ];
+  ], [poolRequests, farmers, mpks]);
+
+  // Define stat type for type safety
+  type StatItem = {
+    label: string;
+    value: string;
+    icon: typeof Boxes;
+    highlight?: boolean;
+    description?: string;
+  };
+
+  // Generate farmer stats from real data
+  const farmerStats = useMemo((): StatItem[] => {
+    const total = userBatches.length;
+    const requiresAction = userBatches.filter(b => b.requires_action).length;
+    const confirmed = userBatches.filter(b => b.status === 'confirmed').length;
+    
+    return [
+      { label: 'Активные партии', value: String(total), icon: Boxes, description: 'Всего партий в системе' },
+      { label: 'Требуют действия', value: String(requiresAction), icon: AlertCircle, highlight: requiresAction > 0, description: 'Требуют внимания' },
+      { label: 'Подтверждённые', value: String(confirmed), icon: CheckCircle2, description: 'Готовы к поставке' },
+    ];
+  }, [userBatches]);
+
+  // Generate MPK stats from real data
+  const mpkStats = useMemo((): StatItem[] => {
+    // Available batches for this MPK's regions
+    const availableBatches = batches.filter(b => 
+      ['confirmed', 'soft_committed', 'forecast'].includes(b.status) &&
+      (!currentMpk?.intake_regions?.length || currentMpk.intake_regions.includes(b.region))
+    );
+    
+    const activeRequests = mpkRequests.filter(r => 
+      r.status === 'submitted' || r.status === 'matching' || r.status === 'partial'
+    ).length;
+    
+    const totalVolume = mpkRequests.reduce((sum, r) => sum + r.required_volume, 0);
+    const matchedVolume = mpkRequests.reduce((sum, r) => sum + r.matched_volume, 0);
+    const fillRate = totalVolume > 0 ? Math.round((matchedVolume / totalVolume) * 100) : 0;
+    
+    return [
+      { label: 'Доступные партии', value: String(availableBatches.length), icon: Boxes },
+      { label: 'В отслеживании', value: String(availableBatches.filter(b => b.status === 'confirmed').length), icon: CheckCircle2 },
+      { label: 'Активные заявки', value: String(activeRequests), icon: Clock },
+      { label: 'Заполнение пула', value: `${fillRate}%`, icon: TrendingUp },
+    ];
+  }, [batches, mpkRequests, currentMpk]);
+
+  // Generate activity feed from real batch data
+  const recentActivity = useMemo(() => {
+    const activities: Array<{
+      id: string;
+      batchNumber: string;
+      description: string;
+      status: 'forecast' | 'soft-committed' | 'confirmed';
+      time: string;
+      action: string | null;
+      actionLabel: string | null;
+      priority: 'high' | 'medium' | 'info';
+    }> = [];
+
+    // Add batches requiring action
+    userBatches
+      .filter(b => b.requires_action)
+      .slice(0, 3)
+      .forEach(b => {
+        activities.push({
+          id: b.id,
+          batchNumber: b.batch_number,
+          description: b.action_type === 'confirm' 
+            ? `Партия #${b.batch_number} готова к подтверждению`
+            : b.action_type === 'update'
+            ? `Данные партии #${b.batch_number} неполные`
+            : `Партия #${b.batch_number} требует внимания`,
+          status: b.status === 'soft_committed' ? 'soft-committed' : b.status as 'forecast' | 'confirmed',
+          time: formatRelativeTime(b.updated_at),
+          action: b.action_type || 'review',
+          actionLabel: b.action_type === 'confirm' ? 'Подтвердить' : 'Обновить',
+          priority: 'high',
+        });
+      });
+
+    // Add recent confirmed batches
+    userBatches
+      .filter(b => b.status === 'confirmed' && !b.requires_action)
+      .slice(0, 2)
+      .forEach(b => {
+        activities.push({
+          id: b.id,
+          batchNumber: b.batch_number,
+          description: `Партия #${b.batch_number} подтверждена`,
+          status: 'confirmed',
+          time: formatRelativeTime(b.updated_at),
+          action: null,
+          actionLabel: null,
+          priority: 'info',
+        });
+      });
+
+    return activities.slice(0, 5);
+  }, [userBatches]);
+
+  // Farmer batch summary from real data
+  const farmerBatchSummary = useMemo(() => ({
+    confirmed: userBatches.filter(b => b.status === 'confirmed').length,
+    softCommitted: userBatches.filter(b => b.status === 'soft_committed').length,
+    forecast: userBatches.filter(b => b.status === 'forecast').length,
+  }), [userBatches]);
 
   // Admin Dashboard
   if (role === 'admin') {
@@ -214,7 +369,7 @@ export default function Overview() {
           description={t('admin.commandControl')} 
         />
 
-        {/* Matching Window Banner - Real data from database */}
+        {/* Matching Window Banner */}
         <div className="mb-6">
           <CurrentMatchingWindowBanner />
         </div>
@@ -250,9 +405,8 @@ export default function Overview() {
     );
   }
 
-  // Farmer and MPK Dashboard (existing code)
-  const currentStats = stats[role as 'farmer' | 'mpk'];
-
+  // Farmer and MPK Dashboard
+  const currentStats = role === 'farmer' ? farmerStats : mpkStats;
   const roleTitle = role === 'farmer' ? t('overview.farmerTitle') : t('overview.mpkTitle');
 
   return (
@@ -355,7 +509,7 @@ export default function Overview() {
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className={`text-2xl font-semibold mt-1 ${stat.highlight ? 'text-amber-600' : 'text-foreground'}`}>{stat.value}</p>
-                  {stat.description && (
+                  {'description' in stat && stat.description && (
                     <p className="text-xs text-muted-foreground mt-0.5">{stat.description}</p>
                   )}
                 </div>
@@ -367,6 +521,7 @@ export default function Overview() {
           </Card>
         ))}
       </div>
+
       {/* Reliability Premium Card for Farmer (hide for observers) */}
       {role === 'farmer' && !isObserver && currentFarmer?.grading && (
         <div className="mb-6">
@@ -389,48 +544,54 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentActivity.map((activity) => (
-                <div 
-                  key={activity.id} 
-                  className={`flex items-center justify-between py-3 px-3 rounded-lg border transition-colors ${
-                    activity.priority === 'high' 
-                      ? 'border-amber-500/40 bg-amber-500/5' 
-                      : activity.priority === 'medium'
-                      ? 'border-amber-500/20 bg-amber-500/[0.02]'
-                      : 'border-border/50 bg-transparent'
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {activity.priority === 'high' && (
-                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                      )}
-                      {activity.priority === 'info' && (
-                        <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      )}
-                      <p className={`text-sm truncate ${
-                        activity.action ? 'text-foreground font-medium' : 'text-muted-foreground'
-                      }`}>
-                        {activity.description}
-                      </p>
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity) => (
+                  <div 
+                    key={activity.id} 
+                    className={`flex items-center justify-between py-3 px-3 rounded-lg border transition-colors ${
+                      activity.priority === 'high' 
+                        ? 'border-amber-500/40 bg-amber-500/5' 
+                        : activity.priority === 'medium'
+                        ? 'border-amber-500/20 bg-amber-500/[0.02]'
+                        : 'border-border/50 bg-transparent'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {activity.priority === 'high' && (
+                          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                        )}
+                        {activity.priority === 'info' && (
+                          <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <p className={`text-sm truncate ${
+                          activity.action ? 'text-foreground font-medium' : 'text-muted-foreground'
+                        }`}>
+                          {activity.description}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">{activity.time}</p>
+                        <StatusBadge status={activity.status} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
-                      <StatusBadge status={activity.status} />
-                    </div>
+                    {activity.action && (
+                      <Button 
+                        variant={activity.priority === 'high' ? 'default' : 'outline'} 
+                        size="sm" 
+                        className="ml-3 flex-shrink-0"
+                        onClick={() => handleActionClick(activity.batchNumber, activity.action!)}
+                      >
+                        {activity.actionLabel}
+                      </Button>
+                    )}
                   </div>
-                  {activity.action && (
-                    <Button 
-                      variant={activity.priority === 'high' ? 'default' : 'outline'} 
-                      size="sm" 
-                      className="ml-3 flex-shrink-0"
-                      onClick={() => handleActionClick(activity.batchId, activity.action!)}
-                    >
-                      {activity.actionLabel}
-                    </Button>
-                  )}
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Нет активных действий
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -448,18 +609,12 @@ export default function Overview() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Data Sync</span>
-                <span className="text-sm text-foreground">Last updated 5 min ago</span>
+                <span className="text-sm text-foreground">Real-time</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Current Pool Period</span>
-                <span className="text-sm text-foreground">Week 51, 2025</span>
+                <span className="text-sm text-foreground">{getCurrentWeekInfo()}</span>
               </div>
-              {role !== 'farmer' && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Next Matching Window</span>
-                  <span className="text-sm text-foreground">Dec 20, 2025</span>
-                </div>
-              )}
             </div>
             
             {role === 'farmer' && (
@@ -467,15 +622,15 @@ export default function Overview() {
                 <p className="text-xs text-muted-foreground mb-2">Your Batch Summary</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="p-2 bg-status-confirmed/10 rounded text-center">
-                    <p className="text-lg font-semibold text-status-confirmed">4</p>
+                    <p className="text-lg font-semibold text-status-confirmed">{farmerBatchSummary.confirmed}</p>
                     <p className="text-xs text-muted-foreground">Confirmed</p>
                   </div>
                   <div className="p-2 bg-status-soft-committed/10 rounded text-center">
-                    <p className="text-lg font-semibold text-status-soft-committed">5</p>
+                    <p className="text-lg font-semibold text-status-soft-committed">{farmerBatchSummary.softCommitted}</p>
                     <p className="text-xs text-muted-foreground">Soft Comm.</p>
                   </div>
                   <div className="p-2 bg-status-forecast/10 rounded text-center">
-                    <p className="text-lg font-semibold text-status-forecast">3</p>
+                    <p className="text-lg font-semibold text-status-forecast">{farmerBatchSummary.forecast}</p>
                     <p className="text-xs text-muted-foreground">Forecast</p>
                   </div>
                 </div>
