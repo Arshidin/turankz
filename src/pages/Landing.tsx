@@ -32,7 +32,7 @@ export default function Landing() {
             {/* CTA button */}
             <div className="mt-12 md:mt-16">
               <Button onClick={() => navigate('/auth/login')} variant="ghost" className="h-12 px-0 text-sm md:text-base font-normal tracking-wide text-landing-foreground hover:bg-transparent hover:text-landing-accent rounded-none transition-colors duration-300 group">
-                Sign in to platform
+                Войти на платформу
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
             </div>
