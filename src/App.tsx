@@ -56,6 +56,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Redirect root to welcome */}
+              <Route path="/" element={<Navigate to="/welcome" replace />} />
+              
               {/* Public Landing Page */}
               <Route path="/welcome" element={<Landing />} />
               
@@ -68,11 +71,12 @@ const App = () => (
               <Route path="/access-restricted" element={<AccessRestricted />} />
               
               {/* Protected Routes */}
-              <Route path="/" element={
+              <Route path="/overview" element={
                 <ProtectedRoute>
                   <Overview />
                 </ProtectedRoute>
               } />
+              
               
               {/* Farmer Routes - requireActive blocks observer/suspended */}
               <Route path="/farmer/profile" element={
