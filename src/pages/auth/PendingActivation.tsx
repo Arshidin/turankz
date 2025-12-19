@@ -69,7 +69,7 @@ export default function PendingActivation() {
 
   // If active, redirect to main app
   if (registrationStatus === 'active') {
-    setTimeout(() => navigate('/'), 1000);
+    setTimeout(() => navigate('/overview'), 1000);
   }
 
   return (
