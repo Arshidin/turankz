@@ -13,6 +13,7 @@ import FarmerProfile from "./pages/farmer/FarmerProfile";
 import LivestockBatches from "./pages/farmer/LivestockBatches";
 import BatchDetail from "./pages/farmer/BatchDetail";
 import SalesCalendar from "./pages/farmer/SalesCalendar";
+import HerdStructure from "./pages/farmer/HerdStructure";
 import FarmerExecutions from "./pages/farmer/FarmerExecutions";
 import MarketOverview from "./pages/mpk/MarketOverview";
 import Watchlist from "./pages/mpk/Watchlist";
@@ -29,6 +30,7 @@ import ActivityLog from "./pages/admin/ActivityLog";
 import PremiumManagement from "./pages/admin/PremiumManagement";
 import ExecutionManagement from "./pages/admin/ExecutionManagement";
 import MatchingWindowsManagement from "./pages/admin/MatchingWindowsManagement";
+import NationalHerdStructure from "./pages/admin/NationalHerdStructure";
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 import AccessRestricted from "./pages/AccessRestricted";
@@ -93,6 +95,11 @@ const App = () => (
               <Route path="/farmer/executions" element={
                 <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <FarmerExecutions />
+                </ProtectedRoute>
+              } />
+              <Route path="/farmer/herd" element={
+                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
+                  <HerdStructure />
                 </ProtectedRoute>
               } />
               
@@ -172,6 +179,11 @@ const App = () => (
               <Route path="/admin/windows" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <MatchingWindowsManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/herd-structure" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <NationalHerdStructure />
                 </ProtectedRoute>
               } />
               
