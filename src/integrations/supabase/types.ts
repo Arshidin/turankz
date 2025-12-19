@@ -355,6 +355,39 @@ export type Database = {
         }
         Relationships: []
       }
+      forecast_reference_coefficients: {
+        Row: {
+          coefficient_key: string
+          coefficient_type: string
+          coefficient_value: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          coefficient_key: string
+          coefficient_type: string
+          coefficient_value: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          coefficient_key?: string
+          coefficient_type?: string
+          coefficient_value?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       herd_structure_snapshots: {
         Row: {
           breed: string
@@ -1409,6 +1442,28 @@ export type Database = {
           verification_status: string
           verified_at: string
           verified_by: string
+        }[]
+      }
+      get_farmer_indicative_forecast: {
+        Args: { p_farmer_id: string }
+        Returns: {
+          calving_rate: number
+          category: string
+          current_count: number
+          estimated_offspring: number
+          reporting_quarter: number
+          reporting_year: number
+        }[]
+      }
+      get_indicative_forecast_by_region: {
+        Args: { p_quarter?: number; p_year?: number }
+        Returns: {
+          breeding_cows_count: number
+          calving_rate: number
+          data_confidence: string
+          estimated_calves: number
+          farmer_count: number
+          region: string
         }[]
       }
       get_user_role: {
