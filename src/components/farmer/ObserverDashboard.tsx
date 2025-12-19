@@ -13,6 +13,7 @@
 
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ObserverModeBanner } from '@/components/access';
 import { 
   Clock, 
   BookOpen,
@@ -56,6 +57,9 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* Observer Mode Banner */}
+      <ObserverModeBanner />
+
       {/* Main Status Card - Single unified status block */}
       <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-amber-500/[0.02]">
         <CardContent className="p-6">

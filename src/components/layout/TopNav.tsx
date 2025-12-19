@@ -98,12 +98,20 @@ export function TopNav() {
           {lang === 'ru' ? config.labelRu : config.label}
         </Badge>
         
-        {/* Account Status Badge for non-admin */}
+        {/* Observer Mode Indicator - Clear role label for non-admin observers */}
         {role !== 'admin' && isObserver && (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            {getStatusLabel(lang)}
-          </Badge>
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs">
+            <Eye className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-amber-700 dark:text-amber-400 font-medium">Observer</span>
+            <span className="text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground text-[11px]">
+              {lang === 'ru' ? 'Только просмотр' : 'Read-only'}
+            </span>
+            <span className="text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground text-[11px]">
+              {lang === 'ru' ? 'Без участия' : 'No participation'}
+            </span>
+          </div>
         )}
       </div>
 
