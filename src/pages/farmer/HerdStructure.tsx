@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, FileText, Calendar, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Plus, FileText, Calendar, CheckCircle2, Clock, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useMyHerdSnapshots, LIVESTOCK_CATEGORIES, CONFIDENCE_LEVELS, type HerdStructureSnapshot } from '@/hooks/useHerdStructure';
 import { HerdSnapshotWizard } from '@/components/herd/HerdSnapshotWizard';
 import { format } from 'date-fns';
@@ -62,6 +62,19 @@ export default function HerdStructure() {
             <Plus className="w-4 h-4 mr-2" />
             {t('herdStructure.newSnapshot', 'New Snapshot')}
           </Button>
+        </div>
+
+        {/* Structural Data Disclaimer */}
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              {t('herdStructure.disclaimer.title', 'Structural Data Only')}
+            </p>
+            <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+              {t('herdStructure.disclaimer.text', 'Structural livestock data does not imply market availability. Only confirmed batches are eligible for matching.')}
+            </p>
+          </div>
         </div>
 
         {/* Info Banner */}
