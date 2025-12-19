@@ -135,7 +135,7 @@ export default function NationalHerdStructure() {
       <div className="space-y-6">
         <PageHeader
           title={t('herdStructure.nationalTitle', 'National Herd Structure')}
-          description={t('herdStructure.nationalDescription', 'Aggregated livestock capacity data from all registered farmers')}
+          description={t('herdStructure.nationalDescription', 'Aggregated structural capacity data — indicative, voluntary reporting')}
         />
 
         <Tabs defaultValue="structure" className="space-y-4">
@@ -152,10 +152,10 @@ export default function NationalHerdStructure() {
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <p className="font-medium text-amber-800 dark:text-amber-200">
-                  {t('herdStructure.disclaimer.title', 'Structural Data Only')}
+                  {t('herdStructure.disclaimer.title', 'Structural Data — Indicative Only')}
                 </p>
                 <p className="text-amber-700 dark:text-amber-300 mt-0.5">
-                  {t('herdStructure.disclaimer.text', 'Structural livestock data does not imply market availability. Only confirmed batches are eligible for matching.')}
+                  {t('herdStructure.disclaimer.text', 'Herd structure is voluntary, indicative capacity data. It does not represent market availability or supply commitments. Only confirmed batches participate in matching.')}
                 </p>
               </div>
             </div>
@@ -531,7 +531,7 @@ export default function NationalHerdStructure() {
                   Indicative / Non-binding Forecast
                 </p>
                 <p className="text-blue-700 dark:text-blue-300 mt-0.5">
-                  These forecasts are derived from herd structure × reference calving rates. They do not imply farmer commitments and are not linked to pricing or matching.
+                  These forecasts are derived from aggregated herd structure × reference calving rates. They are indicative only, do not represent farmer commitments, and are not linked to pricing or pool matching.
                 </p>
               </div>
             </div>
@@ -592,8 +592,9 @@ export default function NationalHerdStructure() {
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
-                      Regional Forecast Breakdown
+                      Regional Indicative Forecast
                     </CardTitle>
+                    <CardDescription>Aggregated, non-binding projections by region</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">

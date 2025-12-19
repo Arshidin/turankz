@@ -57,18 +57,18 @@ export interface AdminMarketIntent {
   created_at: string;
 }
 
-// Horizon labels
+// Horizon labels - using indicative language
 export const HORIZON_OPTIONS: Record<MarketIntentHorizon, { label: string; description: string; months: number }> = {
-  '3m': { label: '3 Months', description: 'Short-term outlook', months: 3 },
-  '6m': { label: '6 Months', description: 'Medium-term outlook', months: 6 },
-  '12m': { label: '12 Months', description: 'Long-term outlook', months: 12 },
+  '3m': { label: '3 Months', description: 'Near-term indicative outlook', months: 3 },
+  '6m': { label: '6 Months', description: 'Medium-term indicative outlook', months: 6 },
+  '12m': { label: '12 Months', description: 'Long-term indicative outlook', months: 12 },
 };
 
-// Confidence level labels
+// Confidence level labels - emphasizing voluntary, non-binding nature
 export const CONFIDENCE_OPTIONS: Record<IntentConfidenceLevel, { label: string; description: string; color: string }> = {
-  low: { label: 'Low', description: 'Uncertain estimate', color: 'text-amber-600' },
-  medium: { label: 'Medium', description: 'Reasonable estimate', color: 'text-blue-600' },
-  high: { label: 'High', description: 'Confident estimate', color: 'text-emerald-600' },
+  low: { label: 'Low', description: 'Preliminary estimate', color: 'text-amber-600' },
+  medium: { label: 'Medium', description: 'Indicative estimate', color: 'text-blue-600' },
+  high: { label: 'High', description: 'Likely estimate', color: 'text-emerald-600' },
 };
 
 // Common breeds (shared with herd structure)

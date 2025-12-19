@@ -21,9 +21,9 @@ const mapStatus = (status: BatchStatus): BatchStatus => {
 };
 
 const statusDescriptions = {
-  confirmed: 'Confirmed batches are verified and committed by farmers for delivery.',
-  'soft-committed': 'Soft committed batches have farmer intent but await final confirmation.',
-  forecast: 'Forecast batches are planned but not yet committed by farmers.',
+  confirmed: 'Confirmed batches are farmer-declared and eligible for matching.',
+  'soft-committed': 'Soft committed batches indicate farmer intent, pending final confirmation.',
+  forecast: 'Forecast batches are indicative plans, not yet committed by farmers.',
 };
 
 // Mock data fallback when database is empty
@@ -90,7 +90,7 @@ export default function MarketOverview() {
     <MainLayout>
       <PageHeader 
         title="Market Overview" 
-        description="Review available supply by readiness status and express interest in batches" 
+        description="Aggregated supply visibility by readiness status — indicative data only" 
       />
 
       {/* Current Matching Window Banner */}
@@ -131,9 +131,9 @@ export default function MarketOverview() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Confirmed Available</p>
+                    <p className="text-sm text-muted-foreground">Confirmed (Indicative)</p>
                     <p className="text-2xl font-semibold text-foreground">{displaySummary.confirmed}</p>
-                    <p className="text-xs text-status-confirmed">Ready for commitment</p>
+                    <p className="text-xs text-status-confirmed">Farmer-declared, eligible for matching</p>
                   </div>
                   <div className="w-10 h-10 bg-status-confirmed/10 rounded-lg flex items-center justify-center">
                     <CheckCircle2 className="w-5 h-5 text-status-confirmed" />
@@ -145,9 +145,9 @@ export default function MarketOverview() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Soft Committed</p>
+                    <p className="text-sm text-muted-foreground">Soft Committed (Indicative)</p>
                     <p className="text-2xl font-semibold text-foreground">{displaySummary.softCommitted}</p>
-                    <p className="text-xs text-status-soft-committed">Pending farmer confirmation</p>
+                    <p className="text-xs text-status-soft-committed">Farmer intent, pending confirmation</p>
                   </div>
                   <div className="w-10 h-10 bg-status-soft-committed/10 rounded-lg flex items-center justify-center">
                     <Clock className="w-5 h-5 text-status-soft-committed" />
@@ -159,9 +159,9 @@ export default function MarketOverview() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Forecast</p>
+                    <p className="text-sm text-muted-foreground">Forecast (Indicative)</p>
                     <p className="text-2xl font-semibold text-foreground">{displaySummary.forecast}</p>
-                    <p className="text-xs text-status-forecast">Planned availability</p>
+                    <p className="text-xs text-status-forecast">Indicative, non-binding</p>
                   </div>
                   <div className="w-10 h-10 bg-status-forecast/10 rounded-lg flex items-center justify-center">
                     <Eye className="w-5 h-5 text-status-forecast" />
@@ -179,9 +179,9 @@ export default function MarketOverview() {
                   <Award className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Standard Premium Eligible Supply</p>
+                  <p className="text-sm font-medium text-foreground">Standard Premium Indicative Reference</p>
                   <p className="text-xs text-muted-foreground">
-                    Available supply may qualify for standard premiums of up to +{standardPremiums?.[standardPremiums.length - 1]?.premium_value ?? 100} ₸/kg based on batch quality and standardization.
+                    Aggregated supply may qualify for indicative premiums of up to +{standardPremiums?.[standardPremiums.length - 1]?.premium_value ?? 100} ₸/kg based on batch quality. Final premiums determined at settlement.
                   </p>
                 </div>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
