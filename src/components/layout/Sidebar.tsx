@@ -62,6 +62,9 @@ interface NavGroup {
 
 // FARMER navigation - grouped by intent with clear separation between
 // "Data & Outlook" (informational, non-binding) and "Market Operations" (binding actions)
+// 
+// OBSERVER ACCESS: Only shows Overview, Price Grid, and National Herd Structure
+// All other sections hidden until profile activation
 const farmerNavGroups: NavGroup[] = [
   {
     key: 'overview',
@@ -69,9 +72,11 @@ const farmerNavGroups: NavGroup[] = [
     items: [
       { labelKey: 'nav.overview', path: '/overview', icon: Home, requiredStatus: ['observer', 'active'] },
       { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
+      // National Herd Structure - read-only for observers
+      { labelKey: 'nav.nationalHerd', path: '/admin/herd-structure', icon: Beef, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
-  // DATA & OUTLOOK: Informational only - never auto-generates batches
+  // DATA & OUTLOOK: Informational only - never auto-generates batches (active only)
   {
     key: 'data-outlook',
     labelKey: 'nav.groups.dataOutlook',
@@ -80,7 +85,7 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
     ],
   },
-  // MARKET OPERATIONS: Binding actions - batches are the gateway to matching
+  // MARKET OPERATIONS: Binding actions - batches are the gateway to matching (active only)
   {
     key: 'market-operations',
     labelKey: 'nav.groups.marketOperations',
@@ -89,6 +94,7 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
     ],
   },
+  // Execution section (active only, requires executions)
   {
     key: 'execution',
     labelKey: 'nav.groups.execution',
@@ -96,6 +102,7 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
     ],
   },
+  // Account section (active only)
   {
     key: 'account',
     labelKey: 'nav.groups.account',
