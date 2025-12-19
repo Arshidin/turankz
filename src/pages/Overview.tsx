@@ -108,7 +108,7 @@ export default function Overview() {
   // Fetch current farmer/mpk data
   const { data: currentFarmer } = useCurrentFarmer();
   const { data: currentMpk } = useCurrentMpk();
-  const isObserver = useIsObserver();
+  const { isObserver, isLoading: observerLoading } = useIsObserver();
   
   // Get farmer status config based on grading
   const farmerStatus = getGradingConfig(currentFarmer?.grading);
@@ -406,7 +406,8 @@ export default function Overview() {
   }
 
   // Observer Dashboard - Simplified view for pending activation
-  if (role === 'farmer' && isObserver) {
+  // Only show when data is loaded and confirmed as observer
+  if (role === 'farmer' && !observerLoading && isObserver) {
     return (
       <MainLayout>
         <PageHeader 

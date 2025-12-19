@@ -88,7 +88,7 @@ export default function LivestockBatches() {
   const stats = useBatchStats();
   const updateBatch = useUpdateBatch();
   const { data: standardPremiums } = useStandardPremiums();
-  const isObserver = useIsObserver();
+  const { isObserver } = useIsObserver();
   const canCreateBatches = useCanCreateBatches();
   const { checkBatchLock } = useGlobalBatchLockStatus();
   

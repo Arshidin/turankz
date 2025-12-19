@@ -29,17 +29,17 @@ export function useFarmerGrading(): FarmerGrading | null {
   return farmer?.grading ?? null;
 }
 
-export function useIsObserver(): boolean {
+export function useIsObserver(): { isObserver: boolean; isLoading: boolean } {
   const { data: farmer, isLoading } = useCurrentFarmer();
   const { role } = useAuthContext();
   
   // Only applies to farmers
-  if (role !== 'farmer') return false;
+  if (role !== 'farmer') return { isObserver: false, isLoading: false };
   
-  // While loading, assume restricted to be safe
-  if (isLoading) return true;
-  
-  return farmer?.grading === 'observer';
+  return { 
+    isObserver: farmer?.grading === 'observer',
+    isLoading 
+  };
 }
 
 export function useCanCreateBatches(): boolean {

@@ -231,7 +231,8 @@ describe('useIsObserver', () => {
       wrapper: createWrapper(),
     });
 
-    expect(result.current).toBe(false);
+    expect(result.current.isObserver).toBe(false);
+    expect(result.current.isLoading).toBe(false);
   });
 
   it('should return true for observer grading', async () => {
@@ -251,7 +252,8 @@ describe('useIsObserver', () => {
     });
 
     await waitFor(() => {
-      expect(result.current).toBe(true);
+      expect(result.current.isObserver).toBe(true);
+      expect(result.current.isLoading).toBe(false);
     });
   });
 
@@ -272,7 +274,8 @@ describe('useIsObserver', () => {
     });
 
     await waitFor(() => {
-      expect(result.current).toBe(false);
+      expect(result.current.isObserver).toBe(false);
+      expect(result.current.isLoading).toBe(false);
     });
   });
 });
