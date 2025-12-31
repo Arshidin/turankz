@@ -97,6 +97,29 @@ export function useMyHerdSnapshots() {
 }
 
 /**
+ * Hook to check for existing snapshots (to prevent duplicates)
+ */
+export function useCheckExistingSnapshots() {
+  const { data: farmer } = useCurrentFarmer();
+
+  return useQuery({
+    queryKey: ['existing-snapshots', farmer?.id],
+    queryFn: async () => {
+      if (!farmer?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('herd_structure_snapshots')
+        .select('reporting_year, reporting_quarter, category, breed')
+        .eq('farmer_id', farmer.id);
+
+      if (error) throw error;
+      return data as Array<{ reporting_year: number; reporting_quarter: number | null; category: LivestockCategory; breed: string }>;
+    },
+    enabled: !!farmer?.id,
+  });
+}
+
+/**
  * Hook to create new herd structure snapshot
  */
 export function useCreateHerdSnapshot() {
@@ -106,6 +129,19 @@ export function useCreateHerdSnapshot() {
   return useMutation({
     mutationFn: async (inputs: Omit<CreateSnapshotInput, 'farmer_id'>[]) => {
       if (!farmer?.id) throw new Error('No farmer profile found');
+
+      // Validate: Check for future periods
+      const currentYear = new Date().getFullYear();
+      const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+      
+      for (const input of inputs) {
+        if (input.reporting_year > currentYear) {
+          throw new Error('Cannot create snapshot for future year');
+        }
+        if (input.reporting_year === currentYear && input.reporting_period_type === 'quarterly' && input.reporting_quarter && input.reporting_quarter > currentQuarter) {
+          throw new Error('Cannot create snapshot for future quarter');
+        }
+      }
 
       const snapshots = inputs.map(input => ({
         farmer_id: farmer.id,
@@ -124,11 +160,19 @@ export function useCreateHerdSnapshot() {
         .insert(snapshots)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        // Check for duplicate key error
+        if (error.code === '23505' || error.message?.includes('unique_snapshot_per_period')) {
+          throw new Error('A snapshot for this period, category, and breed already exists. Please update the existing snapshot or choose a different period.');
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['herd-snapshots'] });
+      queryClient.invalidateQueries({ queryKey: ['existing-snapshots'] });
+      queryClient.invalidateQueries({ queryKey: ['aggregated-herd-structure'] });
     },
   });
 }
@@ -214,6 +258,55 @@ export function useUpdateSnapshotConfidence() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['herd-snapshots'] });
       queryClient.invalidateQueries({ queryKey: ['all-herd-snapshots-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['aggregated-herd-structure'] });
+    },
+  });
+}
+
+/**
+ * Hook for farmers to delete their own snapshots
+ * Farmers can only delete their own snapshots within 24 hours of creation
+ */
+export function useDeleteHerdSnapshot() {
+  const queryClient = useQueryClient();
+  const { data: farmer } = useCurrentFarmer();
+
+  return useMutation({
+    mutationFn: async (snapshotId: string) => {
+      if (!farmer?.id) throw new Error('No farmer profile found');
+
+      // First, verify the snapshot belongs to this farmer and is deletable
+      const { data: snapshot, error: fetchError } = await supabase
+        .from('herd_structure_snapshots')
+        .select('created_at, farmer_id')
+        .eq('id', snapshotId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!snapshot) throw new Error('Snapshot not found');
+      if (snapshot.farmer_id !== farmer.id) throw new Error('You can only delete your own snapshots');
+
+      // Check if snapshot is within 24-hour deletion window
+      const createdAt = new Date(snapshot.created_at);
+      const now = new Date();
+      const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursSinceCreation > 24) {
+        throw new Error('Snapshots can only be deleted within 24 hours of creation. Contact admin for assistance.');
+      }
+
+      // Delete the snapshot
+      const { error } = await supabase
+        .from('herd_structure_snapshots')
+        .delete()
+        .eq('id', snapshotId)
+        .eq('farmer_id', farmer.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['herd-snapshots'] });
+      queryClient.invalidateQueries({ queryKey: ['existing-snapshots'] });
       queryClient.invalidateQueries({ queryKey: ['aggregated-herd-structure'] });
     },
   });

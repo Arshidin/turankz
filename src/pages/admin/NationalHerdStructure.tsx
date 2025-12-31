@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -113,7 +113,22 @@ export default function NationalHerdStructure() {
 
   // Calculate totals
   const totalHeads = filteredData.reduce((sum, row) => sum + row.total_count, 0);
-  const totalFarmers = new Set(filteredData.flatMap(row => row.farmer_count)).size;
+  // Fix: Calculate unique farmers from all snapshots, not aggregated data
+  const totalFarmers = useMemo(() => {
+    if (!allSnapshots) return 0;
+    const farmerIds = new Set(
+      allSnapshots
+        .filter(s => {
+          if (regionFilter !== 'all' && s.farmer_region !== regionFilter) return false;
+          if (categoryFilter !== 'all' && s.category !== categoryFilter) return false;
+          if (selectedYear && s.reporting_year !== selectedYear) return false;
+          if (selectedQuarter && s.reporting_quarter !== selectedQuarter) return false;
+          return true;
+        })
+        .map(s => s.farmer_id)
+    );
+    return farmerIds.size;
+  }, [allSnapshots, regionFilter, categoryFilter, selectedYear, selectedQuarter]);
   const uniqueRegions = new Set(filteredData.map(row => row.region)).size;
 
   // Confidence breakdown
@@ -127,26 +142,89 @@ export default function NationalHerdStructure() {
   const totalEstimatedCalves = forecastData?.reduce((sum, r) => sum + r.estimated_calves, 0) || 0;
   const totalForecastFarmers = forecastData?.reduce((sum, r) => sum + r.farmer_count, 0) || 0;
 
-  // Group by region
-  const byRegion = filteredData.reduce((acc, row) => {
-    if (!acc[row.region]) {
-      acc[row.region] = { total: 0, farmers: 0, categories: {} as Record<LivestockCategory, number>, confidence: row.avg_confidence };
-    }
-    acc[row.region].total += row.total_count;
-    acc[row.region].farmers = Math.max(acc[row.region].farmers, row.farmer_count);
-    acc[row.region].categories[row.category] = (acc[row.region].categories[row.category] || 0) + row.total_count;
-    return acc;
-  }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number>; confidence: DataConfidenceLevel }>);
+  // Group by region - fix: calculate unique farmers correctly
+  const byRegion = useMemo(() => {
+    return filteredData.reduce((acc, row) => {
+      if (!acc[row.region]) {
+        acc[row.region] = { total: 0, farmerIds: new Set<string>(), categories: {} as Record<LivestockCategory, number>, confidence: row.avg_confidence };
+      }
+      acc[row.region].total += row.total_count;
+      acc[row.region].categories[row.category] = (acc[row.region].categories[row.category] || 0) + row.total_count;
+      return acc;
+    }, {} as Record<string, { total: number; farmerIds: Set<string>; categories: Record<LivestockCategory, number>; confidence: DataConfidenceLevel }>);
+  }, [filteredData]);
 
-  // Group by category
-  const byCategory = filteredData.reduce((acc, row) => {
-    if (!acc[row.category]) {
-      acc[row.category] = { total: 0, farmers: 0 };
+  // Calculate actual unique farmers per region from allSnapshots
+  const byRegionWithFarmers = useMemo(() => {
+    if (!allSnapshots) {
+      // If no snapshots, return regions with 0 farmers
+      return Object.entries(byRegion).reduce((acc, [region, data]) => {
+        acc[region] = {
+          total: data.total,
+          farmers: 0,
+          categories: data.categories,
+          confidence: data.confidence,
+        };
+        return acc;
+      }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number>; confidence: DataConfidenceLevel }>);
     }
-    acc[row.category].total += row.total_count;
-    acc[row.category].farmers += row.farmer_count;
-    return acc;
-  }, {} as Record<LivestockCategory, { total: number; farmers: number }>);
+    
+    const regionFarmers: Record<string, Set<string>> = {};
+    allSnapshots.forEach(s => {
+      if (regionFilter !== 'all' && s.farmer_region !== regionFilter) return;
+      if (categoryFilter !== 'all' && s.category !== categoryFilter) return;
+      if (selectedYear && s.reporting_year !== selectedYear) return;
+      if (selectedQuarter && s.reporting_quarter !== selectedQuarter) return;
+      
+      if (!regionFarmers[s.farmer_region]) {
+        regionFarmers[s.farmer_region] = new Set();
+      }
+      regionFarmers[s.farmer_region].add(s.farmer_id);
+    });
+
+    return Object.entries(byRegion).reduce((acc, [region, data]) => {
+      acc[region] = {
+        total: data.total,
+        farmers: regionFarmers[region]?.size || 0,
+        categories: data.categories,
+        confidence: data.confidence,
+      };
+      return acc;
+    }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number>; confidence: DataConfidenceLevel }>);
+  }, [byRegion, allSnapshots, regionFilter, categoryFilter, selectedYear, selectedQuarter]);
+
+  // Group by category - fix: calculate unique farmers correctly
+  const byCategory = useMemo(() => {
+    const categoryData = filteredData.reduce((acc, row) => {
+      if (!acc[row.category]) {
+        acc[row.category] = { total: 0, farmerIds: new Set<string>() };
+      }
+      acc[row.category].total += row.total_count;
+      return acc;
+    }, {} as Record<LivestockCategory, { total: number; farmerIds: Set<string> }>);
+
+    // Calculate actual unique farmers per category from allSnapshots
+    if (allSnapshots) {
+      allSnapshots.forEach(s => {
+        if (regionFilter !== 'all' && s.farmer_region !== regionFilter) return;
+        if (categoryFilter !== 'all' && s.category !== categoryFilter) return;
+        if (selectedYear && s.reporting_year !== selectedYear) return;
+        if (selectedQuarter && s.reporting_quarter !== selectedQuarter) return;
+        
+        if (categoryData[s.category]) {
+          categoryData[s.category].farmerIds.add(s.farmer_id);
+        }
+      });
+    }
+
+    return Object.entries(categoryData).reduce((acc, [category, data]) => {
+      acc[category as LivestockCategory] = {
+        total: data.total,
+        farmers: data.farmerIds.size,
+      };
+      return acc;
+    }, {} as Record<LivestockCategory, { total: number; farmers: number }>);
+  }, [filteredData, allSnapshots, regionFilter, categoryFilter, selectedYear, selectedQuarter]);
 
   const handleUpdateCalvingRate = () => {
     if (!calvingRateCoeff || !editingCalvingRate) return;
@@ -553,7 +631,7 @@ export default function NationalHerdStructure() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {Object.entries(byRegion)
+                      {Object.entries(byRegionWithFarmers)
                         .sort(([, a], [, b]) => b.total - a.total)
                         .map(([region, data]) => (
                           <div key={region} className="p-4 rounded-lg border bg-card">

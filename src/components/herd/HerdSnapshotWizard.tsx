@@ -13,7 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ArrowRight, Check, Calendar, Beef, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
-  useCreateHerdSnapshot, 
+  useCreateHerdSnapshot,
+  useCheckExistingSnapshots,
   LIVESTOCK_CATEGORIES, 
   COMMON_BREEDS,
   type LivestockCategory,
@@ -41,6 +42,7 @@ const STEPS = [
 export function HerdSnapshotWizard({ open, onOpenChange }: WizardProps) {
   const { t } = useTranslation();
   const createSnapshot = useCreateHerdSnapshot();
+  const { data: existingSnapshots } = useCheckExistingSnapshots();
   
   const [step, setStep] = useState(0);
   const [periodType, setPeriodType] = useState<ReportingPeriodType>('quarterly');
@@ -57,12 +59,43 @@ export function HerdSnapshotWizard({ open, onOpenChange }: WizardProps) {
   );
 
   const currentYear = new Date().getFullYear();
+  const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
+  // Validate period - cannot create for future periods
+  const validatePeriod = (year: number, quarter?: number, periodType?: ReportingPeriodType): { valid: boolean; error?: string } => {
+    if (year > currentYear) {
+      return { valid: false, error: 'Cannot create snapshot for future year' };
+    }
+    if (year === currentYear && periodType === 'quarterly' && quarter && quarter > currentQuarter) {
+      return { valid: false, error: 'Cannot create snapshot for future quarter' };
+    }
+    return { valid: true };
+  };
+
+  // Check if snapshot already exists for given period/category/breed
+  const checkExistingSnapshot = (category: LivestockCategory, breed: string): boolean => {
+    if (!existingSnapshots) return false;
+    return existingSnapshots.some(s => 
+      s.reporting_year === year &&
+      s.reporting_quarter === (periodType === 'quarterly' ? quarter : null) &&
+      s.category === category &&
+      s.breed === breed
+    );
+  };
+
   const handleNext = () => {
-    if (step === 0 && !defaultBreed) {
-      toast.error('Please select a primary breed');
-      return;
+    if (step === 0) {
+      // Validate period
+      const periodValidation = validatePeriod(year, quarter, periodType);
+      if (!periodValidation.valid) {
+        toast.error(periodValidation.error || 'Invalid period');
+        return;
+      }
+      if (!defaultBreed) {
+        toast.error('Please select a primary breed');
+        return;
+      }
     }
     if (step < STEPS.length - 1) {
       // Apply default breed to categories without breed
@@ -81,6 +114,13 @@ export function HerdSnapshotWizard({ open, onOpenChange }: WizardProps) {
   };
 
   const handleSubmit = async () => {
+    // Validate period before submit
+    const periodValidation = validatePeriod(year, quarter, periodType);
+    if (!periodValidation.valid) {
+      toast.error(periodValidation.error || 'Invalid period');
+      return;
+    }
+
     const validCounts = counts.filter(c => c.count > 0);
     
     if (validCounts.length === 0) {
@@ -103,8 +143,13 @@ export function HerdSnapshotWizard({ open, onOpenChange }: WizardProps) {
       toast.success('Herd structure snapshot submitted successfully');
       onOpenChange(false);
       resetWizard();
-    } catch (error) {
-      toast.error('Failed to submit snapshot');
+    } catch (error: any) {
+      // Check for duplicate error
+      if (error?.message?.includes('duplicate') || error?.code === '23505') {
+        toast.error('A snapshot for this period, category, and breed already exists. Please update the existing snapshot or choose a different period.');
+      } else {
+        toast.error('Failed to submit snapshot: ' + (error?.message || 'Unknown error'));
+      }
     }
   };
 
@@ -227,49 +272,59 @@ export function HerdSnapshotWizard({ open, onOpenChange }: WizardProps) {
 
           {step === 1 && (
             <div className="space-y-4">
-              {counts.map((item) => (
-                <Card key={item.category} className="border">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <Label className="text-base font-medium">
-                          {LIVESTOCK_CATEGORIES[item.category].label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {LIVESTOCK_CATEGORIES[item.category].description}
-                        </p>
+              {counts.map((item) => {
+                const existingBreed = item.breed || defaultBreed;
+                const hasExisting = existingBreed && checkExistingSnapshot(item.category, existingBreed);
+                
+                return (
+                  <Card key={item.category} className={`border ${hasExisting ? 'border-amber-300 bg-amber-50/50' : ''}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <Label className="text-base font-medium">
+                            {LIVESTOCK_CATEGORIES[item.category].label}
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {LIVESTOCK_CATEGORIES[item.category].description}
+                          </p>
+                          {hasExisting && (
+                            <p className="text-xs text-amber-700 mt-1 font-medium">
+                              ⚠️ Snapshot already exists for this period, category, and breed
+                            </p>
+                          )}
+                        </div>
+                        <div className="w-28">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={item.count || ''}
+                            onChange={(e) => updateCount(item.category, parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="text-right"
+                          />
+                        </div>
                       </div>
-                      <div className="w-28">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={item.count || ''}
-                          onChange={(e) => updateCount(item.category, parseInt(e.target.value) || 0)}
-                          placeholder="0"
-                          className="text-right"
-                        />
-                      </div>
-                    </div>
-                    {item.count > 0 && (
-                      <div className="mt-3">
-                        <Select 
-                          value={item.breed || defaultBreed} 
-                          onValueChange={(v) => updateBreed(item.category, v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Select breed" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {COMMON_BREEDS.map(breed => (
-                              <SelectItem key={breed} value={breed}>{breed}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      {item.count > 0 && (
+                        <div className="mt-3">
+                          <Select 
+                            value={item.breed || defaultBreed} 
+                            onValueChange={(v) => updateBreed(item.category, v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select breed" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMMON_BREEDS.map(breed => (
+                                <SelectItem key={breed} value={breed}>{breed}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
               
               <div className="space-y-2">
                 <Label>{t('herdStructure.additionalNotes', 'Additional Notes')} (optional)</Label>

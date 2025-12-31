@@ -8,12 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, FileText, Calendar, AlertTriangle, TrendingUp, Info } from 'lucide-react';
-import { useMyHerdSnapshots, LIVESTOCK_CATEGORIES, type HerdStructureSnapshot } from '@/hooks/useHerdStructure';
+import { Plus, FileText, Calendar, AlertTriangle, TrendingUp, Info, Trash2 } from 'lucide-react';
+import { useMyHerdSnapshots, useDeleteHerdSnapshot, LIVESTOCK_CATEGORIES, type HerdStructureSnapshot } from '@/hooks/useHerdStructure';
 import { useFarmerForecast, useForecastCoefficients } from '@/hooks/useForecast';
 import { ConfidenceBadge } from '@/components/data-integrity/ConfidenceBadge';
 import { HerdSnapshotWizard } from '@/components/herd/HerdSnapshotWizard';
-import { format } from 'date-fns';
+import { format, differenceInHours } from 'date-fns';
 
 function formatPeriod(snapshot: HerdStructureSnapshot): string {
   if (snapshot.reporting_period_type === 'annual') {
@@ -50,7 +50,9 @@ export default function HerdStructure() {
   const { data: snapshots, isLoading } = useMyHerdSnapshots();
   const { data: forecast, isLoading: forecastLoading } = useFarmerForecast();
   const { data: coefficients } = useForecastCoefficients();
+  const deleteSnapshot = useDeleteHerdSnapshot();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const groupedSnapshots = snapshots ? groupSnapshotsByPeriod(snapshots) : [];
   const calvingRate = coefficients?.find(c => c.coefficient_type === 'calving_rate')?.coefficient_value || 0.85;
@@ -159,18 +161,52 @@ export default function HerdStructure() {
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {group.items.map(snapshot => (
-                          <div key={snapshot.id} className="p-3 rounded-lg border bg-card">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">
-                                {LIVESTOCK_CATEGORIES[snapshot.category].label}
-                              </span>
-                              <ConfidenceBadge level={snapshot.data_confidence_level} />
+                        {group.items.map(snapshot => {
+                          const hoursSinceCreation = differenceInHours(new Date(), new Date(snapshot.created_at));
+                          const canDelete = hoursSinceCreation <= 24;
+                          const isDeleting = deletingId === snapshot.id;
+                          
+                          return (
+                            <div key={snapshot.id} className="p-3 rounded-lg border bg-card relative">
+                              {canDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute top-1 right-1 h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  onClick={async () => {
+                                    if (confirm('Are you sure you want to delete this snapshot? This action cannot be undone.')) {
+                                      setDeletingId(snapshot.id);
+                                      try {
+                                        await deleteSnapshot.mutateAsync(snapshot.id);
+                                        toast.success('Snapshot deleted successfully');
+                                      } catch (error: any) {
+                                        toast.error(error.message || 'Failed to delete snapshot');
+                                      } finally {
+                                        setDeletingId(null);
+                                      }
+                                    }
+                                  }}
+                                  disabled={isDeleting || deleteSnapshot.isPending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium">
+                                  {LIVESTOCK_CATEGORIES[snapshot.category].label}
+                                </span>
+                                <ConfidenceBadge level={snapshot.data_confidence_level} />
+                              </div>
+                              <div className="text-xl font-semibold">{snapshot.count.toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">{snapshot.breed}</div>
+                              {canDelete && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Can delete for {Math.max(0, 24 - hoursSinceCreation)}h
+                                </div>
+                              )}
                             </div>
-                            <div className="text-xl font-semibold">{snapshot.count.toLocaleString()}</div>
-                            <div className="text-xs text-muted-foreground">{snapshot.breed}</div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
