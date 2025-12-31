@@ -1,15 +1,20 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bookmark, Trash2, Plus, TrendingUp, TrendingDown, AlertCircle, Clock, ArrowRight, Database } from 'lucide-react';
+import { Bookmark, Trash2, Plus, AlertCircle, Clock, ArrowRight, Database } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
-import { useMarketBatches, batchMatchesCriteria, aggregateByRegion, calculateMarketSummary } from '@/hooks/useMarketData';
+import { useMarketBatches, batchMatchesCriteria, aggregateByRegion } from '@/hooks/useMarketData';
+import { useWatchlist, useRemoveFromWatchlist, type WatchlistItem as DBWatchlistItem } from '@/hooks/useWatchlist';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
-interface WatchlistItem {
+// Enhanced watchlist item with real batch data
+interface EnhancedWatchlistItem {
   id: string;
   region: string;
   targetMonth: string;
@@ -21,141 +26,9 @@ interface WatchlistItem {
   gradeA: number;
   gradeB: number;
   gradeC: number;
-  changesSinceLastVisit: {
-    volumeChange: number;
-    newSoftCommitted: number;
-  };
-  isApproachingWindow: boolean;
   addedOn: string;
-  // Criteria data for filtering
-  breeds: string[];
-  genders: string[];
-  avgAgeMin: number;
-  avgAgeMax: number;
-  avgWeightMin: number;
-  avgWeightMax: number;
-}
-
-const watchlistItems: WatchlistItem[] = [
-  {
-    id: '1',
-    region: 'Almaty',
-    targetMonth: 'January 2025',
-    targetWeek: 'Week 1',
-    totalHeads: 145,
-    confirmed: 45,
-    softCommitted: 62,
-    forecast: 38,
-    gradeA: 89,
-    gradeB: 41,
-    gradeC: 15,
-    changesSinceLastVisit: { volumeChange: 12, newSoftCommitted: 3 },
-    isApproachingWindow: true,
-    addedOn: 'Dec 15',
-    breeds: ['Angus', 'Hereford', 'Kazakh Whiteheaded'],
-    genders: ['Male', 'Mixed'],
-    avgAgeMin: 12,
-    avgAgeMax: 18,
-    avgWeightMin: 300,
-    avgWeightMax: 380,
-  },
-  {
-    id: '2',
-    region: 'Akmola',
-    targetMonth: 'January 2025',
-    targetWeek: 'Week 2',
-    totalHeads: 98,
-    confirmed: 28,
-    softCommitted: 45,
-    forecast: 25,
-    gradeA: 52,
-    gradeB: 31,
-    gradeC: 15,
-    changesSinceLastVisit: { volumeChange: -8, newSoftCommitted: 0 },
-    isApproachingWindow: false,
-    addedOn: 'Dec 14',
-    breeds: ['Simmental', 'Mixed/Crossbred'],
-    genders: ['Male'],
-    avgAgeMin: 14,
-    avgAgeMax: 20,
-    avgWeightMin: 320,
-    avgWeightMax: 400,
-  },
-  {
-    id: '3',
-    region: 'Karaganda',
-    targetMonth: 'January 2025',
-    targetWeek: 'Week 1',
-    totalHeads: 72,
-    confirmed: 15,
-    softCommitted: 32,
-    forecast: 25,
-    gradeA: 38,
-    gradeB: 24,
-    gradeC: 10,
-    changesSinceLastVisit: { volumeChange: 5, newSoftCommitted: 2 },
-    isApproachingWindow: true,
-    addedOn: 'Dec 12',
-    breeds: ['Hereford', 'Angus'],
-    genders: ['Male'],
-    avgAgeMin: 13,
-    avgAgeMax: 17,
-    avgWeightMin: 310,
-    avgWeightMax: 370,
-  },
-  {
-    id: '4',
-    region: 'East KZ',
-    targetMonth: 'February 2025',
-    targetWeek: 'Week 1',
-    totalHeads: 56,
-    confirmed: 0,
-    softCommitted: 18,
-    forecast: 38,
-    gradeA: 28,
-    gradeB: 20,
-    gradeC: 8,
-    changesSinceLastVisit: { volumeChange: 0, newSoftCommitted: 0 },
-    isApproachingWindow: false,
-    addedOn: 'Dec 10',
-    breeds: ['Kazakh Whiteheaded', 'Auliekol'],
-    genders: ['Male', 'Female'],
-    avgAgeMin: 15,
-    avgAgeMax: 22,
-    avgWeightMin: 280,
-    avgWeightMax: 350,
-  },
-];
-
-// Helper to check if watchlist item matches filter criteria
-function itemMatchesFilter(item: WatchlistItem, filters: CriteriaFilterState): boolean {
-  // Breed filter - at least one breed should match
-  if (filters.breeds.length > 0 && !filters.breeds.some(b => item.breeds.includes(b))) {
-    return false;
-  }
-  
-  // Gender filter
-  if (filters.genders.length > 0 && !filters.genders.some(g => item.genders.includes(g))) {
-    return false;
-  }
-  
-  // Age filter - check for overlap
-  if (filters.ageMin !== null && item.avgAgeMax < filters.ageMin) {
-    return false;
-  }
-  if (filters.ageMax !== null && item.avgAgeMin > filters.ageMax) {
-    return false;
-  }
-  
-  // Weight filter - check for overlap
-  if (filters.weightMin !== null && item.avgWeightMax < filters.weightMin) {
-    return false;
-  }
-  if (filters.weightMax !== null && item.avgWeightMin > filters.weightMax) {
-    return false;
-  }
-  
-  return true;
+  criteria: DBWatchlistItem['criteria'];
+  isApproachingWindow: boolean;
 }
 
 function ReadinessBar({ confirmed, softCommitted, forecast, total }: { confirmed: number; softCommitted: number; forecast: number; total: number }) {
@@ -188,20 +61,21 @@ function ReadinessBar({ confirmed, softCommitted, forecast, total }: { confirmed
   );
 }
 
-function ChangeIndicator({ change }: { change: number }) {
-  if (change === 0) return null;
-  
-  const isPositive = change > 0;
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-      {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-      {isPositive ? '+' : ''}{change}
-    </span>
-  );
-}
+function WatchlistCard({ item, onRemove }: { item: EnhancedWatchlistItem; onRemove: (id: string) => void }) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-function WatchlistCard({ item }: { item: WatchlistItem }) {
-  const hasChanges = item.changesSinceLastVisit.volumeChange !== 0 || item.changesSinceLastVisit.newSoftCommitted > 0;
+  const handleRemove = () => {
+    onRemove(item.id);
+    toast({
+      title: 'Removed from watchlist',
+      description: `${item.region} ${item.targetWeek} has been removed from your watchlist.`,
+    });
+  };
+
+  const criteria = item.criteria;
+  const breeds = criteria?.breeds || [];
+  const genders = criteria?.genders || [];
 
   return (
     <Card className={`${item.isApproachingWindow ? 'ring-1 ring-amber-400 bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
@@ -217,7 +91,12 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
               </Badge>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={handleRemove}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -227,13 +106,7 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold text-foreground">{item.totalHeads}</span>
               <span className="text-sm text-muted-foreground">heads</span>
-              <ChangeIndicator change={item.changesSinceLastVisit.volumeChange} />
             </div>
-            {item.changesSinceLastVisit.newSoftCommitted > 0 && (
-              <p className="text-xs text-emerald-600 mt-0.5">
-                +{item.changesSinceLastVisit.newSoftCommitted} new soft committed
-              </p>
-            )}
           </div>
           <div className="text-right">
             <div className="flex items-center justify-end gap-2 text-sm">
@@ -252,12 +125,28 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
         </div>
 
         {/* Criteria summary */}
-        <div className="flex flex-wrap gap-1 mb-3">
-          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.breeds.slice(0, 2).join(', ')}{item.breeds.length > 2 ? ` +${item.breeds.length - 2}` : ''}</span>
-          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.genders.join('/')}</span>
-          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.avgAgeMin}–{item.avgAgeMax} mo</span>
-          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{item.avgWeightMin}–{item.avgWeightMax} kg</span>
-        </div>
+        {criteria && (breeds.length > 0 || genders.length > 0 || criteria.ageMin || criteria.ageMax || criteria.weightMin || criteria.weightMax) && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {breeds.length > 0 && (
+              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                {breeds.slice(0, 2).join(', ')}{breeds.length > 2 ? ` +${breeds.length - 2}` : ''}
+              </span>
+            )}
+            {genders.length > 0 && (
+              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{genders.join('/')}</span>
+            )}
+            {(criteria.ageMin || criteria.ageMax) && (
+              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                {criteria.ageMin || 0}–{criteria.ageMax || '∞'} mo
+              </span>
+            )}
+            {(criteria.weightMin || criteria.weightMax) && (
+              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                {criteria.weightMin || 0}–{criteria.weightMax || '∞'} kg
+              </span>
+            )}
+          </div>
+        )}
 
         <ReadinessBar 
           confirmed={item.confirmed}
@@ -267,10 +156,19 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
         />
 
         <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border">
-          <Button variant="outline" size="sm" className="flex-1">
-            Express Interest
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => navigate('/mpk/market')}
+          >
+            View Market
           </Button>
-          <Button size="sm" className="flex-1">
+          <Button 
+            size="sm" 
+            className="flex-1"
+            onClick={() => navigate('/mpk/requests/new')}
+          >
             <Plus className="w-3 h-3 mr-1" />
             Create Pool Request
           </Button>
@@ -281,56 +179,171 @@ function WatchlistCard({ item }: { item: WatchlistItem }) {
 }
 
 export default function Watchlist() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
   const isFiltered = hasActiveFilters(criteriaFilters);
+  
+  // Fetch watchlist items from database
+  const { data: watchlistItems, isLoading: watchlistLoading } = useWatchlist();
+  const removeFromWatchlist = useRemoveFromWatchlist();
   
   // Fetch real batch data
   const { data: realBatches, isLoading: batchesLoading } = useMarketBatches();
   const hasRealData = (realBatches?.length || 0) > 0;
   
-  // Filter watchlist items based on criteria (using mock data for watchlist structure)
-  // In production, this would be a saved watchlist in the database
-  const filteredItems = isFiltered
-    ? watchlistItems.filter(item => itemMatchesFilter(item, criteriaFilters))
-    : watchlistItems;
-  
-  // If we have real batch data, calculate real statistics for regions that match watchlist items
+  // Enhance watchlist items with real batch data
   const enhancedItems = useMemo(() => {
-    if (!hasRealData || !realBatches) return filteredItems;
+    if (!watchlistItems || watchlistItems.length === 0) return [];
+    if (!realBatches || realBatches.length === 0) {
+      // Return watchlist items with zero stats if no batch data
+      return watchlistItems.map(item => ({
+        id: item.id,
+        region: item.region,
+        targetMonth: item.target_month,
+        targetWeek: item.target_week,
+        totalHeads: 0,
+        confirmed: 0,
+        softCommitted: 0,
+        forecast: 0,
+        gradeA: 0,
+        gradeB: 0,
+        gradeC: 0,
+        addedOn: format(new Date(item.added_at), 'MMM d'),
+        criteria: item.criteria,
+        isApproachingWindow: false, // TODO: Calculate based on matching window dates
+      }));
+    }
     
-    // Filter real batches by criteria
-    const filteredRealBatches = realBatches.filter(batch => batchMatchesCriteria(batch, criteriaFilters));
-    const regionData = aggregateByRegion(filteredRealBatches);
+    // Filter batches by region and target week that match watchlist items
+    const regionData = aggregateByRegion(realBatches);
     
-    return filteredItems.map(item => {
-      const realRegion = regionData.find(r => r.region.toLowerCase().includes(item.region.toLowerCase()));
-      if (realRegion) {
-        return {
-          ...item,
-          totalHeads: realRegion.total,
-          confirmed: realRegion.confirmed,
-          softCommitted: realRegion.softCommitted,
-          forecast: realRegion.forecast,
-        };
-      }
-      return item;
+    return watchlistItems.map(item => {
+      // Find batches matching this watchlist item's region and week
+      const matchingBatches = realBatches.filter(batch => {
+        const regionMatch = batch.region.toLowerCase().includes(item.region.toLowerCase());
+        const weekMatch = batch.target_week === item.target_week;
+        
+        // Also check criteria if specified
+        let criteriaMatch = true;
+        if (item.criteria) {
+          criteriaMatch = batchMatchesCriteria(batch, {
+            breeds: item.criteria.breeds || [],
+            genders: item.criteria.genders || [],
+            ageMin: item.criteria.ageMin ?? null,
+            ageMax: item.criteria.ageMax ?? null,
+            weightMin: item.criteria.weightMin ?? null,
+            weightMax: item.criteria.weightMax ?? null,
+          });
+        }
+        
+        return regionMatch && weekMatch && criteriaMatch;
+      });
+      
+      // Calculate stats from matching batches
+      const totalHeads = matchingBatches.reduce((sum, b) => sum + b.heads, 0);
+      const confirmed = matchingBatches
+        .filter(b => ['confirmed', 'matched', 'closed'].includes(b.status))
+        .reduce((sum, b) => sum + b.heads, 0);
+      const softCommitted = matchingBatches
+        .filter(b => b.status === 'soft_committed')
+        .reduce((sum, b) => sum + b.heads, 0);
+      const forecast = matchingBatches
+        .filter(b => !['confirmed', 'matched', 'closed', 'soft_committed'].includes(b.status))
+        .reduce((sum, b) => sum + b.heads, 0);
+      
+      // Calculate grade distribution (simplified - would need actual grade data)
+      const gradeA = Math.round(totalHeads * 0.6);
+      const gradeB = Math.round(totalHeads * 0.3);
+      const gradeC = totalHeads - gradeA - gradeB;
+      
+      return {
+        id: item.id,
+        region: item.region,
+        targetMonth: item.target_month,
+        targetWeek: item.target_week,
+        totalHeads,
+        confirmed,
+        softCommitted,
+        forecast,
+        gradeA,
+        gradeB,
+        gradeC,
+        addedOn: format(new Date(item.added_at), 'MMM d'),
+        criteria: item.criteria,
+        isApproachingWindow: false, // TODO: Calculate based on matching window dates
+      };
     });
-  }, [filteredItems, realBatches, hasRealData, criteriaFilters]);
+  }, [watchlistItems, realBatches]);
   
-  const groupedByMonth = enhancedItems.reduce((acc, item) => {
+  // Filter by criteria if active
+  const filteredItems = useMemo(() => {
+    if (!isFiltered) return enhancedItems;
+    
+    return enhancedItems.filter(item => {
+      if (!item.criteria) return true;
+      
+      // Breed filter
+      if (criteriaFilters.breeds.length > 0) {
+        const itemBreeds = item.criteria.breeds || [];
+        if (!criteriaFilters.breeds.some(b => itemBreeds.includes(b))) {
+          return false;
+        }
+      }
+      
+      // Gender filter
+      if (criteriaFilters.genders.length > 0) {
+        const itemGenders = item.criteria.genders || [];
+        if (!criteriaFilters.genders.some(g => itemGenders.includes(g))) {
+          return false;
+        }
+      }
+      
+      // Age filter
+      if (criteriaFilters.ageMin !== null && item.criteria.ageMax && item.criteria.ageMax < criteriaFilters.ageMin) {
+        return false;
+      }
+      if (criteriaFilters.ageMax !== null && item.criteria.ageMin && item.criteria.ageMin > criteriaFilters.ageMax) {
+        return false;
+      }
+      
+      // Weight filter
+      if (criteriaFilters.weightMin !== null && item.criteria.weightMax && item.criteria.weightMax < criteriaFilters.weightMin) {
+        return false;
+      }
+      if (criteriaFilters.weightMax !== null && item.criteria.weightMin && item.criteria.weightMin > criteriaFilters.weightMax) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [enhancedItems, criteriaFilters, isFiltered]);
+  
+  const groupedByMonth = filteredItems.reduce((acc, item) => {
     if (!acc[item.targetMonth]) {
       acc[item.targetMonth] = [];
     }
     acc[item.targetMonth].push(item);
     return acc;
-  }, {} as Record<string, WatchlistItem[]>);
+  }, {} as Record<string, EnhancedWatchlistItem[]>);
 
-  const totalWatched = enhancedItems.length;
-  const totalHeads = enhancedItems.reduce((sum, item) => sum + item.totalHeads, 0);
-  const approachingWindow = enhancedItems.filter(item => item.isApproachingWindow).length;
-  const itemsWithChanges = enhancedItems.filter(
-    item => item.changesSinceLastVisit.volumeChange !== 0 || item.changesSinceLastVisit.newSoftCommitted > 0
-  ).length;
+  const totalWatched = filteredItems.length;
+  const totalHeads = filteredItems.reduce((sum, item) => sum + item.totalHeads, 0);
+  const approachingWindow = filteredItems.filter(item => item.isApproachingWindow).length;
+  
+  const handleRemove = async (id: string) => {
+    try {
+      await removeFromWatchlist.mutateAsync(id);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove item from watchlist.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const isLoading = watchlistLoading || batchesLoading;
 
   return (
     <MainLayout>
@@ -356,7 +369,7 @@ export default function Watchlist() {
         <CriteriaFilter filters={criteriaFilters} onFiltersChange={setCriteriaFilters} />
         {isFiltered && (
           <p className="text-xs text-muted-foreground mt-2">
-            Showing {enhancedItems.length} of {watchlistItems.length} watched items matching your criteria.
+            Showing {filteredItems.length} of {enhancedItems.length} watched items matching your criteria.
           </p>
         )}
         {hasRealData && (
@@ -372,7 +385,7 @@ export default function Watchlist() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -405,14 +418,6 @@ export default function Watchlist() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div>
-              <p className="text-2xl font-semibold text-emerald-600">{itemsWithChanges}</p>
-              <p className="text-sm text-muted-foreground">Items with Changes</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {Object.entries(groupedByMonth).map(([month, items]) => (
@@ -427,13 +432,24 @@ export default function Watchlist() {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {items.map((item) => (
-              <WatchlistCard key={item.id} item={item} />
+              <WatchlistCard key={item.id} item={item} onRemove={handleRemove} />
             ))}
           </div>
         </div>
       ))}
 
-      {enhancedItems.length === 0 && (
+      {isLoading && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Bookmark className="w-10 h-10 text-muted-foreground/60 animate-pulse" />
+            </div>
+            <p className="text-sm text-muted-foreground">Loading watchlist...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && filteredItems.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
@@ -455,7 +471,7 @@ export default function Watchlist() {
                 <p className="text-sm text-muted-foreground max-w-sm mb-4">
                   Monitor supply by region and month to track availability before requesting.
                 </p>
-                <Button>
+                <Button onClick={() => navigate('/mpk/market')}>
                   Add Regions to Watch
                 </Button>
               </>

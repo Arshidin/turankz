@@ -167,6 +167,9 @@ export function validateAgeOverlap(
 /**
  * Full matching validation
  * Returns all validation errors and warnings
+ * 
+ * NOTE: For admin users, delivery period, region, and grade mismatches are warnings (not errors)
+ * because admin can intentionally create matchings with mismatches for operational reasons.
  */
 export function validateMatchingCriteria(
   batch: {
@@ -186,30 +189,49 @@ export function validateMatchingCriteria(
     age_range_min: number | null;
     age_range_max: number | null;
     target_delivery_period?: DeliveryPeriod | null;
+  },
+  options?: {
+    allowAdminOverride?: boolean; // If true, criteria mismatches become warnings instead of errors
   }
 ): MatchingValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const isAdminOverride = options?.allowAdminOverride === true;
 
-  // 1. Delivery Period (CRITICAL)
+  // 1. Delivery Period
+  // For admin: warning (can override), For others: error (blocking)
   const deliveryCheck = validateDeliveryPeriodOverlap(
     batch.delivery_period || null,
     request.target_delivery_period || null
   );
   if (!deliveryCheck.compatible) {
-    errors.push(deliveryCheck.reason);
+    if (isAdminOverride) {
+      warnings.push(deliveryCheck.reason);
+    } else {
+      errors.push(deliveryCheck.reason);
+    }
   }
 
   // 2. Region
+  // For admin: warning (can override), For others: error (blocking)
   const regionCheck = validateRegionOverlap(batch.region, request.regions);
   if (!regionCheck.compatible) {
-    errors.push(regionCheck.reason);
+    if (isAdminOverride) {
+      warnings.push(regionCheck.reason);
+    } else {
+      errors.push(regionCheck.reason);
+    }
   }
 
   // 3. Grade
+  // For admin: warning (can override), For others: error (blocking)
   const gradeCheck = validateGradeCompatibility(batch.grade, request.required_grade);
   if (!gradeCheck.compatible) {
-    errors.push(gradeCheck.reason);
+    if (isAdminOverride) {
+      warnings.push(gradeCheck.reason);
+    } else {
+      errors.push(gradeCheck.reason);
+    }
   }
 
   // 4. Weight (Warning only - admin can override)

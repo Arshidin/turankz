@@ -19,12 +19,12 @@ export const LIVESTOCK_GENDERS = [
 ] as const;
 
 export const AGE_RANGE = {
-  min: 12,  // 12 months
+  min: 6,  // 6 months
   max: 48,  // 48 months
 } as const;
 
 export const WEIGHT_RANGE = {
-  min: 300,  // 300 kg
+  min: 150,  // 150 kg
   max: 700,  // 700 kg
 } as const;
 
@@ -71,25 +71,59 @@ export function checkBatchMatch(batch: BatchCriteria, criteria: AcceptanceCriter
     if (!genderMatch) partialMatch = true;
   }
 
-  // Age check
+  // Age check - use overlap logic (not strict containment)
+  // Batch is compatible if ranges overlap, not if batch is fully contained
   if (criteria.age_range_min !== null || criteria.age_range_max !== null) {
-    if (batch.age_min !== null && batch.age_max !== null) {
-      const minAge = criteria.age_range_min ?? 0;
-      const maxAge = criteria.age_range_max ?? 999;
-      const ageMatch = batch.age_min >= minAge && batch.age_max <= maxAge;
-      checks.push(ageMatch);
-      if (!ageMatch) partialMatch = true;
+    if (batch.age_min !== null || batch.age_max !== null) {
+      const batchMin = batch.age_min ?? 0;
+      const batchMax = batch.age_max ?? Infinity;
+      const criteriaMin = criteria.age_range_min ?? 0;
+      const criteriaMax = criteria.age_range_max ?? Infinity;
+      
+      // Check for overlap: ranges overlap if batchMin <= criteriaMax && batchMax >= criteriaMin
+      const ageOverlap = batchMin <= criteriaMax && batchMax >= criteriaMin;
+      
+      // Full match: batch is fully contained within criteria
+      const ageFullMatch = batch.age_min !== null && batch.age_max !== null &&
+        batch.age_min >= criteriaMin && batch.age_max <= criteriaMax;
+      
+      if (ageFullMatch) {
+        checks.push(true);
+      } else if (ageOverlap) {
+        checks.push(true);
+        partialMatch = true; // Overlap but not full containment = partial match
+      } else {
+        checks.push(false);
+        partialMatch = true;
+      }
     }
   }
 
-  // Weight check
+  // Weight check - use overlap logic (not strict containment)
+  // Batch is compatible if ranges overlap, not if batch is fully contained
   if (criteria.weight_range_min !== null || criteria.weight_range_max !== null) {
-    if (batch.weight_min !== null && batch.weight_max !== null) {
-      const minWeight = criteria.weight_range_min ?? 0;
-      const maxWeight = criteria.weight_range_max ?? 9999;
-      const weightMatch = batch.weight_min >= minWeight && batch.weight_max <= maxWeight;
-      checks.push(weightMatch);
-      if (!weightMatch) partialMatch = true;
+    if (batch.weight_min !== null || batch.weight_max !== null) {
+      const batchMin = batch.weight_min ?? 0;
+      const batchMax = batch.weight_max ?? Infinity;
+      const criteriaMin = criteria.weight_range_min ?? 0;
+      const criteriaMax = criteria.weight_range_max ?? Infinity;
+      
+      // Check for overlap: ranges overlap if batchMin <= criteriaMax && batchMax >= criteriaMin
+      const weightOverlap = batchMin <= criteriaMax && batchMax >= criteriaMin;
+      
+      // Full match: batch is fully contained within criteria
+      const weightFullMatch = batch.weight_min !== null && batch.weight_max !== null &&
+        batch.weight_min >= criteriaMin && batch.weight_max <= criteriaMax;
+      
+      if (weightFullMatch) {
+        checks.push(true);
+      } else if (weightOverlap) {
+        checks.push(true);
+        partialMatch = true; // Overlap but not full containment = partial match
+      } else {
+        checks.push(false);
+        partialMatch = true;
+      }
     }
   }
 

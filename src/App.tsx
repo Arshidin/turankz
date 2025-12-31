@@ -13,7 +13,6 @@ import FarmerProfile from "./pages/farmer/FarmerProfile";
 import LivestockBatches from "./pages/farmer/LivestockBatches";
 import BatchDetail from "./pages/farmer/BatchDetail";
 import SalesCalendar from "./pages/farmer/SalesCalendar";
-import HerdStructure from "./pages/farmer/HerdStructure";
 import MarketIntent from "./pages/farmer/MarketIntent";
 import MarketSignals from "./pages/farmer/MarketSignals";
 import MarketWorkflow from "./pages/farmer/MarketWorkflow";
@@ -104,11 +103,6 @@ const App = () => (
               <Route path="/farmer/executions" element={
                 <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
                   <FarmerExecutions />
-                </ProtectedRoute>
-              } />
-              <Route path="/farmer/herd" element={
-                <ProtectedRoute allowedRoles={['farmer', 'admin']} requireActive>
-                  <HerdStructure />
                 </ProtectedRoute>
               } />
               <Route path="/farmer/intent" element={

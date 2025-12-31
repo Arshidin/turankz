@@ -20,11 +20,14 @@ import {
   Pencil,
   Lock,
   Target,
-  TrendingUp
+  TrendingUp,
+  Loader2
 } from 'lucide-react';
-import { usePoolRequests, useCancelPoolRequest, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
+import { usePoolRequests, useCancelPoolRequest, useTransitionPoolRequestStatus, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
 import { useMpks } from '@/hooks/useMpks';
+import { useCurrentMpk } from '@/hooks/useCurrentMpk';
 import { NewRequestDialog } from '@/components/mpk/NewRequestDialog';
+import type { AcceptanceCriteria } from '@/lib/livestock-criteria';
 import { EditRequestDialog } from '@/components/mpk/EditRequestDialog';
 import { MatchingWindowStatusBanner } from '@/components/mpk/MatchingWindowStatusBanner';
 import { format, parseISO } from 'date-fns';
@@ -128,6 +131,7 @@ export default function PurchasePoolRequests() {
   const { data: requests, isLoading, error } = usePoolRequests();
   const { data: mpks } = useMpks();
   const cancelRequest = useCancelPoolRequest();
+  const transitionStatus = useTransitionPoolRequestStatus();
   
   const [newRequestOpen, setNewRequestOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState<string | null>(null);
@@ -141,13 +145,34 @@ export default function PurchasePoolRequests() {
     setCurrentWindow(window);
   }, []);
 
-  // For demo, use first MPK or default values
-  const currentMpk = mpks?.[0] || { id: 'demo', mpk_id: 'MPK-001', name: 'Demo MPK' };
+  // Get current MPK profile
+  const { data: currentMpkData } = useCurrentMpk();
+  const currentMpk = currentMpkData || mpks?.[0] || { id: 'demo', mpk_id: 'MPK-001', name: 'Demo MPK' };
+
+  // Prepare default criteria from MPK profile for pre-filling new request form
+  const defaultCriteria: AcceptanceCriteria | undefined = currentMpkData ? {
+    accepted_breeds: [], // Can be extended in future
+    accepted_genders: [], // Can be extended in future
+    age_range_min: currentMpkData.default_age_range_min ?? null,
+    age_range_max: currentMpkData.default_age_range_max ?? null,
+    weight_range_min: currentMpkData.default_weight_range_min ?? null,
+    weight_range_max: currentMpkData.default_weight_range_max ?? null,
+  } : undefined;
+
+  // Prepare default regions from MPK profile
+  const defaultRegions = currentMpkData?.intake_regions || [];
+
+  // Filter requests: only show requests belonging to current MPK
+  // This is a defense-in-depth measure - RLS should already filter, but this adds extra protection
+  const filteredRequests = useMemo(() => {
+    if (!currentMpkData?.mpk_id) return [];
+    return requests?.filter(r => r.mpk_id === currentMpkData.mpk_id) || [];
+  }, [requests, currentMpkData?.mpk_id]);
 
   // Filter out cancelled requests from main view
   const activeRequests = useMemo(() => 
-    requests?.filter(r => r.status !== 'cancelled') || [],
-    [requests]
+    filteredRequests.filter(r => r.status !== 'cancelled'),
+    [filteredRequests]
   );
 
   const stats = useMemo(() => {
@@ -169,6 +194,18 @@ export default function PurchasePoolRequests() {
     if (!cancelDialogOpen) return;
     await cancelRequest.mutateAsync(cancelDialogOpen);
     setCancelDialogOpen(null);
+  };
+
+  const handleSubmitDraft = async (requestId: string) => {
+    const request = requests?.find(r => r.id === requestId);
+    if (!request || request.status !== 'draft') return;
+    
+    await transitionStatus.mutateAsync({
+      id: requestId,
+      fromStatus: 'draft',
+      toStatus: 'submitted',
+      role: 'mpk',
+    });
   };
 
   if (isLoading) {
@@ -431,10 +468,10 @@ export default function PurchasePoolRequests() {
                       </div>
                     </div>
 
-                    {/* Quick Actions for At-Risk Requests - Only in draft status */}
-                    {request.status === 'draft' && atRisk && (
+                    {/* Quick Actions for Draft Requests */}
+                    {request.status === 'draft' && (
                       <div className="pt-3 mt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">Quick actions:</p>
+                        <p className="text-xs text-muted-foreground mb-2">Draft request - actions:</p>
                         <div className="flex flex-wrap gap-2">
                           <Button 
                             variant="outline" 
@@ -443,9 +480,28 @@ export default function PurchasePoolRequests() {
                             onClick={() => setEditRequest(request)}
                           >
                             <Pencil className="w-3 h-3 mr-1" />
-                            Edit Request
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="text-xs"
+                            onClick={() => handleSubmitDraft(request.id)}
+                            disabled={transitionStatus.isPending || !canSubmitRequests}
+                          >
+                            {transitionStatus.isPending ? (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : (
+                              <Target className="w-3 h-3 mr-1" />
+                            )}
+                            Submit Request
                           </Button>
                         </div>
+                        {!canSubmitRequests && (
+                          <p className="text-xs text-amber-600 mt-2">
+                            Submissions are closed. Wait for an active matching window to submit.
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -509,8 +565,11 @@ export default function PurchasePoolRequests() {
       <NewRequestDialog 
         open={newRequestOpen} 
         onOpenChange={setNewRequestOpen}
-        mpkId={currentMpk.id}
+        mpkId={currentMpk.mpk_id}
         mpkName={currentMpk.name}
+        defaultCriteria={defaultCriteria}
+        defaultRegions={defaultRegions}
+        commonTargetWeeks={currentMpkData?.common_target_weeks || []}
       />
 
       {/* Edit Request Dialog */}

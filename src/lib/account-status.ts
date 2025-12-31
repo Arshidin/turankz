@@ -23,10 +23,10 @@ export interface AccountStatusConfig {
 
 export const ACCOUNT_STATUS_CONFIG: Record<AccountStatus, AccountStatusConfig> = {
   observer: {
-    label: 'Observer',
-    labelRu: 'Наблюдатель',
-    description: 'Read-only access. Awaiting activation by Admin.',
-    descriptionRu: 'Доступ только для просмотра. Ожидайте активации Администратором.',
+    label: 'Pending Activation',
+    labelRu: 'Ожидает активации',
+    description: 'Your account is pending activation. You have read-only access until Admin activates your profile.',
+    descriptionRu: 'Ваш аккаунт ожидает активации. У вас есть доступ только для просмотра до активации профиля Администратором.',
     canPerformActions: false,
     badgeVariant: 'secondary',
   },

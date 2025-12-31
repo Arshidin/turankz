@@ -43,6 +43,16 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AccountStatus } from '@/lib/account-status';
 import { useState } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useBatches } from '@/hooks/useBatches';
+import { usePoolRequests } from '@/hooks/usePoolRequests';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCurrentMpk } from '@/hooks/useCurrentMpk';
 
 interface NavItem {
   labelKey: string;
@@ -79,11 +89,11 @@ const farmerNavGroups: NavGroup[] = [
     ],
   },
   // DATA & OUTLOOK: Informational only - never auto-generates batches (active only)
+  // NOTE: Herd Structure removed from farmer UI - admin-only feature
   {
     key: 'data-outlook',
     labelKey: 'nav.groups.dataOutlook',
     items: [
-      { labelKey: 'nav.herdStructure', path: '/farmer/herd', icon: Beef, requiredStatus: ['active'] },
       { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
     ],
   },
@@ -196,6 +206,49 @@ export function Sidebar() {
   const { accountStatus, isLoading, isObserver, isSuspended } = useAccountStatus();
   const { data: hasExecutions = false } = useHasExecutions();
   const location = useLocation();
+  const { user } = useAuthContext();
+  
+  // Fetch data for indicators
+  const { data: batches = [] } = useBatches();
+  const { data: poolRequests = [] } = usePoolRequests();
+  const { data: currentMpk } = useCurrentMpk();
+  
+  // Calculate indicators
+  const getNavItemIndicator = (path: string): number | null => {
+    if (role === 'farmer' && user?.id) {
+      if (path === '/farmer/batches') {
+        // Count batches requiring action
+        const requiringAction = batches.filter(
+          b => b.user_id === user.id && b.requires_action
+        ).length;
+        return requiringAction > 0 ? requiringAction : null;
+      }
+    }
+    if (role === 'mpk' && currentMpk?.mpk_id) {
+      if (path === '/mpk/requests') {
+        // Count draft requests for current MPK only
+        const draftRequests = poolRequests.filter(
+          r => r.mpk_id === currentMpk.mpk_id && r.status === 'draft'
+        ).length;
+        return draftRequests > 0 ? draftRequests : null;
+      }
+    }
+    return null;
+  };
+  
+  // Get tooltip text for nav items
+  const getNavItemTooltip = (item: NavItem): string => {
+    const tooltips: Record<string, string> = {
+      '/overview': t('nav.tooltips.overview', 'Dashboard with overview of your activity'),
+      '/farmer/batches': t('nav.tooltips.batches', 'Manage your livestock batches'),
+      '/farmer/calendar': t('nav.tooltips.calendar', 'View your sales calendar'),
+      '/mpk/requests': t('nav.tooltips.requests', 'Manage purchase pool requests'),
+      '/mpk/watchlist': t('nav.tooltips.watchlist', 'Track batches of interest'),
+      '/price-grid': t('nav.tooltips.priceGrid', 'View reference prices'),
+      '/market-workflow': t('nav.tooltips.workflow', 'Learn about the platform workflow'),
+    };
+    return tooltips[item.path] || t(item.labelKey);
+  };
   
   // Track collapsed state for collapsible groups
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -300,7 +353,7 @@ export function Sidebar() {
             >
               {isObserver && <Eye className="w-2.5 h-2.5 mr-0.5" />}
               {isSuspended && <Lock className="w-2.5 h-2.5 mr-0.5" />}
-              {isObserver ? 'Observer' : isSuspended ? 'Suspended' : ''}
+              {isObserver ? (t('accountStatus.pending', 'Pending') || 'Pending') : isSuspended ? 'Suspended' : ''}
             </Badge>
           )}
         </div>
@@ -349,30 +402,64 @@ export function Sidebar() {
               {/* Group Items */}
               {shouldShow && (
                 <ul className="space-y-0.5 mt-1">
-                  {group.items.map((item) => (
-                    <li key={item.path}>
-                      <NavLink
-                        to={item.path}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                          isActive(item.path)
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                        )}
-                      >
-                        <item.icon className={cn(
-                          "w-4 h-4",
-                          isActive(item.path) 
-                            ? "text-primary" 
-                            : "text-sidebar-muted"
-                        )} />
-                        <span className="flex-1 truncate">{t(item.labelKey)}</span>
-                        {item.readOnly && (
-                          <Eye className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                        )}
-                      </NavLink>
-                    </li>
-                  ))}
+                  {group.items.map((item) => {
+                    const indicator = getNavItemIndicator(item.path);
+                    const tooltipText = getNavItemTooltip(item);
+                    
+                    return (
+                      <li key={item.path}>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <NavLink
+                                to={item.path}
+                                className={cn(
+                                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative",
+                                  isActive(item.path)
+                                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                                )}
+                              >
+                                <item.icon className={cn(
+                                  "w-4 h-4",
+                                  isActive(item.path) 
+                                    ? "text-primary" 
+                                    : "text-sidebar-muted"
+                                )} />
+                                <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {indicator !== null && indicator > 0 && (
+                                    <Badge 
+                                      variant="destructive" 
+                                      className="h-5 min-w-5 px-1.5 text-[10px] font-semibold flex items-center justify-center"
+                                    >
+                                      {indicator > 99 ? '99+' : indicator}
+                                    </Badge>
+                                  )}
+                                  {item.readOnly && (
+                                    <Eye className="w-3 h-3 text-muted-foreground" />
+                                  )}
+                                </div>
+                              </NavLink>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-[200px]">
+                              <p className="font-medium">{t(item.labelKey)}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {tooltipText}
+                              </p>
+                              {indicator !== null && indicator > 0 && (
+                                <p className="text-xs text-destructive mt-1 font-medium">
+                                  {indicator} {indicator === 1 
+                                    ? t('nav.requiresAttention', 'requires attention')
+                                    : t('nav.requireAttention', 'require attention')}
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

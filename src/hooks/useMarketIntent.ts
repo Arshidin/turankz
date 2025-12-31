@@ -184,7 +184,7 @@ export function useAggregatedMarketIntent(horizon?: MarketIntentHorizon) {
       if (error) throw error;
       return data as AggregatedIntentData[];
     },
-    enabled: role === 'admin' || role === 'mpk',
+    enabled: role === 'admin', // MPK access removed - admin-only feature
   });
 }
 

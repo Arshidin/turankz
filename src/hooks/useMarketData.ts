@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { type Batch, type BatchStatus } from './useBatches';
 import { type CriteriaFilterState } from '@/components/livestock';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 // Aggregated market data by region
 export interface RegionSupply {
@@ -82,11 +83,14 @@ export function aggregateByRegion(batches: Batch[]): RegionSupply[] {
     
     existing.total += batch.heads;
     
-    if (batch.status === 'confirmed' || batch.status === 'matched' || batch.status === 'closed') {
+    // For MPK view, only soft_committed and confirmed batches are shown
+    // So we only need to handle these two statuses
+    if (batch.status === 'confirmed') {
       existing.confirmed += batch.heads;
     } else if (batch.status === 'soft_committed') {
       existing.softCommitted += batch.heads;
     } else {
+      // Fallback for other statuses (shouldn't happen for MPK after filtering, but handle gracefully)
       existing.forecast += batch.heads;
     }
     
@@ -101,11 +105,13 @@ export function calculateMarketSummary(batches: Batch[]): MarketSummary {
   return batches.reduce(
     (acc, batch) => {
       acc.total += batch.heads;
-      if (batch.status === 'confirmed' || batch.status === 'matched' || batch.status === 'closed') {
+      // For MPK view, only soft_committed and confirmed batches are shown
+      if (batch.status === 'confirmed') {
         acc.confirmed += batch.heads;
       } else if (batch.status === 'soft_committed') {
         acc.softCommitted += batch.heads;
       } else {
+        // Fallback for other statuses (shouldn't happen for MPK, but handle gracefully)
         acc.forecast += batch.heads;
       }
       return acc;
@@ -115,12 +121,30 @@ export function calculateMarketSummary(batches: Batch[]): MarketSummary {
 }
 
 // Fetch all batches for market view (anonymous, aggregated)
-// Note: In production, this would use a separate RLS policy or edge function
-// to ensure MPKs can see aggregate supply without identifying farmers
+// For MPKs: only select anonymized fields (no user_id, batch_number, notes, mpk_interest)
+// For Admins: select all fields
+// For Farmers: only their own batches (handled by RLS)
 export const useMarketBatches = () => {
+  const { role } = useAuthContext();
+  
   return useQuery({
-    queryKey: ['market-batches'],
+    queryKey: ['market-batches', role],
     queryFn: async () => {
+      // For MPKs, select only anonymized fields to maintain data privacy
+      // Include breed, gender, age, weight for filtering and display (these don't identify farmers)
+      // Only show soft_committed and confirmed batches (not draft, forecast, matched, closed)
+      if (role === 'mpk') {
+        const { data, error } = await supabase
+          .from('batches')
+          .select('id, heads, avg_weight, grade, region, status, target_week, delivery_period, breed, gender, age_min, age_max, weight_min, weight_max, created_at, updated_at')
+          .in('status', ['soft_committed', 'confirmed'])
+          .order('target_week', { ascending: true });
+
+        if (error) throw error;
+        return data as Batch[];
+      }
+      
+      // For Admins and Farmers, select all fields
       const { data, error } = await supabase
         .from('batches')
         .select('*')

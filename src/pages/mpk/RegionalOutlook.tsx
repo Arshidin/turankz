@@ -9,12 +9,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, MapPin, AlertTriangle, Beef, Shield, Info } from 'lucide-react';
-import { 
-  useAggregatedMarketIntent, 
-  HORIZON_OPTIONS, 
-  type MarketIntentHorizon 
-} from '@/hooks/useMarketIntent';
+import { TrendingUp, AlertTriangle, Beef, Shield, Info } from 'lucide-react';
+// Market Intent removed from MPK view - admin-only feature
 import { useAggregatedHerdStructure, LIVESTOCK_CATEGORIES, type LivestockCategory } from '@/hooks/useHerdStructure';
 import { useIndicativeForecast, useForecastCoefficients } from '@/hooks/useForecast';
 import { ALL_REGIONS } from '@/lib/defaults';
@@ -23,18 +19,12 @@ export default function RegionalOutlook() {
   const { t } = useTranslation();
   const [regionFilter, setRegionFilter] = useState<string>('all');
   
-  const { data: aggregatedData, isLoading } = useAggregatedMarketIntent();
+  // Market Intent removed from MPK view - admin-only feature
   const { data: herdData, isLoading: isLoadingHerd } = useAggregatedHerdStructure();
   const { data: forecastData, isLoading: forecastLoading } = useIndicativeForecast();
   const { data: coefficients } = useForecastCoefficients();
 
   const calvingRate = coefficients?.find(c => c.coefficient_type === 'calving_rate')?.coefficient_value || 0.85;
-
-  // Filter intent data by region
-  const filteredData = aggregatedData?.filter(row => {
-    if (regionFilter !== 'all' && row.region !== regionFilter) return false;
-    return true;
-  }) || [];
 
   // Filter herd data by region
   const filteredHerdData = herdData?.filter(row => {
@@ -48,11 +38,6 @@ export default function RegionalOutlook() {
     return true;
   }) || [];
 
-  // Calculate intent totals
-  const totalHeads = filteredData.reduce((sum, row) => sum + row.total_estimated_heads, 0);
-  const totalIntents = filteredData.reduce((sum, row) => sum + row.intent_count, 0);
-  const uniqueRegions = new Set(filteredData.map(row => row.region)).size;
-
   // Calculate herd totals
   const totalHerdHeads = filteredHerdData.reduce((sum, row) => sum + row.total_count, 0);
   const herdUniqueRegions = new Set(filteredHerdData.map(row => row.region)).size;
@@ -60,17 +45,6 @@ export default function RegionalOutlook() {
   // Calculate forecast totals
   const totalBreedingCows = filteredForecastData.reduce((sum, r) => sum + r.breeding_cows_count, 0);
   const totalEstimatedCalves = filteredForecastData.reduce((sum, r) => sum + r.estimated_calves, 0);
-
-  // Group intent by region
-  const byRegion = filteredData.reduce((acc, row) => {
-    if (!acc[row.region]) {
-      acc[row.region] = { total: 0, intents: 0, horizons: {} as Record<MarketIntentHorizon, number> };
-    }
-    acc[row.region].total += row.total_estimated_heads;
-    acc[row.region].intents += row.intent_count;
-    acc[row.region].horizons[row.horizon] = (acc[row.region].horizons[row.horizon] || 0) + row.total_estimated_heads;
-    return acc;
-  }, {} as Record<string, { total: number; intents: number; horizons: Record<MarketIntentHorizon, number> }>);
 
   // Group herd by region
   const herdByRegion = filteredHerdData.reduce((acc, row) => {
@@ -129,10 +103,6 @@ export default function RegionalOutlook() {
             <TabsTrigger value="forecast" className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
               Supply Outlook
-            </TabsTrigger>
-            <TabsTrigger value="intent" className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Market Intent
             </TabsTrigger>
             <TabsTrigger value="herd" className="flex items-center gap-2">
               <Beef className="w-4 h-4" />
@@ -216,53 +186,7 @@ export default function RegionalOutlook() {
             )}
           </TabsContent>
 
-          <TabsContent value="intent" className="space-y-4 mt-6">
-            {/* Non-Binding Disclaimer */}
-            <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
-              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-amber-800 dark:text-amber-200">
-                  {t('regionalOutlook.disclaimer.title', 'Indicative Data Only')}
-                </p>
-                <p className="text-amber-700 dark:text-amber-300 mt-0.5">
-                  {t('regionalOutlook.disclaimer.text', 'Market intents are voluntary, non-binding signals. They do not represent confirmed availability. Only confirmed batches participate in pool matching.')}
-                </p>
-              </div>
-            </div>
-
-            {isLoading ? (
-              <Skeleton className="h-32 w-full" />
-            ) : filteredData.length === 0 ? (
-              <EmptyState icon={TrendingUp} message="No market intent data" />
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card><CardContent className="p-6"><div className="text-2xl font-bold">{totalHeads.toLocaleString()}</div><div className="text-sm text-muted-foreground">Estimated Heads</div></CardContent></Card>
-                  <Card><CardContent className="p-6"><div className="text-2xl font-bold">{totalIntents}</div><div className="text-sm text-muted-foreground">Total Intents</div></CardContent></Card>
-                  <Card><CardContent className="p-6"><div className="text-2xl font-bold">{uniqueRegions}</div><div className="text-sm text-muted-foreground">Regions</div></CardContent></Card>
-                </div>
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Regional Breakdown</CardTitle><CardDescription>Aggregated indicative data — voluntary, non-binding</CardDescription></CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {Object.entries(byRegion).sort(([, a], [, b]) => b.total - a.total).map(([region, data]) => (
-                        <div key={region} className="p-4 rounded-lg border">
-                          <div className="flex justify-between mb-2"><Badge variant="outline">{region}</Badge><span className="font-bold">{data.total.toLocaleString()} heads</span></div>
-                          <div className="grid grid-cols-3 gap-2 text-xs">
-                            {(['3m', '6m', '12m'] as MarketIntentHorizon[]).map(h => (
-                              <div key={h} className="flex justify-between p-2 rounded bg-muted/50">
-                                <span>{HORIZON_OPTIONS[h].label}</span><span className="font-medium">{(data.horizons[h] || 0).toLocaleString()}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </TabsContent>
+          {/* Market Intent tab removed - admin-only feature */}
 
           <TabsContent value="herd" className="space-y-4 mt-6">
             {isLoadingHerd ? (

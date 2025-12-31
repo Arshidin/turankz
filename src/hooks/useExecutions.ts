@@ -96,7 +96,8 @@ export function useExecutions(filters?: { status?: ExecutionStatus; requestId?: 
           pool_matches:match_id (
             heads_matched,
             total_price_per_kg,
-            total_premium
+            total_premium,
+            status
           )
         `)
         .order('created_at', { ascending: false });
@@ -112,14 +113,69 @@ export function useExecutions(filters?: { status?: ExecutionStatus; requestId?: 
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching executions:', error);
+        throw error;
+      }
 
-      return data.map((item: any) => ({
-        ...item,
-        batch: item.batches,
-        request: item.purchase_pool_requests,
-        match: item.pool_matches,
-      })) as ExecutionWithDetails[];
+      // Debug: log raw data
+      console.log('Raw executions data:', data);
+      console.log('Number of executions:', data?.length || 0);
+
+      // Map executions to include related data
+      const mapped = data.map((item: any) => {
+        const execution = {
+          ...item,
+          batch: item.batches,
+          request: item.purchase_pool_requests,
+          match: item.pool_matches,
+        } as ExecutionWithDetails;
+        
+        // Debug: log each execution
+        if (data.length > 0) {
+          console.log('Mapped execution:', {
+            id: execution.id,
+            status: execution.status,
+            matchStatus: execution.match?.status,
+            hasMatch: !!execution.match,
+            hasBatch: !!execution.batch,
+            hasRequest: !!execution.request,
+          });
+        }
+        
+        return execution;
+      });
+
+      // Filter out executions where matching is cancelled (but show all others)
+      // Executions are created only after matching finalization, so most should be valid
+      // If match is null/undefined, still show the execution (backward compatibility or data issue)
+      const filtered = mapped.filter((item: ExecutionWithDetails) => {
+        // If no match data, show it anyway (might be a data issue, but don't hide it)
+        if (!item.match) {
+          console.warn('Execution without match data:', item.id);
+          return true; // Show it anyway
+        }
+        
+        const matchStatus = item.match.status;
+        // Hide only if matching is explicitly cancelled
+        const shouldShow = matchStatus !== 'cancelled';
+        
+        if (!shouldShow) {
+          console.log('Filtered out execution:', {
+            id: item.id,
+            matchStatus,
+            reason: 'matching is cancelled',
+          });
+        }
+        
+        return shouldShow;
+      });
+
+      if (data.length > 0) {
+        console.log('Final filtered executions count:', filtered.length, 'out of', data.length);
+      }
+      
+      return filtered;
     },
   });
 }
@@ -153,7 +209,8 @@ export function useExecution(id: string | null) {
             total_price_per_kg,
             base_price_per_kg,
             total_premium,
-            premium_breakdown
+            premium_breakdown,
+            status
           )
         `)
         .eq('id', id)

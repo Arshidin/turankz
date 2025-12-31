@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, CheckCircle2, Clock, Eye, Heart, Info, AlertCircle, Award } from 'lucide-react';
 import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
-import { useFilteredMarketData, type RegionSupply } from '@/hooks/useMarketData';
+import { useFilteredMarketData, type RegionSupply, aggregateByRegion } from '@/hooks/useMarketData';
 import { useStandardPremiums } from '@/hooks/usePremiums';
 import { type Batch, type BatchStatus } from '@/hooks/useBatches';
 import { format, parseISO } from 'date-fns';
 import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
+import { useAddToWatchlist } from '@/hooks/useWatchlist';
+import { useToast } from '@/hooks/use-toast';
 
 // Map database status to display status
 const mapStatus = (status: BatchStatus): BatchStatus => {
@@ -26,10 +28,58 @@ const statusDescriptions = {
   forecast: 'Forecast batches are indicative plans, not yet committed by farmers.',
 };
 
+// Parse target_week to get month and week label
+// Supports formats: YYYY-WXX (e.g., 2025-W01) and WXX-YYYY (e.g., W01-2025)
+function parseTargetWeek(targetWeek: string): { targetMonth: string; targetWeekLabel: string } {
+  let year: number;
+  let week: number;
+  
+  if (targetWeek.includes('-W')) {
+    // Format: YYYY-WXX (e.g., 2025-W01)
+    const [yearStr, weekStr] = targetWeek.split('-W');
+    year = parseInt(yearStr);
+    week = parseInt(weekStr);
+  } else if (targetWeek.startsWith('W')) {
+    // Format: WXX-YYYY (e.g., W01-2025)
+    const parts = targetWeek.split('-');
+    week = parseInt(parts[0].replace('W', ''));
+    year = parseInt(parts[1]);
+  } else {
+    // Fallback: try to extract any numbers
+    const matches = targetWeek.match(/\d+/g);
+    if (matches && matches.length >= 2) {
+      if (parseInt(matches[1]) > 100) {
+        week = parseInt(matches[0]);
+        year = parseInt(matches[1]);
+      } else {
+        year = parseInt(matches[0]);
+        week = parseInt(matches[1]);
+      }
+    } else {
+      // Fallback to current month
+      const now = new Date();
+      year = now.getFullYear();
+      week = 1;
+    }
+  }
+  
+  // Calculate date from week
+  const date = new Date(year, 0, 1);
+  date.setDate(date.getDate() + (week - 1) * 7);
+  
+  // Format month (e.g., "January 2025")
+  const targetMonth = format(date, 'MMMM yyyy');
+  const targetWeekLabel = `Week ${week}`;
+  
+  return { targetMonth, targetWeekLabel };
+}
+
 export default function MarketOverview() {
+  const { toast } = useToast();
   const [criteriaFilters, setCriteriaFilters] = useState<CriteriaFilterState>(defaultCriteriaFilters);
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const isFiltered = hasActiveFilters(criteriaFilters);
+  const addToWatchlist = useAddToWatchlist();
   
   // Fetch premium settings for display
   const { data: standardPremiums } = useStandardPremiums();
@@ -46,12 +96,51 @@ export default function MarketOverview() {
   const gradedBatches = gradeFilter === 'all' 
     ? displayBatches 
     : displayBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
+  
+  // Apply grade filter to regions data
+  const filteredRegions = gradeFilter === 'all'
+    ? displayRegions
+    : (() => {
+        const filteredBatchesForRegions = displayBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
+        return aggregateByRegion(filteredBatchesForRegions);
+      })();
+  
+  const handleAddToWatchlist = async (batch: Batch) => {
+    try {
+      const { targetMonth, targetWeekLabel } = parseTargetWeek(batch.target_week || '');
+      
+      await addToWatchlist.mutateAsync({
+        region: batch.region,
+        target_month: targetMonth,
+        target_week: targetWeekLabel,
+        criteria: {
+          breeds: batch.breed ? [batch.breed] : undefined,
+          genders: batch.gender ? [batch.gender] : undefined,
+          ageMin: batch.age_min || undefined,
+          ageMax: batch.age_max || undefined,
+          weightMin: batch.weight_min || undefined,
+          weightMax: batch.weight_max || undefined,
+        },
+      });
+      
+      toast({
+        title: 'Added to watchlist',
+        description: `${batch.region} ${targetWeekLabel} has been added to your watchlist.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add item to watchlist. It may already be in your watchlist.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <MainLayout>
       <PageHeader 
         title="Market Overview" 
-        description="Aggregated supply visibility by readiness status — indicative data only" 
+        description="Aggregated supply visibility by readiness status — indicative data only. Individual farmer data is anonymized." 
       />
 
       {/* Current Matching Window Banner */}
@@ -63,13 +152,26 @@ export default function MarketOverview() {
       <div className="mb-6">
         <CriteriaFilter filters={criteriaFilters} onFiltersChange={setCriteriaFilters} />
         {isFiltered && (
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+            <Info className="w-3 h-3" />
             Showing supply matching your acceptance criteria. Individual farmer data remains anonymous.
           </p>
         )}
-        {!hasData && (
-          <p className="text-xs text-amber-600 mt-2">
-            Displaying sample data. Real supply data will appear when farmers declare batches.
+        {!isFiltered && hasData && (
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+            <Info className="w-3 h-3" />
+            Showing all available supply data. Use filters to narrow down by criteria.
+          </p>
+        )}
+        {!isLoading && !hasData && (
+          <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            No supply data available. Real supply data will appear when farmers declare batches with status "Soft Committed" or "Confirmed".
+          </p>
+        )}
+        {!isLoading && hasData && isFiltered && filteredBatches.length === 0 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            No batches match your current filter criteria. Try adjusting your filters.
           </p>
         )}
       </div>
@@ -178,7 +280,7 @@ export default function MarketOverview() {
                   <Skeleton key={i} className="h-8 w-full" />
                 ))}
               </div>
-            ) : displayRegions.length > 0 ? (
+            ) : filteredRegions.length > 0 ? (
               <>
                 {/* Table Header */}
                 <div className="grid grid-cols-4 gap-2 pb-2 border-b border-border mb-3">
@@ -188,7 +290,7 @@ export default function MarketOverview() {
                   <div className="text-xs font-medium text-status-forecast text-center">Forecast</div>
                 </div>
                 <div className="space-y-2">
-                  {displayRegions.map((region) => (
+                  {filteredRegions.map((region) => (
                     <div key={region.region} className="grid grid-cols-4 gap-2 py-2 border-b border-border/50 last:border-0 items-center">
                       <div className="text-sm font-medium text-foreground">{region.region}</div>
                       <div className="text-sm text-center font-medium text-foreground">{region.confirmed}</div>
@@ -201,13 +303,13 @@ export default function MarketOverview() {
                 <div className="grid grid-cols-4 gap-2 pt-3 mt-2 border-t border-border">
                   <div className="text-sm font-semibold text-foreground">Total</div>
                   <div className="text-sm text-center font-semibold text-foreground">
-                    {displayRegions.reduce((sum, r) => sum + r.confirmed, 0)}
+                    {filteredRegions.reduce((sum, r) => sum + r.confirmed, 0)}
                   </div>
                   <div className="text-sm text-center font-semibold text-foreground">
-                    {displayRegions.reduce((sum, r) => sum + r.softCommitted, 0)}
+                    {filteredRegions.reduce((sum, r) => sum + r.softCommitted, 0)}
                   </div>
                   <div className="text-sm text-center font-semibold text-muted-foreground">
-                    {displayRegions.reduce((sum, r) => sum + r.forecast, 0)}
+                    {filteredRegions.reduce((sum, r) => sum + r.forecast, 0)}
                   </div>
                 </div>
               </>
@@ -253,15 +355,17 @@ export default function MarketOverview() {
               <div className="space-y-3">
                 {gradedBatches.length > 0 ? (
                   gradedBatches.slice(0, 5).map((batch) => (
-                    <div key={batch.id || batch.batch_number} className="p-3 bg-secondary/50 rounded-lg">
+                    <div key={batch.id} className="p-3 bg-secondary/50 rounded-lg">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-secondary rounded flex items-center justify-center">
                             <span className="text-sm font-medium text-foreground">{batch.grade}</span>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground">{batch.batch_number}</p>
-                            <p className="text-xs text-muted-foreground">{batch.region} • {batch.heads} heads</p>
+                            <p className="text-sm font-medium text-foreground">
+                              {batch.region} • {batch.target_week}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{batch.heads} heads</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -289,7 +393,13 @@ export default function MarketOverview() {
                         )}
                       </div>
                       <div className="flex gap-2 mt-3 pt-2 border-t border-border/50">
-                        <Button variant="outline" size="sm" className="flex-1 text-xs">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 text-xs"
+                          onClick={() => handleAddToWatchlist(batch)}
+                          disabled={addToWatchlist.isPending}
+                        >
                           <Heart className="w-3 h-3 mr-1" />
                           Add to Watchlist
                         </Button>

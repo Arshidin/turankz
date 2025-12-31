@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -6,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useActivePriceGrid, AGE_CATEGORIES, SEX_OPTIONS, BREED_GROUPS } from '@/hooks/usePriceGrid';
+import { Separator } from '@/components/ui/separator';
+import { useActivePriceGrid, AGE_CATEGORIES, SEX_OPTIONS, BREED_GROUPS, type PriceGridCell } from '@/hooks/usePriceGrid';
 import { useRole } from '@/contexts/RoleContext';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { format, parseISO } from 'date-fns';
@@ -17,6 +19,11 @@ export default function PriceGrid() {
   const { isObserver } = useAccountStatus();
   const { data: activeGrid, isLoading, error } = useActivePriceGrid();
 
+  // Handle potential errors gracefully
+  if (error) {
+    console.error('PriceGrid error:', error);
+  }
+
   const getAgeCategoryLabel = (value: string) => 
     AGE_CATEGORIES.find(c => c.value === value)?.label || value;
 
@@ -26,19 +33,40 @@ export default function PriceGrid() {
   const getBreedGroupLabel = (value: string | null) => 
     value ? BREED_GROUPS.find(b => b.value === value)?.label || value : 'All Breeds';
 
-  // Group cells by age category and sex for display
-  const groupedCells = activeGrid?.cells.reduce((acc, cell) => {
-    const key = `${cell.age_category}-${cell.sex}`;
-    if (!acc[key]) {
-      acc[key] = {
-        age_category: cell.age_category,
-        sex: cell.sex,
-        cells: [],
-      };
-    }
-    acc[key].cells.push(cell);
-    return acc;
-  }, {} as Record<string, { age_category: string; sex: string; cells: typeof activeGrid.cells }>) || {};
+  // Group cells by age category and sex for better visualization
+  const groupedCells = useMemo(() => {
+    if (!activeGrid?.cells || activeGrid.cells.length === 0) return {};
+    
+    type CellGroup = {
+      age_category: string;
+      sex: string;
+      cells: PriceGridCell[];
+    };
+    
+    return activeGrid.cells.reduce((acc, cell) => {
+      const key = `${cell.age_category}-${cell.sex}`;
+      if (!acc[key]) {
+        acc[key] = {
+          age_category: cell.age_category,
+          sex: cell.sex,
+          cells: [],
+        };
+      }
+      acc[key].cells.push(cell);
+      return acc;
+    }, {} as Record<string, CellGroup>);
+  }, [activeGrid?.cells]);
+  
+  // Sort groups for consistent display
+  const sortedGroups = useMemo(() => {
+    return Object.values(groupedCells).sort((a, b) => {
+      // Sort by age category first, then by sex
+      const ageOrder = ['<12_months', '12_18_months', '>18_months'];
+      const ageCompare = ageOrder.indexOf(a.age_category) - ageOrder.indexOf(b.age_category);
+      if (ageCompare !== 0) return ageCompare;
+      return a.sex.localeCompare(b.sex);
+    });
+  }, [groupedCells]);
 
   return (
     <MainLayout>
@@ -147,6 +175,51 @@ export default function PriceGrid() {
                 <p className="text-sm text-muted-foreground text-center py-8">
                   No reference price cells defined in this grid.
                 </p>
+              ) : sortedGroups.length > 0 ? (
+                <div className="space-y-6">
+                  {sortedGroups.map((group, groupIndex) => (
+                    <div key={`${group.age_category}-${group.sex}`} className="space-y-2">
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <Badge variant="secondary" className="text-xs">
+                          {getAgeCategoryLabel(group.age_category)}
+                        </Badge>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {getSexLabel(group.sex)}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {group.cells.length} {group.cells.length === 1 ? 'cell' : 'cells'}
+                        </span>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Weight Range</TableHead>
+                            <TableHead>Breed Group</TableHead>
+                            <TableHead className="text-right">Reference Price</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.cells
+                            .sort((a, b) => a.weight_min - b.weight_min)
+                            .map((cell) => (
+                              <TableRow key={cell.id}>
+                                <TableCell className="font-mono text-sm">
+                                  {cell.weight_min}–{cell.weight_max} kg
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {getBreedGroupLabel(cell.breed_group)}
+                                </TableCell>
+                                <TableCell className="text-right font-semibold">
+                                  {cell.base_price.toLocaleString()} ₸/kg
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                      {groupIndex < sortedGroups.length - 1 && <Separator className="my-4" />}
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <Table>
                   <TableHeader>

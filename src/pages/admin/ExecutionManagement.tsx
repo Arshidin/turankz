@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useRole } from '@/contexts/RoleContext';
 import { 
   useExecutions, 
   useConfirmCompliance,
@@ -54,6 +56,7 @@ import {
   Eye,
 } from 'lucide-react';
 import type { ExecutionStatus } from '@/lib/execution-lifecycle';
+import { validateExecutionTransition } from '@/lib/execution-lifecycle';
 import { cn } from '@/lib/utils';
 
 const STATUS_TABS: { value: ExecutionStatus | 'all'; label: string; icon: React.ReactNode }[] = [
@@ -98,6 +101,11 @@ export default function ExecutionManagement() {
   const [schedulingDialogOpen, setSchedulingDialogOpen] = useState(false);
   const [settlementDialogOpen, setSettlementDialogOpen] = useState(false);
   
+  // Get current user info for audit trail
+  const { user } = useAuthContext();
+  const { roleName } = useRole();
+  const adminName = user?.email ? `${roleName} (${user.email.split('@')[0]})` : roleName || 'Admin';
+  
   // Fetch all executions for counts, then filter for display
   const { data: allExecutions, isLoading: allLoading } = useExecutions();
   const { data: filteredExecutions, isLoading: filteredLoading } = useExecutions(
@@ -121,17 +129,31 @@ export default function ExecutionManagement() {
   };
 
   const handleConfirmCompliance = async (execution: ExecutionWithDetails) => {
+    // Validate FSM transition
+    const validation = validateExecutionTransition(execution.status, 'confirmed', 'admin');
+    if (!validation.valid) {
+      // Error will be shown by toast in the mutation
+      throw new Error(validation.error);
+    }
+    
     await confirmCompliance.mutateAsync({
       id: execution.id,
-      admin_confirmed_by: 'Admin',
+      admin_confirmed_by: adminName,
       admin_compliance_notes: 'Compliance verified',
     });
   };
 
   const handleCloseExecution = async (execution: ExecutionWithDetails) => {
+    // Validate FSM transition
+    const validation = validateExecutionTransition(execution.status, 'closed', 'admin');
+    if (!validation.valid) {
+      // Error will be shown by toast in the mutation
+      throw new Error(validation.error);
+    }
+    
     await closeExecution.mutateAsync({
       id: execution.id,
-      closed_by: 'Admin',
+      closed_by: adminName,
       closure_notes: 'Execution completed',
     });
   };
@@ -155,6 +177,8 @@ export default function ExecutionManagement() {
   };
 
   const statusCounts = getStatusCounts();
+  // Pending actions for admin: matched (needs scheduling), delivered (needs compliance confirmation), confirmed (needs settlement)
+  // Note: scheduled is waiting for MPK action, not admin action
   const pendingActions = statusCounts.matched + statusCounts.delivered + statusCounts.confirmed;
 
   const getNextAction = (execution: ExecutionWithDetails) => {

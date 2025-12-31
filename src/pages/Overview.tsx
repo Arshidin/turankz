@@ -8,12 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRole } from '@/contexts/RoleContext';
 import { Boxes, TrendingUp, Clock, CheckCircle2, AlertCircle, ArrowRight, Shield, Info } from 'lucide-react';
+import { format, startOfMonth } from 'date-fns';
 import { SystemHealthSummary } from '@/components/admin/SystemHealthSummary';
 import { SupplyDemandSnapshot } from '@/components/admin/SupplyDemandSnapshot';
 import { AttentionRequired } from '@/components/admin/AttentionRequired';
 import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { ReliabilityPremiumCard } from '@/components/premium';
 import { ObserverDashboard } from '@/components/farmer/ObserverDashboard';
+import { ObserverMpkDashboard } from '@/components/mpk/ObserverMpkDashboard';
+import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
+import { BatchOnboarding } from '@/components/farmer/BatchOnboarding';
+import { FirstActionPrompt } from '@/components/auth/FirstActionPrompt';
 import { useFarmers } from '@/hooks/useFarmers';
 import { useMpks } from '@/hooks/useMpks';
 import { useBatches } from '@/hooks/useBatches';
@@ -21,6 +26,7 @@ import { usePoolRequests } from '@/hooks/usePoolRequests';
 import { useCurrentFarmer, useIsObserver } from '@/hooks/useCurrentFarmer';
 import { useCurrentMpk } from '@/hooks/useCurrentMpk';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { useMemo } from 'react';
 
 const getGradingConfig = (grading: string | null | undefined) => {
@@ -90,6 +96,52 @@ const formatRelativeTime = (dateString: string) => {
   return `${diffDays} дн. назад`;
 };
 
+// Parse target_week to get month key for grouping
+// Supports formats: YYYY-WXX (e.g., 2025-W01) and WXX-YYYY (e.g., W01-2025)
+function getMonthKeyFromTargetWeek(targetWeek: string | null | undefined): string {
+  if (!targetWeek) return 'Unknown';
+  
+  let year: number;
+  let week: number;
+  
+  if (targetWeek.includes('-W')) {
+    // Format: YYYY-WXX (e.g., 2025-W01)
+    const [yearStr, weekStr] = targetWeek.split('-W');
+    year = parseInt(yearStr);
+    week = parseInt(weekStr);
+  } else if (targetWeek.startsWith('W')) {
+    // Format: WXX-YYYY (e.g., W01-2025)
+    const parts = targetWeek.split('-');
+    week = parseInt(parts[0].replace('W', ''));
+    year = parseInt(parts[1]);
+  } else {
+    // Fallback: try to extract any numbers
+    const matches = targetWeek.match(/\d+/g);
+    if (matches && matches.length >= 2) {
+      if (parseInt(matches[1]) > 100) {
+        week = parseInt(matches[0]);
+        year = parseInt(matches[1]);
+      } else {
+        year = parseInt(matches[0]);
+        week = parseInt(matches[1]);
+      }
+    } else {
+      // Fallback to current month
+      const now = new Date();
+      year = now.getFullYear();
+      week = 1;
+    }
+  }
+  
+  // Calculate date from week
+  const date = new Date(year, 0, 1);
+  date.setDate(date.getDate() + (week - 1) * 7);
+  
+  // Get start of month and format as YYYY-MM
+  const monthStart = startOfMonth(date);
+  return format(monthStart, 'yyyy-MM');
+}
+
 // Helper to get current week info
 const getCurrentWeekInfo = () => {
   const now = new Date();
@@ -109,15 +161,19 @@ export default function Overview() {
   const { data: currentFarmer } = useCurrentFarmer();
   const { data: currentMpk } = useCurrentMpk();
   const { isObserver, isLoading: observerLoading } = useIsObserver();
+  const { isObserver: isMpkObserver, isLoading: accountStatusLoading } = useAccountStatus();
   
   // Get farmer status config based on grading
   const farmerStatus = getGradingConfig(currentFarmer?.grading);
   
-  // Fetch real data
+  // Fetch real data - optimize for role
+  // Only fetch data that's needed for the current role
   const { data: farmers = [] } = useFarmers();
   const { data: mpks = [] } = useMpks();
   const { data: batches = [] } = useBatches();
-  const { data: poolRequests = [] } = usePoolRequests();
+  // Pool requests are only needed for admin and MPK, not for farmers
+  // Farmers see aggregated demand via useAggregatedDemand hook
+  const { data: poolRequests = [] } = (role === 'admin' || role === 'mpk') ? usePoolRequests() : { data: [] };
 
   // Filter batches for current user (farmer role)
   const userBatches = useMemo(() => {
@@ -126,6 +182,12 @@ export default function Overview() {
     }
     return batches;
   }, [batches, role, user?.id]);
+
+  // Check if farmer has any batches (excluding draft)
+  const hasActiveBatches = useMemo(() => {
+    if (role !== 'farmer') return false;
+    return userBatches.some(b => b.status !== 'draft');
+  }, [userBatches, role]);
 
   // Filter requests for current MPK
   const mpkRequests = useMemo(() => {
@@ -142,7 +204,11 @@ export default function Overview() {
   // Calculate admin metrics from real data
   const activeFarmers = farmers.filter(f => f.registration_status === 'active').length;
   const activeMpks = mpks.filter(m => m.registration_status === 'active').length;
-  const totalDeclaredVolume = batches.reduce((sum, b) => sum + b.heads, 0);
+  // Only count active batch statuses (forecast, soft_committed, confirmed)
+  // Exclude draft (not yet declared), matched (already matched), closed (completed)
+  const totalDeclaredVolume = batches
+    .filter(b => ['forecast', 'soft_committed', 'confirmed'].includes(b.status))
+    .reduce((sum, b) => sum + b.heads, 0);
   const activePoolRequests = poolRequests.filter(r => r.status === 'submitted' || r.status === 'matching' || r.status === 'partial').length;
 
   // Calculate supply totals
@@ -160,11 +226,17 @@ export default function Overview() {
   };
 
   // Calculate regional breakdown
+  // Only count active batch statuses for supply (forecast, soft_committed, confirmed)
+  // Only count active request statuses for demand (submitted, matching, partial)
   const regions = [...new Set([...batches.map(b => b.region), ...poolRequests.flatMap(r => r.regions)])];
   const byRegion = regions.map(region => ({
     region,
-    supply: batches.filter(b => b.region === region).reduce((sum, b) => sum + b.heads, 0),
-    demand: poolRequests.filter(r => r.regions.includes(region)).reduce((sum, r) => sum + r.required_volume, 0),
+    supply: batches
+      .filter(b => b.region === region && ['forecast', 'soft_committed', 'confirmed'].includes(b.status))
+      .reduce((sum, b) => sum + b.heads, 0),
+    demand: poolRequests
+      .filter(r => r.regions.includes(region) && ['submitted', 'matching', 'partial'].includes(r.status))
+      .reduce((sum, r) => sum + r.required_volume, 0),
   })).filter(r => r.supply > 0 || r.demand > 0);
 
   // Calculate monthly breakdown from real data based on target_week
@@ -175,8 +247,8 @@ export default function Overview() {
     }> = {};
 
     batches.forEach(batch => {
-      // Parse target_week (e.g., "2025-W01" or "Week 1, 2025")
-      const monthKey = batch.target_week?.slice(0, 7) || 'Unknown';
+      // Parse target_week to get proper month key (e.g., "2025-01" for January 2025)
+      const monthKey = getMonthKeyFromTargetWeek(batch.target_week);
       
       if (!monthData[monthKey]) {
         monthData[monthKey] = {
@@ -185,13 +257,16 @@ export default function Overview() {
         };
       }
       
-      if (batch.status === 'forecast') monthData[monthKey].supply.forecast += batch.heads;
-      if (batch.status === 'soft_committed') monthData[monthKey].supply.softCommitted += batch.heads;
-      if (batch.status === 'confirmed') monthData[monthKey].supply.confirmed += batch.heads;
+      // Only count active batch statuses
+      if (['forecast', 'soft_committed', 'confirmed'].includes(batch.status)) {
+        if (batch.status === 'forecast') monthData[monthKey].supply.forecast += batch.heads;
+        if (batch.status === 'soft_committed') monthData[monthKey].supply.softCommitted += batch.heads;
+        if (batch.status === 'confirmed') monthData[monthKey].supply.confirmed += batch.heads;
+      }
     });
 
     poolRequests.forEach(request => {
-      const monthKey = request.target_week?.slice(0, 7) || 'Unknown';
+      const monthKey = getMonthKeyFromTargetWeek(request.target_week);
       
       if (!monthData[monthKey]) {
         monthData[monthKey] = {
@@ -200,16 +275,29 @@ export default function Overview() {
         };
       }
       
+      // Only count active request statuses for demand
       if (request.status === 'submitted' || request.status === 'matching') {
         monthData[monthKey].demand.submitted += request.required_volume;
       }
-      if (request.status === 'partial') monthData[monthKey].demand.partial += request.required_volume;
-      if (request.status === 'fulfilled') monthData[monthKey].demand.fulfilled += request.required_volume;
+      if (request.status === 'partial') {
+        monthData[monthKey].demand.partial += request.required_volume;
+      }
+      // Note: fulfilled is included for historical tracking, but not in active demand
+      if (request.status === 'fulfilled') {
+        monthData[monthKey].demand.fulfilled += request.required_volume;
+      }
     });
 
     return Object.entries(monthData)
-      .map(([month, data]) => ({ month, ...data }))
-      .sort((a, b) => a.month.localeCompare(b.month))
+      .map(([monthKey, data]) => {
+        // Format month key for display (e.g., "2025-01" -> "January 2025")
+        const [year, month] = monthKey.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const monthLabel = format(date, 'MMMM yyyy');
+        
+        return { month: monthLabel, monthKey, ...data };
+      })
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
       .slice(0, 6); // Show up to 6 months
   }, [batches, poolRequests]);
 
@@ -268,10 +356,15 @@ export default function Overview() {
     const requiresAction = userBatches.filter(b => b.requires_action).length;
     const confirmed = userBatches.filter(b => b.status === 'confirmed').length;
     
+    // Calculate total heads by status
+    const totalHeads = userBatches.reduce((sum, b) => sum + b.heads, 0);
+    const confirmedHeads = userBatches.filter(b => b.status === 'confirmed').reduce((sum, b) => sum + b.heads, 0);
+    const softCommittedHeads = userBatches.filter(b => b.status === 'soft_committed').reduce((sum, b) => sum + b.heads, 0);
+    
     return [
-      { label: 'Активные партии', value: String(total), icon: Boxes, description: 'Всего партий в системе' },
+      { label: 'Активные партии', value: String(total), icon: Boxes, description: `${totalHeads} голов всего` },
       { label: 'Требуют действия', value: String(requiresAction), icon: AlertCircle, highlight: requiresAction > 0, description: 'Требуют внимания' },
-      { label: 'Подтверждённые', value: String(confirmed), icon: CheckCircle2, description: 'Готовы к поставке' },
+      { label: 'Подтверждённые', value: String(confirmed), icon: CheckCircle2, description: `${confirmedHeads} голов готовы` },
     ];
   }, [userBatches]);
 
@@ -353,12 +446,32 @@ export default function Overview() {
     return activities.slice(0, 5);
   }, [userBatches]);
 
-  // Farmer batch summary from real data
-  const farmerBatchSummary = useMemo(() => ({
-    confirmed: userBatches.filter(b => b.status === 'confirmed').length,
-    softCommitted: userBatches.filter(b => b.status === 'soft_committed').length,
-    forecast: userBatches.filter(b => b.status === 'forecast').length,
-  }), [userBatches]);
+  // Farmer batch summary from real data (count and volume)
+  const farmerBatchSummary = useMemo(() => {
+    const confirmed = userBatches.filter(b => b.status === 'confirmed');
+    const softCommitted = userBatches.filter(b => b.status === 'soft_committed');
+    const forecast = userBatches.filter(b => b.status === 'forecast');
+    const matched = userBatches.filter(b => b.status === 'matched');
+    
+    return {
+      confirmed: {
+        count: confirmed.length,
+        heads: confirmed.reduce((sum, b) => sum + b.heads, 0),
+      },
+      softCommitted: {
+        count: softCommitted.length,
+        heads: softCommitted.reduce((sum, b) => sum + b.heads, 0),
+      },
+      forecast: {
+        count: forecast.length,
+        heads: forecast.reduce((sum, b) => sum + b.heads, 0),
+      },
+      matched: {
+        count: matched.length,
+        heads: matched.reduce((sum, b) => sum + b.heads, 0),
+      },
+    };
+  }, [userBatches]);
 
   // Admin Dashboard
   if (role === 'admin') {
@@ -415,6 +528,20 @@ export default function Overview() {
           description={`Добро пожаловать в Turan Standard Pool`} 
         />
         <ObserverDashboard farmerName={currentFarmer?.name} />
+      </MainLayout>
+    );
+  }
+
+  // Observer MPK Dashboard - Simplified view for pending activation
+  // Only show when data is loaded and confirmed as observer
+  if (role === 'mpk' && !accountStatusLoading && isMpkObserver) {
+    return (
+      <MainLayout>
+        <PageHeader 
+          title="Обзор" 
+          description={`Добро пожаловать в Turan Standard Pool`} 
+        />
+        <ObserverMpkDashboard mpkName={currentMpk?.name} />
       </MainLayout>
     );
   }
@@ -499,6 +626,20 @@ export default function Overview() {
         </div>
       )}
 
+      {/* First Action Prompt - Show for active users without first action */}
+      {(role === 'farmer' || role === 'mpk') && !isObserver && (
+        <div className="mb-6">
+          <FirstActionPrompt />
+        </div>
+      )}
+
+      {/* Batch Onboarding - Show for farmers without active batches */}
+      {role === 'farmer' && !isObserver && !hasActiveBatches && (
+        <div className="mb-6">
+          <BatchOnboarding />
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 ${role === 'farmer' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
         {currentStats.map((stat, index) => (
@@ -520,6 +661,13 @@ export default function Overview() {
           </Card>
         ))}
       </div>
+
+      {/* Aggregated Demand Signals for Farmer */}
+      {role === 'farmer' && (
+        <div className="mb-6">
+          <AggregatedDemandCard />
+        </div>
+      )}
 
       {/* Reliability Premium Card for Farmer */}
       {role === 'farmer' && currentFarmer?.grading && (
@@ -619,19 +767,29 @@ export default function Overview() {
             {role === 'farmer' && (
               <div className="mt-4 pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground mb-2">Your Batch Summary</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="p-2 bg-status-confirmed/10 rounded text-center">
-                    <p className="text-lg font-semibold text-status-confirmed">{farmerBatchSummary.confirmed}</p>
+                    <p className="text-lg font-semibold text-status-confirmed">{farmerBatchSummary.confirmed.count}</p>
                     <p className="text-xs text-muted-foreground">Confirmed</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{farmerBatchSummary.confirmed.heads} heads</p>
                   </div>
                   <div className="p-2 bg-status-soft-committed/10 rounded text-center">
-                    <p className="text-lg font-semibold text-status-soft-committed">{farmerBatchSummary.softCommitted}</p>
+                    <p className="text-lg font-semibold text-status-soft-committed">{farmerBatchSummary.softCommitted.count}</p>
                     <p className="text-xs text-muted-foreground">Soft Comm.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{farmerBatchSummary.softCommitted.heads} heads</p>
                   </div>
                   <div className="p-2 bg-status-forecast/10 rounded text-center">
-                    <p className="text-lg font-semibold text-status-forecast">{farmerBatchSummary.forecast}</p>
+                    <p className="text-lg font-semibold text-status-forecast">{farmerBatchSummary.forecast.count}</p>
                     <p className="text-xs text-muted-foreground">Forecast</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{farmerBatchSummary.forecast.heads} heads</p>
                   </div>
+                  {farmerBatchSummary.matched.count > 0 && (
+                    <div className="p-2 bg-blue-500/10 rounded text-center">
+                      <p className="text-lg font-semibold text-blue-600">{farmerBatchSummary.matched.count}</p>
+                      <p className="text-xs text-muted-foreground">Matched</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{farmerBatchSummary.matched.heads} heads</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

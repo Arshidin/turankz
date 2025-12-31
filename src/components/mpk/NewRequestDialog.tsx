@@ -98,9 +98,11 @@ interface NewRequestDialogProps {
   mpkId: string;
   mpkName: string;
   defaultCriteria?: AcceptanceCriteria;
+  defaultRegions?: string[];
+  commonTargetWeeks?: string[]; // Months from MPK profile (e.g., ['Январь', 'Февраль'])
 }
 
-export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCriteria }: NewRequestDialogProps) {
+export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCriteria, defaultRegions = [], commonTargetWeeks = [] }: NewRequestDialogProps) {
   const createRequest = useCreatePoolRequest();
   const { data: matchingWindow } = useCurrentMatchingWindow();
   const canCreateRequests = useCanCreateRequests();
@@ -120,7 +122,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
     defaultValues: {
       required_volume: undefined,
       required_grade: '',
-      regions: [],
+      regions: defaultRegions || [], // Pre-fill regions from MPK profile
       target_week: matchingWindow?.target_week || '',
       target_delivery_period: 'short_term' as DeliveryPeriod,
       notes: '',
@@ -139,6 +141,26 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
       form.setValue('target_week', matchingWindow.target_week);
     }
   }, [matchingWindow, form]);
+
+  // Reset form with default values when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        required_volume: undefined,
+        required_grade: '',
+        regions: defaultRegions || [],
+        target_week: matchingWindow?.target_week || '',
+        target_delivery_period: 'short_term' as DeliveryPeriod,
+        notes: '',
+        accepted_breeds: defaultCriteria?.accepted_breeds || [],
+        accepted_genders: defaultCriteria?.accepted_genders || [],
+        age_range_min: defaultCriteria?.age_range_min ?? undefined,
+        age_range_max: defaultCriteria?.age_range_max ?? undefined,
+        weight_range_min: defaultCriteria?.weight_range_min ?? undefined,
+        weight_range_max: defaultCriteria?.weight_range_max ?? undefined,
+      });
+    }
+  }, [open, defaultRegions, defaultCriteria, matchingWindow?.target_week, form]);
 
   const onSubmit = async (data: FormData) => {
     // Double-check submission is still allowed
@@ -566,11 +588,16 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
               </Button>
               <Button 
                 type="submit" 
-                disabled={createRequest.isPending || !canSubmit}
+                disabled={createRequest.isPending}
               >
                 {createRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {!canCreateRequests ? 'Account Restricted' : (submissionValidation.canSubmit ? 'Create Request' : 'Submissions Closed')}
+                {!canCreateRequests ? 'Account Restricted' : 'Create Draft Request'}
               </Button>
+              {!canCreateRequests && (
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Your account is restricted. Contact administrator.
+                </p>
+              )}
             </div>
           </form>
         </Form>

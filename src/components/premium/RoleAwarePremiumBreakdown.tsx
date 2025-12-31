@@ -167,11 +167,7 @@ export function RoleAwarePremiumBreakdown({
           <span className="text-muted-foreground">Total Premium</span>
           <span className="font-medium text-emerald-600">+{breakdown.totalPremium} ₸/kg</span>
         </div>
-        <Separator />
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Indicative Price</span>
-          <span className="font-bold text-lg">{breakdown.totalPricePerKg} ₸/kg</span>
-        </div>
+        {/* Total Price removed - show only components to avoid price-setting appearance */}
         {isLocked && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
             <Lock className="h-3 w-3" />
@@ -216,17 +212,13 @@ export function RoleAwarePremiumBreakdown({
             <span className="font-medium text-emerald-600">+{breakdown.totalPremium} ₸/kg</span>
           </div>
 
-          <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-            <span className="font-semibold">Indicative Price per kg</span>
-            <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
-          </div>
-
-          {!isLocked && (
-            <p className="text-xs text-muted-foreground text-center">
-              <Eye className="h-3 w-3 inline mr-1" />
-              This is an indicative estimate. Final settlement price is determined at delivery based on market conditions.
+          {/* Disclaimer - Reference pricing only */}
+          <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+            <Info className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              <strong>Reference pricing only.</strong> These prices are indicative market benchmarks. TURAN does not set, enforce, or guarantee transaction prices. Actual prices are negotiated between parties.
             </p>
-          )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -296,9 +288,12 @@ export function RoleAwarePremiumBreakdown({
 
           <Separator className="my-2" />
 
-          <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-            <span className="font-semibold">Indicative Price per kg</span>
-            <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
+          {/* Disclaimer - Reference pricing only */}
+          <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+            <Info className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              <strong>Reference pricing only.</strong> These prices are indicative market benchmarks. TURAN does not set, enforce, or guarantee transaction prices. Actual prices are negotiated between parties.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -338,10 +333,13 @@ export function RoleAwarePremiumBreakdown({
           <span className="font-medium text-emerald-600">+{breakdown.totalPremium} ₸/kg</span>
         </div>
 
-          <div className="flex items-center justify-between py-3 bg-primary/5 rounded-lg px-3 border border-primary/10">
-            <span className="font-semibold">Indicative Settlement Price per kg</span>
-            <span className="font-bold text-xl">{breakdown.totalPricePerKg} ₸/kg</span>
-          </div>
+        {/* Disclaimer - Reference pricing only */}
+        <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+          <Info className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            <strong>Reference pricing only.</strong> These prices are indicative market benchmarks. TURAN does not set, enforce, or guarantee transaction prices. Actual prices are negotiated between parties.
+          </p>
+        </div>
 
         {isLocked && lockedAt && (
           <p className="text-xs text-muted-foreground text-center">

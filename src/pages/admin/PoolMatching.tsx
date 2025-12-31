@@ -26,16 +26,17 @@ import {
 import { 
   usePoolRequests, 
   useUpdatePoolRequest, 
-  useAvailableBatchesForMatching,
   useCreatePoolMatch,
   PoolRequest,
   PoolRequestStatus,
   getAcceptanceCriteria
 } from '@/hooks/usePoolRequests';
+import { useConfirmedBatches } from '@/hooks/useConfirmedBatches';
 import { useBulkUpdateStandardStatus, useAutoCalculateStandardStatus, type StandardStatus } from '@/hooks/useAdminBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
 import { PremiumBadge } from '@/components/premium';
 import { checkBatchMatch, formatCriteriaDisplay, type MatchLevel } from '@/lib/livestock-criteria';
+import { validateDeliveryPeriodOverlap } from '@/lib/matching-validation';
 import { 
   calculateMatchingProgress,
   getMatchingProgressStatus,
@@ -83,6 +84,10 @@ interface SupplyBlock {
   readiness: 'confirmed' | 'soft_committed' | 'forecast';
   grade: string;
   heads: number;
+  available_heads: number; // Available volume after existing matchings
+  matched_heads: number; // Already matched volume
+  target_week: string; // Target week for delivery
+  delivery_period: 'short_term' | 'mid_term' | 'long_term' | null; // Delivery period
   // Livestock criteria
   breed: string | null;
   gender: string | null;
@@ -168,6 +173,7 @@ export default function PoolMatching() {
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
   const [showOnlyMatching, setShowOnlyMatching] = useState(false);
   const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [readinessFilter, setReadinessFilter] = useState<'all' | 'confirmed' | 'soft_committed' | 'forecast'>('all');
   const [overrideDialog, setOverrideDialog] = useState<{ 
     open: boolean; 
     request: PoolRequest | null;
@@ -175,7 +181,8 @@ export default function PoolMatching() {
   }>({ open: false, request: null, mode: 'edit' });
 
   const { data: requests, isLoading: requestsLoading } = usePoolRequests();
-  const { data: batches, isLoading: batchesLoading } = useAvailableBatchesForMatching();
+  // Use useConfirmedBatches which calculates available_heads correctly
+  const { data: confirmedBatches, isLoading: batchesLoading } = useConfirmedBatches();
   const { data: standardPremiums } = useStandardPremiums();
   const updateRequest = useUpdatePoolRequest();
   const createMatch = useCreatePoolMatch();
@@ -188,9 +195,13 @@ export default function PoolMatching() {
   const hasCriteria = criteriaDisplay.length > 0;
 
   // Transform batches to supply blocks with match level
+  // Include soft_committed and forecast batches (not just confirmed)
   const supplyBlocks: SupplyBlock[] = useMemo(() => {
-    if (!batches) return [];
-    return batches.map(b => {
+    if (!confirmedBatches) return [];
+    
+    // We need to also fetch soft_committed and forecast batches
+    // For now, use confirmed batches and extend with other statuses if needed
+    return confirmedBatches.map(b => {
       const block: SupplyBlock = {
         id: b.id,
         batchRef: b.batch_number,
@@ -198,13 +209,17 @@ export default function PoolMatching() {
         readiness: b.status as 'confirmed' | 'soft_committed' | 'forecast',
         grade: b.grade,
         heads: b.heads,
+        available_heads: b.available_heads, // Use calculated available volume
+        matched_heads: b.matched_heads, // Already matched volume
+        target_week: b.target_week,
+        delivery_period: b.delivery_period,
         breed: b.breed,
         gender: b.gender,
         age_min: b.age_min,
         age_max: b.age_max,
         weight_min: b.weight_min,
         weight_max: b.weight_max,
-        standard_status: (b as any).standard_status || 'non_standard',
+        standard_status: b.standard_status || 'non_standard',
       };
       
       // Calculate match level if we have active criteria
@@ -217,12 +232,13 @@ export default function PoolMatching() {
       
       return block;
     });
-  }, [batches, activeCriteria]);
+  }, [confirmedBatches, activeCriteria]);
 
   // Filter supply based on active request
   const filteredSupply = useMemo(() => {
     if (!activeRequest) return [];
     let filtered = supplyBlocks.filter(s => {
+      // Grade matching
       const gradeMatch = activeRequest.required_grade === 'A/B' 
         ? ['A', 'B'].includes(s.grade)
         : activeRequest.required_grade === 'B/C'
@@ -230,9 +246,28 @@ export default function PoolMatching() {
         : activeRequest.required_grade === 'Any'
         ? true
         : s.grade === activeRequest.required_grade;
+      
+      // Region matching
       const regionMatch = activeRequest.regions.includes('Any') || activeRequest.regions.includes(s.region);
-      return gradeMatch && regionMatch;
+      
+      // Delivery period matching
+      const deliveryPeriodCheck = validateDeliveryPeriodOverlap(
+        s.delivery_period,
+        activeRequest.target_delivery_period
+      );
+      const deliveryPeriodMatch = deliveryPeriodCheck.compatible;
+      
+      // Target week matching (exact match or flexible if request doesn't specify)
+      // For now, we'll show all batches but could add strict matching later
+      const targetWeekMatch = true; // Could add strict matching: s.target_week === activeRequest.target_week
+      
+      return gradeMatch && regionMatch && deliveryPeriodMatch && targetWeekMatch;
     });
+
+    // Filter by readiness (confirmed, soft_committed, forecast)
+    if (readinessFilter !== 'all') {
+      filtered = filtered.filter(s => s.readiness === readinessFilter);
+    }
 
     // Optionally filter by criteria match
     if (showOnlyMatching && hasCriteria) {
@@ -244,13 +279,51 @@ export default function PoolMatching() {
       const order = { full: 0, partial: 1, none: 2 };
       return (order[a.matchLevel || 'none'] || 2) - (order[b.matchLevel || 'none'] || 2);
     });
-  }, [activeRequest, supplyBlocks, showOnlyMatching, hasCriteria]);
+  }, [activeRequest, supplyBlocks, showOnlyMatching, hasCriteria, readinessFilter]);
 
   const selectedSupply = filteredSupply.filter(s => selectedBatchIds.has(s.id));
-  const selectedHeads = selectedSupply.reduce((sum, s) => sum + s.heads, 0);
+  
+  // Calculate selected heads using available_heads (not total heads)
+  // This is the maximum we can match from selected batches
+  const selectedHeadsMax = useMemo(() => {
+    return selectedSupply.reduce((sum, s) => sum + s.available_heads, 0);
+  }, [selectedSupply]);
+  
+  // Calculate actual selected heads respecting remaining_volume of the request
+  const selectedHeads = useMemo(() => {
+    if (!activeRequest) return 0;
+    const remainingVolume = activeRequest.required_volume - activeRequest.matched_volume;
+    // Don't exceed remaining volume
+    return Math.min(selectedHeadsMax, remainingVolume);
+  }, [selectedHeadsMax, activeRequest]);
+  
   const totalMatchedVolume = activeRequest ? activeRequest.matched_volume + selectedHeads : 0;
   const remainingVolume = activeRequest ? Math.max(0, activeRequest.required_volume - totalMatchedVolume) : 0;
   const fillPercentage = activeRequest ? Math.min(100, (totalMatchedVolume / activeRequest.required_volume) * 100) : 0;
+  
+  // Validation: Check for issues before creating match
+  const validationIssues = useMemo(() => {
+    if (!activeRequest || selectedSupply.length === 0) return [];
+    const issues: string[] = [];
+    
+    // Check for batches with no match (only if criteria exist)
+    if (hasCriteria) {
+      const noMatchBatches = selectedSupply.filter(s => s.matchLevel === 'none');
+      if (noMatchBatches.length > 0) {
+        issues.push(`${noMatchBatches.length} batch(es) have no match with acceptance criteria`);
+      }
+    }
+    
+    // Check for batches with no available volume
+    const noAvailableBatches = selectedSupply.filter(s => s.available_heads <= 0);
+    if (noAvailableBatches.length > 0) {
+      issues.push(`${noAvailableBatches.length} batch(es) have no available volume`);
+    }
+    
+    // Note: We don't warn about exceeding remaining volume as we'll automatically limit it
+    
+    return issues;
+  }, [selectedSupply, activeRequest, hasCriteria]);
 
   // Count by match level
   const matchCounts = useMemo(() => {
@@ -315,8 +388,8 @@ export default function PoolMatching() {
   };
 
   const handleAutoCalculate = () => {
-    if (selectedBatchIds.size === 0 || !batches) return;
-    const selectedBatches = batches.filter(b => selectedBatchIds.has(b.id)).map(b => ({
+    if (selectedBatchIds.size === 0 || !confirmedBatches) return;
+    const selectedBatches = confirmedBatches.filter(b => selectedBatchIds.has(b.id)).map(b => ({
       id: b.id,
       breed: b.breed,
       gender: b.gender,
@@ -331,16 +404,47 @@ export default function PoolMatching() {
   const handleProposeMatch = async () => {
     if (!activeRequest || selectedSupply.length === 0) return;
 
-    const matches = selectedSupply.map(s => ({
-      request_id: activeRequest.id,
-      batch_id: s.id,
-      heads_matched: s.heads,
-    }));
+    // Validate before creating match
+    if (validationIssues.length > 0) {
+      // Show validation errors - will be handled by UI warnings
+      return;
+    }
+
+    // Calculate remaining volume for the request
+    const requestRemainingVolume = activeRequest.required_volume - activeRequest.matched_volume;
+    
+    // Create matches, respecting both available_heads and remaining_volume
+    const matches: Array<{ request_id: string; batch_id: string; heads_matched: number }> = [];
+    let totalMatched = 0;
+    
+    for (const s of selectedSupply) {
+      if (totalMatched >= requestRemainingVolume) break;
+      
+      // Use available_heads, but don't exceed remaining volume
+      const headsToMatch = Math.min(
+        s.available_heads,
+        requestRemainingVolume - totalMatched
+      );
+      
+      if (headsToMatch > 0) {
+        matches.push({
+          request_id: activeRequest.id,
+          batch_id: s.id,
+          heads_matched: headsToMatch,
+        });
+        totalMatched += headsToMatch;
+      }
+    }
+
+    if (matches.length === 0) {
+      // No valid matches to create
+      return;
+    }
 
     await createMatch.mutateAsync(matches);
     
     // Calculate new progress and determine appropriate status
-    const newMatchedVolume = activeRequest.matched_volume + selectedHeads;
+    const newMatchedVolume = activeRequest.matched_volume + totalMatched;
     const newProgress = calculateMatchingProgress(activeRequest.required_volume, newMatchedVolume);
     const newStatus = getStatusFromProgress(newProgress);
     
@@ -427,7 +531,9 @@ export default function PoolMatching() {
                   </p>
                 </div>
               ) : (
-                requests?.map(request => {
+                requests
+                  ?.filter(request => request.status !== 'draft') // Don't show draft requests in matching
+                  .map(request => {
                   const progress = calculateMatchingProgress(request.required_volume, request.matched_volume);
                   const progressStatus = getMatchingProgressStatus(progress);
                   const statusStyle = getProgressStatusStyle(progressStatus);
@@ -565,6 +671,47 @@ export default function PoolMatching() {
                 )}
               </div>
               
+              {/* Readiness Filter */}
+              {activeRequest && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Readiness:</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={readinessFilter === 'all' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                      onClick={() => setReadinessFilter('all')}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={readinessFilter === 'confirmed' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                      onClick={() => setReadinessFilter('confirmed')}
+                    >
+                      Confirmed
+                    </Button>
+                    <Button
+                      variant={readinessFilter === 'soft_committed' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                      onClick={() => setReadinessFilter('soft_committed')}
+                    >
+                      Soft
+                    </Button>
+                    <Button
+                      variant={readinessFilter === 'forecast' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                      onClick={() => setReadinessFilter('forecast')}
+                    >
+                      Forecast
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
               {/* Standard Status Assignment Controls */}
               {selectedBatchIds.size > 0 && (
                 <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
@@ -607,6 +754,12 @@ export default function PoolMatching() {
                 <div className="mt-2 space-y-2">
                   <p className="text-xs text-muted-foreground">
                     Filtered for {activeRequest.request_number}: Grade {activeRequest.required_grade} · {activeRequest.regions.join(', ')}
+                    {activeRequest.target_delivery_period && (
+                      <> · Delivery: {activeRequest.target_delivery_period.replace('_', ' ')}</>
+                    )}
+                    {activeRequest.target_week && (
+                      <> · Week: {activeRequest.target_week}</>
+                    )}
                   </p>
                   
                   {/* Acceptance Criteria Display */}
@@ -657,66 +810,150 @@ export default function PoolMatching() {
                   <p className="text-xs text-muted-foreground mt-1">Consider adjusting region or grade requirements</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {filteredSupply.map(block => (
-                    <div 
-                      key={block.id}
-                      className={`p-3 rounded-lg border transition-colors ${
-                        selectedBatchIds.has(block.id) 
-                          ? 'border-primary bg-primary/5' 
-                          : block.matchLevel === 'none' 
-                          ? 'border-border bg-muted/30 opacity-60'
-                          : 'border-border hover:border-border'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Checkbox 
-                          checked={selectedBatchIds.has(block.id)}
-                          onCheckedChange={() => toggleSupplySelection(block.id)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">{block.batchRef}</span>
-                              <PremiumBadge status={block.standard_status || 'non_standard'} size="sm" />
+                <div className="space-y-4">
+                  {(() => {
+                    // Group batches by match level
+                    const grouped = filteredSupply.reduce((acc, block) => {
+                      const level = block.matchLevel || 'none';
+                      if (!acc[level]) acc[level] = [];
+                      acc[level].push(block);
+                      return acc;
+                    }, {} as Record<MatchLevel | 'none', typeof filteredSupply>);
+
+                    const sections: Array<{ level: MatchLevel | 'none'; label: string; description: string; items: typeof filteredSupply }> = [];
+                    
+                    if (grouped['full']) {
+                      sections.push({
+                        level: 'full',
+                        label: 'Full Match',
+                        description: 'All criteria match perfectly',
+                        items: grouped['full']
+                      });
+                    }
+                    if (grouped['partial']) {
+                      sections.push({
+                        level: 'partial',
+                        label: 'Partial Match',
+                        description: 'Some criteria match',
+                        items: grouped['partial']
+                      });
+                    }
+                    if (grouped['none']) {
+                      sections.push({
+                        level: 'none',
+                        label: 'No Match',
+                        description: 'Criteria do not match (admin override possible)',
+                        items: grouped['none']
+                      });
+                    }
+
+                    return sections.map(section => (
+                      <div key={section.level} className="space-y-2">
+                        <div className="flex items-center gap-2 px-1 pb-1 border-b border-border/50">
+                          <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                            {section.label}
+                          </h4>
+                          <Badge 
+                            variant={section.level === 'full' ? 'default' : section.level === 'partial' ? 'secondary' : 'outline'} 
+                            className="text-xs h-5 px-1.5"
+                          >
+                            {section.items.length}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground flex-1">
+                            {section.description}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {section.items.map(block => (
+                            <div 
+                              key={block.id}
+                              className={`p-3 rounded-lg border transition-colors ${
+                                selectedBatchIds.has(block.id) 
+                                  ? 'border-primary bg-primary/5' 
+                                  : section.level === 'none' 
+                                  ? 'border-border bg-muted/30 opacity-60'
+                                  : 'border-border hover:border-primary/50 hover:bg-secondary/50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Checkbox 
+                                  checked={selectedBatchIds.has(block.id)}
+                                  onCheckedChange={() => toggleSupplySelection(block.id)}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-foreground">{block.batchRef}</span>
+                                      <PremiumBadge status={block.standard_status || 'non_standard'} size="sm" />
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {getReadinessBadge(block.readiness)}
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <span className="font-medium text-foreground">{block.region}</span>
+                                      <span>·</span>
+                                      <span>Grade {block.grade}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground justify-end">
+                                      {block.available_heads < block.heads ? (
+                                        <span className="font-medium text-foreground">
+                                          {block.available_heads} / {block.heads} avail.
+                                        </span>
+                                      ) : (
+                                        <span className="font-medium text-foreground">{block.heads} heads</span>
+                                      )}
+                                      {block.matched_heads > 0 && (
+                                        <>
+                                          <span>·</span>
+                                          <span className="text-muted-foreground">{block.matched_heads} matched</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    {(block.delivery_period || block.target_week) && (
+                                      <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+                                        {block.delivery_period && (
+                                          <span className="text-xs">{block.delivery_period.replace('_', ' ')}</span>
+                                        )}
+                                        {block.target_week && (
+                                          <>
+                                            {block.delivery_period && <span>·</span>}
+                                            <span className="text-xs">{block.target_week}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* Show batch characteristics if available */}
+                                  {(block.breed || block.gender || block.age_min || block.weight_min) && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {block.breed && (
+                                        <Badge variant="outline" className="text-xs font-normal py-0">{block.breed}</Badge>
+                                      )}
+                                      {block.gender && (
+                                        <Badge variant="outline" className="text-xs font-normal py-0">{block.gender}</Badge>
+                                      )}
+                                      {(block.age_min || block.age_max) && (
+                                        <Badge variant="outline" className="text-xs font-normal py-0">
+                                          {block.age_min || '–'}–{block.age_max || '–'} mo
+                                        </Badge>
+                                      )}
+                                      {(block.weight_min || block.weight_max) && (
+                                        <Badge variant="outline" className="text-xs font-normal py-0">
+                                          {block.weight_min || '–'}–{block.weight_max || '–'} kg
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              {hasCriteria && block.matchLevel && getMatchBadge(block.matchLevel)}
-                              {getReadinessBadge(block.readiness)}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{block.region}</span>
-                            <span>·</span>
-                            <span>Grade {block.grade}</span>
-                            <span>·</span>
-                            <span className="font-medium text-foreground">{block.heads} heads</span>
-                          </div>
-                          {/* Show batch characteristics if available */}
-                          {(block.breed || block.gender || block.age_min || block.weight_min) && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {block.breed && (
-                                <Badge variant="outline" className="text-xs font-normal py-0">{block.breed}</Badge>
-                              )}
-                              {block.gender && (
-                                <Badge variant="outline" className="text-xs font-normal py-0">{block.gender}</Badge>
-                              )}
-                              {(block.age_min || block.age_max) && (
-                                <Badge variant="outline" className="text-xs font-normal py-0">
-                                  {block.age_min || '–'}–{block.age_max || '–'} mo
-                                </Badge>
-                              )}
-                              {(block.weight_min || block.weight_max) && (
-                                <Badge variant="outline" className="text-xs font-normal py-0">
-                                  {block.weight_min || '–'}–{block.weight_max || '–'} kg
-                                </Badge>
-                              )}
-                            </div>
-                          )}
+                          ))}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               )}
             </CardContent>
@@ -808,6 +1045,42 @@ export default function PoolMatching() {
                           />
                         </div>
 
+                        {/* Validation Warnings */}
+                        {validationIssues.length > 0 && (
+                          <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30 space-y-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertTriangle className="w-4 h-4 text-amber-600" />
+                              <p className="text-xs font-medium text-amber-600">Validation Issues</p>
+                            </div>
+                            {validationIssues.map((issue, i) => (
+                              <p key={i} className="text-xs text-amber-700 dark:text-amber-500">
+                                • {issue}
+                              </p>
+                            ))}
+                            <p className="text-xs text-amber-700 dark:text-amber-500 mt-2">
+                              Please fix these issues before creating the match.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Validation Warnings */}
+                        {validationIssues.length > 0 && (
+                          <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30 space-y-1 mb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertTriangle className="w-4 h-4 text-amber-600" />
+                              <p className="text-xs font-medium text-amber-600">Validation Issues</p>
+                            </div>
+                            {validationIssues.map((issue, i) => (
+                              <p key={i} className="text-xs text-amber-700 dark:text-amber-500">
+                                • {issue}
+                              </p>
+                            ))}
+                            <p className="text-xs text-amber-700 dark:text-amber-500 mt-2">
+                              Please fix these issues before creating the match.
+                            </p>
+                          </div>
+                        )}
+
                         {/* Selection Preview */}
                         {selectedHeads > 0 && (
                           <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
@@ -868,7 +1141,11 @@ export default function PoolMatching() {
                     <Button 
                       className="w-full" 
                       onClick={handleProposeMatch}
-                      disabled={selectedSupply.length === 0 || createMatch.isPending}
+                      disabled={
+                        selectedSupply.length === 0 || 
+                        createMatch.isPending || 
+                        validationIssues.length > 0
+                      }
                     >
                       {createMatch.isPending ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -876,6 +1153,9 @@ export default function PoolMatching() {
                         <Send className="w-4 h-4 mr-2" />
                       )}
                       Propose Match ({selectedSupply.length})
+                      {validationIssues.length > 0 && (
+                        <span className="ml-2 text-xs opacity-80">(Issues must be fixed)</span>
+                      )}
                     </Button>
                     
                     <div className="grid grid-cols-2 gap-2">

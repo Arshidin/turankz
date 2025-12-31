@@ -20,6 +20,7 @@ import { canCreateMatching } from '@/lib/matching-lifecycle';
 import { validateMatchingCriteria, getDeliveryPeriodLabel, type DeliveryPeriod } from '@/lib/matching-validation';
 import type { ConfirmedBatch } from '@/hooks/useConfirmedBatches';
 import type { MatchingPoolRequest } from '@/hooks/useMatchingRequests';
+import { useRole } from '@/contexts/RoleContext';
 import { Link2, AlertTriangle, Package, Target, CheckCircle2, Loader2, Info, AlertCircle } from 'lucide-react';
 
 interface CreateMatchingDialogProps {
@@ -38,7 +39,9 @@ export function CreateMatchingDialog({
   onSuccess,
 }: CreateMatchingDialogProps) {
   const { data: matchingWindow } = useCurrentMatchingWindow();
+  const { role } = useRole();
   const createMatching = useCreateMatching();
+  const isAdmin = role === 'admin';
 
   const [matchedVolume, setMatchedVolume] = useState<number>(0);
   const [notes, setNotes] = useState('');
@@ -82,6 +85,9 @@ export function CreateMatchingDialog({
         age_range_min: selectedRequest.age_range_min,
         age_range_max: selectedRequest.age_range_max,
         target_delivery_period: selectedRequest.target_delivery_period as DeliveryPeriod | null,
+      },
+      {
+        allowAdminOverride: isAdmin, // Admin can override criteria mismatches
       }
     );
   }, [selectedBatch, selectedRequest]);
@@ -147,8 +153,8 @@ export function CreateMatchingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
             Create Matching
@@ -158,7 +164,7 @@ export function CreateMatchingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           {/* Matching Window Warning */}
           {!canCreate.allowed && (
             <Alert variant="destructive">
@@ -314,7 +320,7 @@ export function CreateMatchingDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-auto flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

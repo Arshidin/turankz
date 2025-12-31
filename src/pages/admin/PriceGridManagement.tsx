@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -68,6 +68,11 @@ import {
   Calendar,
   Power,
   ShieldCheck,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
 } from 'lucide-react';
 
 function VersionCard({
@@ -237,16 +242,33 @@ function CellEditor({
   const handleSubmit = () => {
     if (!ageCategory || !sex || !weightMin || !weightMax || !basePrice || !changeReason.trim()) return;
 
+    // Validation
+    const weightMinNum = parseInt(weightMin, 10);
+    const weightMaxNum = parseInt(weightMax, 10);
+    const basePriceNum = parseInt(basePrice, 10);
+
+    // Validate weight range
+    if (isNaN(weightMinNum) || isNaN(weightMaxNum) || weightMinNum >= weightMaxNum) {
+      // Error will be shown by disabled button state
+      return;
+    }
+
+    // Validate price is positive
+    if (isNaN(basePriceNum) || basePriceNum <= 0) {
+      // Error will be shown by disabled button state
+      return;
+    }
+
     upsertCell.mutate(
       {
         versionId,
         cell: {
           age_category: ageCategory,
           sex,
-          weight_min: parseInt(weightMin, 10),
-          weight_max: parseInt(weightMax, 10),
+          weight_min: weightMinNum,
+          weight_max: weightMaxNum,
           breed_group: breedGroup === '__all__' ? null : breedGroup,
-          base_price: parseInt(basePrice, 10),
+          base_price: basePriceNum,
           notes: notes || null,
         },
         changeReason: changeReason.trim(),
@@ -255,6 +277,13 @@ function CellEditor({
       { onSuccess: onClose }
     );
   };
+
+  // Validation state
+  const weightMinNum = parseInt(weightMin, 10);
+  const weightMaxNum = parseInt(weightMax, 10);
+  const basePriceNum = parseInt(basePrice, 10);
+  const isValidWeight = !isNaN(weightMinNum) && !isNaN(weightMaxNum) && weightMinNum < weightMaxNum && weightMinNum > 0 && weightMaxNum > 0;
+  const isValidPrice = !isNaN(basePriceNum) && basePriceNum > 0;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -301,18 +330,25 @@ function CellEditor({
               <Label>Weight Min (kg) *</Label>
               <Input
                 type="number"
+                min="1"
                 value={weightMin}
                 onChange={(e) => setWeightMin(e.target.value)}
                 placeholder="e.g., 180"
+                className={weightMin && weightMax && (!isValidWeight) ? 'border-destructive' : ''}
               />
+              {weightMin && weightMax && (!isValidWeight) && (
+                <p className="text-xs text-destructive">Min must be less than max and both must be positive</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Weight Max (kg) *</Label>
               <Input
                 type="number"
+                min="1"
                 value={weightMax}
                 onChange={(e) => setWeightMax(e.target.value)}
                 placeholder="e.g., 260"
+                className={weightMin && weightMax && (!isValidWeight) ? 'border-destructive' : ''}
               />
             </div>
           </div>
@@ -338,10 +374,15 @@ function CellEditor({
             <Label>Reference Price (₸/kg) *</Label>
             <Input
               type="number"
+              min="1"
               value={basePrice}
               onChange={(e) => setBasePrice(e.target.value)}
               placeholder="e.g., 1200"
+              className={basePrice && (!isValidPrice) ? 'border-destructive' : ''}
             />
+            {basePrice && (!isValidPrice) && (
+              <p className="text-xs text-destructive">Price must be a positive number</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -376,6 +417,8 @@ function CellEditor({
               !weightMax ||
               !basePrice ||
               !changeReason.trim() ||
+              !isValidWeight ||
+              !isValidPrice ||
               upsertCell.isPending
             }
           >
@@ -401,10 +444,19 @@ export default function PriceGridManagement() {
   const [duplicateVersion, setDuplicateVersion] = useState<PriceGridVersion | null>(null);
   const [duplicateName, setDuplicateName] = useState('');
   const [duplicateDate, setDuplicateDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Filtering and sorting
+  const [searchQuery, setSearchQuery] = useState('');
+  const [ageFilter, setAgeFilter] = useState<string>('all');
+  const [sexFilter, setSexFilter] = useState<string>('all');
+  const [breedFilter, setBreedFilter] = useState<string>('all');
+  const [sortField, setSortField] = useState<'age_category' | 'sex' | 'weight_min' | 'base_price'>('age_category');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const activateVersion = useActivatePriceGridVersion();
   const deleteCell = useDeletePriceGridCell();
   const duplicate = useDuplicatePriceGridVersion();
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const selectedVersion = versions?.find((v) => v.id === selectedVersionId);
 
@@ -446,6 +498,94 @@ export default function PriceGridManagement() {
 
   const getBreedGroupLabel = (value: string | null) =>
     value ? BREED_GROUPS.find((b) => b.value === value)?.label || value : 'All Breeds';
+
+  // Filter and sort cells
+  const filteredAndSortedCells = useMemo(() => {
+    if (!cells) return [];
+    
+    let filtered = cells.filter((cell) => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          getAgeCategoryLabel(cell.age_category).toLowerCase().includes(query) ||
+          getSexLabel(cell.sex).toLowerCase().includes(query) ||
+          getBreedGroupLabel(cell.breed_group).toLowerCase().includes(query) ||
+          cell.base_price.toString().includes(query) ||
+          `${cell.weight_min}-${cell.weight_max}`.includes(query);
+        if (!matchesSearch) return false;
+      }
+      
+      // Age filter
+      if (ageFilter !== 'all' && cell.age_category !== ageFilter) return false;
+      
+      // Sex filter
+      if (sexFilter !== 'all' && cell.sex !== sexFilter) return false;
+      
+      // Breed filter
+      if (breedFilter !== 'all') {
+        if (breedFilter === '__all__' && cell.breed_group !== null) return false;
+        if (breedFilter !== '__all__' && cell.breed_group !== breedFilter) return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort
+    filtered.sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+      
+      switch (sortField) {
+        case 'age_category':
+          aValue = getAgeCategoryLabel(a.age_category);
+          bValue = getAgeCategoryLabel(b.age_category);
+          break;
+        case 'sex':
+          aValue = getSexLabel(a.sex);
+          bValue = getSexLabel(b.sex);
+          break;
+        case 'weight_min':
+          aValue = a.weight_min;
+          bValue = b.weight_min;
+          break;
+        case 'base_price':
+          aValue = a.base_price;
+          bValue = b.base_price;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return sortDirection === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      }
+    });
+    
+    return filtered;
+  }, [cells, searchQuery, ageFilter, sexFilter, breedFilter, sortField, sortDirection]);
+
+  const handleSort = (field: typeof sortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: typeof sortField) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1" />
+      : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
 
   return (
     <MainLayout>
@@ -529,7 +669,7 @@ export default function PriceGridManagement() {
                       {selectedVersion.version_name}
                     </CardTitle>
                     <CardDescription>
-                      {cells?.length || 0} reference price cells defined
+                      {filteredAndSortedCells.length} of {cells?.length || 0} reference price cells
                     </CardDescription>
                   </div>
                   <Button size="sm" onClick={() => setShowAddCell(true)}>
@@ -542,59 +682,177 @@ export default function PriceGridManagement() {
                 {loadingCells ? (
                   <Skeleton className="h-48" />
                 ) : cells && cells.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Age</TableHead>
-                        <TableHead>Sex</TableHead>
-                        <TableHead>Weight</TableHead>
-                        <TableHead>Breed</TableHead>
-                        <TableHead className="text-right">Ref. Price</TableHead>
-                        <TableHead className="w-20"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cells.map((cell) => (
-                        <TableRow key={cell.id}>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {getAgeCategoryLabel(cell.age_category)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{getSexLabel(cell.sex)}</TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {cell.weight_min}–{cell.weight_max} kg
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {getBreedGroupLabel(cell.breed_group)}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {cell.base_price.toLocaleString()} ₸
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
+                  <div className="space-y-4">
+                    {/* Filters and Search */}
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search cells..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-9"
+                        />
+                        {searchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                            onClick={() => setSearchQuery('')}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Select value={ageFilter} onValueChange={setAgeFilter}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Age" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Ages</SelectItem>
+                            {AGE_CATEGORIES.map((cat) => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                {cat.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={sexFilter} onValueChange={setSexFilter}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Sex" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Sex</SelectItem>
+                            {SEX_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={breedFilter} onValueChange={setBreedFilter}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Breed" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Breeds</SelectItem>
+                            <SelectItem value="__all__">All Breeds (generic)</SelectItem>
+                            {BREED_GROUPS.map((bg) => (
+                              <SelectItem key={bg.value} value={bg.value}>
+                                {bg.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    {/* Table */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={() => setEditingCell(cell)}
+                                className="h-6 px-2 font-medium -ml-2"
+                                onClick={() => handleSort('age_category')}
                               >
-                                <Pencil className="h-3 w-3" />
+                                Age
+                                {getSortIcon('age_category')}
                               </Button>
+                            </TableHead>
+                            <TableHead>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                onClick={() => deleteCell.mutate({ cellId: cell.id })}
+                                className="h-6 px-2 font-medium -ml-2"
+                                onClick={() => handleSort('sex')}
                               >
-                                <Trash2 className="h-3 w-3" />
+                                Sex
+                                {getSortIcon('sex')}
                               </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                            </TableHead>
+                            <TableHead>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 font-medium -ml-2"
+                                onClick={() => handleSort('weight_min')}
+                              >
+                                Weight
+                                {getSortIcon('weight_min')}
+                              </Button>
+                            </TableHead>
+                            <TableHead>Breed</TableHead>
+                            <TableHead className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 font-medium -mr-2"
+                                onClick={() => handleSort('base_price')}
+                              >
+                                Ref. Price
+                                {getSortIcon('base_price')}
+                              </Button>
+                            </TableHead>
+                            <TableHead className="w-20"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredAndSortedCells.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                No cells match the current filters
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredAndSortedCells.map((cell) => (
+                              <TableRow key={cell.id}>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">
+                                    {getAgeCategoryLabel(cell.age_category)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{getSexLabel(cell.sex)}</TableCell>
+                                <TableCell className="font-mono text-sm">
+                                  {cell.weight_min}–{cell.weight_max} kg
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {getBreedGroupLabel(cell.breed_group)}
+                                </TableCell>
+                                <TableCell className="text-right font-semibold">
+                                  {cell.base_price.toLocaleString()} ₸
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => setEditingCell(cell)}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      onClick={() => setDeleteConfirm(cell.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p className="mb-3">No reference price cells defined yet.</p>
@@ -676,6 +934,32 @@ export default function PriceGridManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Cell Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Reference Price Cell?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The cell will be permanently removed from this version.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirm) {
+                  deleteCell.mutate({ cellId: deleteConfirm });
+                  setDeleteConfirm(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Duplicate Dialog */}
       <Dialog open={!!duplicateVersion} onOpenChange={() => setDuplicateVersion(null)}>

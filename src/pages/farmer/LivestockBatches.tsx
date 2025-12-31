@@ -24,7 +24,10 @@ import {
   AlertTriangle,
   Lock,
   TrendingUp,
-  Package
+  Package,
+  FileEdit,
+  Send,
+  Info
 } from 'lucide-react';
 import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
@@ -47,6 +50,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
 import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
+import { BatchStatusExplanation } from '@/components/farmer/BatchStatusExplanation';
 import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { useAggregatedDemand } from '@/hooks/useAggregatedDemand';
 import { toast } from '@/hooks/use-toast';
@@ -95,6 +99,7 @@ export default function LivestockBatches() {
   const [withdrawBatchId, setWithdrawBatchId] = useState<string | null>(null);
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);
   const [newBatchOpen, setNewBatchOpen] = useState(false);
+  const [batchViewTab, setBatchViewTab] = useState<'draft' | 'active'>('active');
 
   const dateLocale = i18n.language === 'ru' ? ru : undefined;
 
@@ -104,15 +109,27 @@ export default function LivestockBatches() {
   };
 
   const getStatusLabel = (status: BatchStatus): string => {
+    if (status === 'draft') return t('batches.draft');
     if (status === 'forecast') return t('batches.forecast');
     if (status === 'soft_committed') return t('batches.softCommitted');
+    if (status === 'confirmed') return t('batches.confirmed');
+    if (status === 'matched') return t('batches.matched');
+    if (status === 'closed') return t('batches.closed');
     return t('batches.confirmed');
   };
 
   const handleEscalateStatus = () => {
     if (!escalateBatch) return;
     
-    const newStatus: BatchStatus = escalateBatch.currentStatus === 'forecast' ? 'soft_committed' : 'confirmed';
+    // Handle draft → forecast transition
+    let newStatus: BatchStatus;
+    if (escalateBatch.currentStatus === 'draft') {
+      newStatus = 'forecast';
+    } else if (escalateBatch.currentStatus === 'forecast') {
+      newStatus = 'soft_committed';
+    } else {
+      newStatus = 'confirmed';
+    }
     
     updateBatch.mutate(
       { id: escalateBatch.id, status: newStatus },
@@ -120,9 +137,15 @@ export default function LivestockBatches() {
         onSuccess: () => {
           toast({
             title: t('batches.statusUpdated'),
-            description: t('batches.statusChangedTo', { status: getStatusLabel(newStatus) }),
+            description: escalateBatch.currentStatus === 'draft' 
+              ? (t('batches.batchPublished') || 'Партия опубликована и теперь видна в Market Overview')
+              : t('batches.statusChangedTo', { status: getStatusLabel(newStatus) }),
           });
           setEscalateBatch(null);
+          // Switch to active tab if published from draft
+          if (escalateBatch.currentStatus === 'draft') {
+            setBatchViewTab('active');
+          }
         },
       }
     );
@@ -139,6 +162,7 @@ export default function LivestockBatches() {
   };
 
   const getNextStatus = (status: BatchStatus): string | null => {
+    if (status === 'draft') return t('batches.forecast');
     if (status === 'forecast') return t('batches.softCommitted');
     if (status === 'soft_committed') return t('batches.confirmed');
     return null;
@@ -164,6 +188,13 @@ export default function LivestockBatches() {
 
       {/* Matching Window Status Banner */}
       <CurrentMatchingWindowBanner />
+
+      {/* Batch Status Explanation - Show for users with batches */}
+      {batches && batches.length > 0 && (
+        <div className="mb-4">
+          <BatchStatusExplanation />
+        </div>
+      )}
 
       {/* Batch Stats Summary - compact inline */}
       <div className="grid grid-cols-3 gap-3 mt-4 mb-4">
@@ -275,7 +306,55 @@ export default function LivestockBatches() {
             </div>
           ) : batches && batches.length > 0 ? (
             <>
-            <Table>
+              {/* Separate Draft and Active batches */}
+              {(() => {
+                const draftBatches = batches.filter(b => b.status === 'draft');
+                const activeBatches = batches.filter(b => b.status !== 'draft');
+                
+                // Auto-switch to draft tab if there are draft batches and no active batches
+                if (draftBatches.length > 0 && activeBatches.length === 0 && batchViewTab === 'active') {
+                  setBatchViewTab('draft');
+                }
+                
+                return (
+                  <Tabs value={batchViewTab} onValueChange={(v) => setBatchViewTab(v as 'draft' | 'active')} className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="draft" className="gap-2">
+                        <FileEdit className="h-4 w-4" />
+                        {t('batches.draft')}
+                        {draftBatches.length > 0 && (
+                          <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                            {draftBatches.length}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger value="active" className="gap-2">
+                        <Package className="h-4 w-4" />
+                        {t('batches.activeBatches') || 'Активные партии'}
+                        {activeBatches.length > 0 && (
+                          <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                            {activeBatches.length}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Draft Batches Tab */}
+                    <TabsContent value="draft" className="mt-0">
+                      {draftBatches.length > 0 ? (
+                        <>
+                          {/* Draft Explanation Alert */}
+                          <Alert className="mb-4 border-blue-500/30 bg-blue-500/5">
+                            <Info className="h-4 w-4 text-blue-600" />
+                            <AlertDescription className="text-sm">
+                              <span className="font-medium text-blue-700">{t('batches.draftExplanation') || 'Черновики партий'}</span>
+                              <span className="text-muted-foreground block mt-1">
+                                {t('batches.draftDescription') || 'Ваши партии созданы, но ещё не опубликованы. Опубликуйте их, чтобы они стали видимы в Market Overview и могли участвовать в сопоставлении.'}
+                              </span>
+                            </AlertDescription>
+                          </Alert>
+
+                          <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('batches.batchNumber')}</TableHead>
@@ -290,163 +369,365 @@ export default function LivestockBatches() {
                     <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {batches.map((batch) => {
-                    const stale = isStale(batch.updated_at);
-                    const approaching = isApproachingDeadline(batch.target_week, batch.status);
-                    const nextStatus = getNextStatus(batch.status);
-                    const hasCharacteristics = batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max;
-                    const standardStatus = (batch as any).standard_status || 'non_standard';
-                    const premiumValue = getPremiumByLevel(standardPremiums, standardStatus)?.premium_value ?? 0;
-                    const batchLockStatus = checkBatchLock(batch.status as BatchLifecycleStatus);
-                    const isTimeLocked = batchLockStatus.isLocked;
-                    
-                    return (
-                      <TableRow 
-                        key={batch.id} 
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleRowClick(batch.batch_number)}
-                      >
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {batch.batch_number}
-                            {isTimeLocked && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Lock className="w-4 h-4 text-amber-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{getTimeLockedTooltip()}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {!isTimeLocked && (stale || approaching) && (
-                              <AlertTriangle className="w-4 h-4 text-amber-500" />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{batch.region}</TableCell>
-                        <TableCell>{batch.target_week}</TableCell>
-                        <TableCell>{batch.heads}</TableCell>
-                        <TableCell>
-                          {hasCharacteristics ? (
-                            <div className="flex flex-wrap gap-1 max-w-[200px]">
-                              {batch.breed && (
-                                <Badge variant="outline" className="text-xs">{batch.breed}</Badge>
-                              )}
-                              {batch.gender && (
-                                <Badge variant="outline" className="text-xs">{batch.gender}</Badge>
-                              )}
-                              {(batch.age_min || batch.age_max) && (
-                                <Badge variant="outline" className="text-xs">
-                                  {batch.age_min ?? '–'}–{batch.age_max ?? '–'} mo
-                                </Badge>
-                              )}
-                              {(batch.weight_min || batch.weight_max) && (
-                                <Badge variant="outline" className="text-xs">
-                                  {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
-                                </Badge>
-                          )}
-                                          </div>
-                                          ) : (
-                                            <span className="text-xs text-muted-foreground">{t('batches.notSpecified')}</span>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>{t('batches.batchNumber')}</TableHead>
+                                <TableHead>{t('common.region')}</TableHead>
+                                <TableHead>{t('batches.targetWeek')}</TableHead>
+                                <TableHead>{t('batches.heads')}</TableHead>
+                                <TableHead>{t('batches.characteristics')}</TableHead>
+                                <TableHead>{t('common.grade')}</TableHead>
+                                <TableHead>{t('common.status')}</TableHead>
+                                <TableHead>{t('batches.lastUpdated')}</TableHead>
+                                <TableHead className="text-right">{t('common.actions')}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {draftBatches.map((batch) => {
+                                const hasCharacteristics = batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max;
+                                
+                                return (
+                                  <TableRow 
+                                    key={batch.id} 
+                                    className="cursor-pointer hover:bg-muted/50"
+                                    onClick={() => handleRowClick(batch.batch_number)}
+                                  >
+                                    <TableCell className="font-medium">
+                                      <div className="flex items-center gap-2">
+                                        {batch.batch_number}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{batch.region}</TableCell>
+                                    <TableCell>{batch.target_week}</TableCell>
+                                    <TableCell>{batch.heads}</TableCell>
+                                    <TableCell>
+                                      {hasCharacteristics ? (
+                                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                          {batch.breed && (
+                                            <Badge variant="outline" className="text-xs">{batch.breed}</Badge>
                                           )}
-                                        </TableCell>
-                                        <TableCell>
-                                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
-                                            {batch.grade}
-                                          </span>
-                                        </TableCell>
-                        <TableCell>
-                          <PremiumBadge 
-                            status={standardStatus} 
-                            premiumValue={premiumValue}
-                            showValue={premiumValue > 0}
-                            size="sm"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={mapStatus(batch.status)} />
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {format(parseISO(batch.updated_at), 'd MMM yyyy', { locale: dateLocale })}
-                          {stale && (
-                            <span className="block text-xs text-amber-600">{t('batches.needsUpdate')}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleRowClick(batch.batch_number)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            {nextStatus && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="inline-block">
+                                          {batch.gender && (
+                                            <Badge variant="outline" className="text-xs">{batch.gender}</Badge>
+                                          )}
+                                          {(batch.age_min || batch.age_max) && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {batch.age_min ?? '–'}–{batch.age_max ?? '–'} mo
+                                            </Badge>
+                                          )}
+                                          {(batch.weight_min || batch.weight_max) && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground">{t('batches.notSpecified')}</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
+                                        {batch.grade}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <StatusBadge status={mapStatus(batch.status)} />
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                      {format(parseISO(batch.updated_at), 'd MMM yyyy', { locale: dateLocale })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() => handleRowClick(batch.batch_number)}
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span className="inline-block">
+                                                <Button 
+                                                  variant="default" 
+                                                  size="sm"
+                                                  className="h-8 gap-1"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (canCreateBatches) {
+                                                      setEscalateBatch({ id: batch.id, currentStatus: 'draft' });
+                                                    }
+                                                  }}
+                                                  disabled={!canCreateBatches}
+                                                >
+                                                  <Send className="w-3 h-3" />
+                                                  {t('batches.publish') || 'Опубликовать'}
+                                                </Button>
+                                              </span>
+                                            </TooltipTrigger>
+                                            {!canCreateBatches && (
+                                              <TooltipContent>
+                                                <p>Available after Admin activation</p>
+                                              </TooltipContent>
+                                            )}
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span className="inline-block">
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="icon"
+                                                  className={`h-8 w-8 ${!canCreateBatches ? 'opacity-50 cursor-not-allowed' : 'text-destructive hover:text-destructive'}`}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (canCreateBatches) {
+                                                      setWithdrawBatchId(batch.id);
+                                                    }
+                                                  }}
+                                                  disabled={!canCreateBatches}
+                                                >
+                                                  {!canCreateBatches ? <Lock className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                                                </Button>
+                                              </span>
+                                            </TooltipTrigger>
+                                            {!canCreateBatches && (
+                                              <TooltipContent>
+                                                <p>Available after Admin activation</p>
+                                              </TooltipContent>
+                                            )}
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                            <FileEdit className="w-10 h-10 text-muted-foreground/60" />
+                          </div>
+                          <p className="font-medium text-foreground mb-1">{t('batches.noDraftBatches') || 'Нет черновиков'}</p>
+                          <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                            {t('batches.noDraftBatchesDescription') || 'Создайте новую партию, чтобы начать работу.'}
+                          </p>
+                          <Button 
+                            onClick={() => setNewBatchOpen(true)} 
+                            disabled={!canCreateBatches}
+                            className={!canCreateBatches ? 'opacity-50 cursor-not-allowed' : ''}
+                          >
+                            {!canCreateBatches && <Lock className="w-4 h-4 mr-2" />}
+                            <Plus className="w-4 h-4 mr-2" />
+                            {t('batches.newBatch')}
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Active Batches Tab */}
+                    <TabsContent value="active" className="mt-0">
+                      {activeBatches.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>{t('batches.batchNumber')}</TableHead>
+                              <TableHead>{t('common.region')}</TableHead>
+                              <TableHead>{t('batches.targetWeek')}</TableHead>
+                              <TableHead>{t('batches.heads')}</TableHead>
+                              <TableHead>{t('batches.characteristics')}</TableHead>
+                              <TableHead>{t('common.grade')}</TableHead>
+                              <TableHead>{t('batches.standardStatus')}</TableHead>
+                              <TableHead>{t('common.status')}</TableHead>
+                              <TableHead>{t('batches.lastUpdated')}</TableHead>
+                              <TableHead className="text-right">{t('common.actions')}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {activeBatches.map((batch) => {
+                              const stale = isStale(batch.updated_at);
+                              const approaching = isApproachingDeadline(batch.target_week, batch.status);
+                              const nextStatus = getNextStatus(batch.status);
+                              const hasCharacteristics = batch.breed || batch.gender || batch.age_min || batch.age_max || batch.weight_min || batch.weight_max;
+                              const standardStatus = (batch as any).standard_status || 'non_standard';
+                              const premiumValue = getPremiumByLevel(standardPremiums, standardStatus)?.premium_value ?? 0;
+                              const batchLockStatus = checkBatchLock(batch.status as BatchLifecycleStatus);
+                              const isTimeLocked = batchLockStatus.isLocked;
+                              
+                              return (
+                                <TableRow 
+                                  key={batch.id} 
+                                  className="cursor-pointer hover:bg-muted/50"
+                                  onClick={() => handleRowClick(batch.batch_number)}
+                                >
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                      {batch.batch_number}
+                                      {isTimeLocked && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger>
+                                              <Lock className="w-4 h-4 text-amber-500" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>{getTimeLockedTooltip()}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                      {!isTimeLocked && (stale || approaching) && (
+                                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{batch.region}</TableCell>
+                                  <TableCell>{batch.target_week}</TableCell>
+                                  <TableCell>{batch.heads}</TableCell>
+                                  <TableCell>
+                                    {hasCharacteristics ? (
+                                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                        {batch.breed && (
+                                          <Badge variant="outline" className="text-xs">{batch.breed}</Badge>
+                                        )}
+                                        {batch.gender && (
+                                          <Badge variant="outline" className="text-xs">{batch.gender}</Badge>
+                                        )}
+                                        {(batch.age_min || batch.age_max) && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {batch.age_min ?? '–'}–{batch.age_max ?? '–'} mo
+                                          </Badge>
+                                        )}
+                                        {(batch.weight_min || batch.weight_max) && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">{t('batches.notSpecified')}</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary text-sm font-medium">
+                                      {batch.grade}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <PremiumBadge 
+                                      status={standardStatus} 
+                                      premiumValue={premiumValue}
+                                      showValue={premiumValue > 0}
+                                      size="sm"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <StatusBadge status={mapStatus(batch.status)} />
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {format(parseISO(batch.updated_at), 'd MMM yyyy', { locale: dateLocale })}
+                                    {stale && (
+                                      <span className="block text-xs text-amber-600">{t('batches.needsUpdate')}</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                                       <Button 
                                         variant="ghost" 
                                         size="icon"
-                                        className={`h-8 w-8 ${(!canCreateBatches || isTimeLocked) ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
-                                        onClick={() => canCreateBatches && !isTimeLocked && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
-                                        disabled={!canCreateBatches || isTimeLocked}
+                                        className="h-8 w-8"
+                                        onClick={() => handleRowClick(batch.batch_number)}
                                       >
-                                        {(!canCreateBatches || isTimeLocked) ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                                        <Edit className="w-4 h-4" />
                                       </Button>
-                                    </span>
-                                  </TooltipTrigger>
-                                  {!canCreateBatches ? (
-                                    <TooltipContent>
-                                      <p>Available after Admin activation</p>
-                                    </TooltipContent>
-                                  ) : isTimeLocked ? (
-                                    <TooltipContent>
-                                      <p>{getTimeLockedTooltip()}</p>
-                                    </TooltipContent>
-                                  ) : (
-                                    <TooltipContent>
-                                      <p>Escalate to {nextStatus}</p>
-                                    </TooltipContent>
-                                  )}
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-block">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      className={`h-8 w-8 ${!canCreateBatches ? 'opacity-50 cursor-not-allowed' : 'text-destructive hover:text-destructive'}`}
-                                      onClick={() => canCreateBatches && setWithdrawBatchId(batch.id)}
-                                      disabled={!canCreateBatches}
-                                    >
-                                      {!canCreateBatches ? <Lock className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
-                                    </Button>
-                                  </span>
-                                </TooltipTrigger>
-                                {!canCreateBatches && (
-                                  <TooltipContent>
-                                    <p>Available after Admin activation</p>
-                                  </TooltipContent>
-                                )}
-                              </Tooltip>
-                            </TooltipProvider>
+                                      {nextStatus && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span className="inline-block">
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="icon"
+                                                  className={`h-8 w-8 ${(!canCreateBatches || isTimeLocked) ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
+                                                  onClick={() => canCreateBatches && !isTimeLocked && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
+                                                  disabled={!canCreateBatches || isTimeLocked}
+                                                >
+                                                  {(!canCreateBatches || isTimeLocked) ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                                                </Button>
+                                              </span>
+                                            </TooltipTrigger>
+                                            {!canCreateBatches ? (
+                                              <TooltipContent>
+                                                <p>Available after Admin activation</p>
+                                              </TooltipContent>
+                                            ) : isTimeLocked ? (
+                                              <TooltipContent>
+                                                <p>{getTimeLockedTooltip()}</p>
+                                              </TooltipContent>
+                                            ) : (
+                                              <TooltipContent>
+                                                <p>Escalate to {nextStatus}</p>
+                                              </TooltipContent>
+                                            )}
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="inline-block">
+                                              <Button 
+                                                variant="ghost" 
+                                                size="icon"
+                                                className={`h-8 w-8 ${!canCreateBatches ? 'opacity-50 cursor-not-allowed' : 'text-destructive hover:text-destructive'}`}
+                                                onClick={() => canCreateBatches && setWithdrawBatchId(batch.id)}
+                                                disabled={!canCreateBatches}
+                                              >
+                                                {!canCreateBatches ? <Lock className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                                              </Button>
+                                            </span>
+                                          </TooltipTrigger>
+                                          {!canCreateBatches && (
+                                            <TooltipContent>
+                                              <p>Available after Admin activation</p>
+                                            </TooltipContent>
+                                          )}
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                            <Package className="w-10 h-10 text-muted-foreground/60" />
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          <p className="font-medium text-foreground mb-1">{t('batches.noActiveBatches') || 'Нет активных партий'}</p>
+                          <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                            {t('batches.noActiveBatchesDescription') || 'Опубликуйте черновики или создайте новые партии.'}
+                          </p>
+                          {draftBatches.length > 0 && (
+                            <Button 
+                              variant="outline"
+                              onClick={() => setBatchViewTab('draft')}
+                            >
+                              {t('batches.viewDrafts') || 'Посмотреть черновики'}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                );
+              })()}
               
               {/* Discipline Helper */}
               <div className="mt-4 pt-4 border-t">
@@ -506,16 +787,36 @@ export default function LivestockBatches() {
       <AlertDialog open={!!escalateBatch} onOpenChange={() => setEscalateBatch(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('batches.escalateStatus')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {escalateBatch?.currentStatus === 'draft' 
+                ? (t('batches.publishBatch') || 'Опубликовать партию')
+                : t('batches.escalateStatus')}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {escalateBatch && (
                 <>
-                  {t('batches.escalateConfirmation', {
-                    from: escalateBatch.currentStatus === 'forecast' ? t('batches.forecast') : t('batches.softCommitted'),
-                    to: getNextStatus(escalateBatch.currentStatus)
-                  })}
-                  <br /><br />
-                  {t('batches.escalateNote')}
+                  {escalateBatch.currentStatus === 'draft' ? (
+                    <>
+                      <p className="mb-2">
+                        {t('batches.publishConfirmation') || 'Вы собираетесь опубликовать эту партию. После публикации она станет видна в Market Overview и сможет участвовать в сопоставлении пулов.'}
+                      </p>
+                      <Alert className="mt-3 border-blue-500/30 bg-blue-500/5">
+                        <Info className="h-4 w-4 text-blue-600" />
+                        <AlertDescription className="text-sm">
+                          {t('batches.publishNote') || 'После публикации вы сможете изменить статус партии на "Предварительно" или "Подтверждено" для повышения приоритета.'}
+                        </AlertDescription>
+                      </Alert>
+                    </>
+                  ) : (
+                    <>
+                      {t('batches.escalateConfirmation', {
+                        from: escalateBatch.currentStatus === 'forecast' ? t('batches.forecast') : t('batches.softCommitted'),
+                        to: getNextStatus(escalateBatch.currentStatus)
+                      })}
+                      <br /><br />
+                      {t('batches.escalateNote')}
+                    </>
+                  )}
                 </>
               )}
             </AlertDialogDescription>
@@ -523,7 +824,9 @@ export default function LivestockBatches() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleEscalateStatus}>
-              {t('batches.confirmEscalation')}
+              {escalateBatch?.currentStatus === 'draft' 
+                ? (t('batches.publish') || 'Опубликовать')
+                : t('batches.confirmEscalation')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

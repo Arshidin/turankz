@@ -22,7 +22,7 @@ export function ObserverModeBanner({ variant = 'default', className = '' }: Obse
     return (
       <div className={`flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm ${className}`}>
         <Eye className="w-4 h-4 text-amber-600" />
-        <span className="text-amber-700 dark:text-amber-400 font-medium">Observer</span>
+        <span className="text-amber-700 dark:text-amber-400 font-medium">Ожидает активации</span>
         <span className="text-muted-foreground">·</span>
         <span className="text-muted-foreground">Только просмотр</span>
         <span className="text-muted-foreground">·</span>
@@ -40,7 +40,7 @@ export function ObserverModeBanner({ variant = 'default', className = '' }: Obse
         <AlertDescription className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-amber-700 dark:text-amber-400">
-              Режим наблюдателя
+              Аккаунт ожидает активации
             </span>
             <span className="text-muted-foreground">·</span>
             <span className="text-muted-foreground flex items-center gap-1">
@@ -53,7 +53,7 @@ export function ObserverModeBanner({ variant = 'default', className = '' }: Obse
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Вы можете изучать платформу, но не можете совершать действия до активации профиля.
+            Ваш профиль находится на рассмотрении. После активации Администратором вы получите полный доступ к участию в закупочных пулах.
           </p>
         </AlertDescription>
       </div>

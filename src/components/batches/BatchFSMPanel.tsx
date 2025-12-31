@@ -1,12 +1,8 @@
 /**
- * BATCH FSM VERIFICATION PANEL
+ * BATCH STATUS PANEL
  * 
- * Displays the batch lifecycle state machine with:
- * - Current status visualization
- * - Allowed next actions based on role
- * - Disabled actions with explanatory tooltips
- * - Lock icons for read-only states
- * - Confirmation dialogs for critical transitions
+ * Simplified panel for managing batch status transitions.
+ * Provides clear, user-friendly explanations without technical jargon.
  */
 
 import { useState } from 'react';
@@ -38,31 +34,30 @@ import {
   Shield,
   Circle,
   Info,
-  XCircle
+  XCircle,
+  TrendingUp,
+  Clock
 } from 'lucide-react';
 import { useRole } from '@/contexts/RoleContext';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 import {
   BATCH_STATUSES,
   BATCH_STATUS_LABELS,
   BATCH_STATUS_DESCRIPTIONS,
   type BatchLifecycleStatus,
-  isTransitionAllowed,
   getAllowedTransitions,
   getTransitionActionLabel,
-  getDisabledTransitionTooltip,
   isBatchReadOnly,
-  getLockedFieldTooltip,
-  validateTransitionComplete,
   getStatusIndex,
   getTransitionConfirmation,
   requiresTransitionConfirmation,
   getConfirmationDialogLabels,
+  validateTransitionComplete,
 } from '@/lib/batch-lifecycle';
 import {
   validateBatchTransition,
   formatValidationError,
-  isBlockedByTimeConstraint,
 } from '@/lib/batch-transition-guard';
 import { type MatchingWindow } from '@/lib/matching-window';
 
@@ -76,6 +71,45 @@ interface BatchFSMPanelProps {
   matchingWindow?: MatchingWindow | null;
 }
 
+// Simple status descriptions for farmers
+const getSimpleStatusDescription = (status: BatchLifecycleStatus, lang: 'ru' | 'en'): string => {
+  if (lang === 'ru') {
+    switch (status) {
+      case 'draft':
+        return 'Черновик — партия создана, но ещё не опубликована';
+      case 'forecast':
+        return 'Прогноз — партия опубликована и видна покупателям';
+      case 'soft_committed':
+        return 'Предварительно — вы подтвердили готовность к поставке';
+      case 'confirmed':
+        return 'Подтверждено — партия готова к сопоставлению';
+      case 'matched':
+        return 'Сопоставлено — партия найдена покупателю';
+      case 'closed':
+        return 'Завершено — партия доставлена и оплачена';
+      default:
+        return BATCH_STATUS_DESCRIPTIONS[status];
+    }
+  } else {
+    switch (status) {
+      case 'draft':
+        return 'Draft — batch created but not yet published';
+      case 'forecast':
+        return 'Forecast — batch is published and visible to buyers';
+      case 'soft_committed':
+        return 'Soft Committed — you confirmed readiness to deliver';
+      case 'confirmed':
+        return 'Confirmed — batch is ready for matching';
+      case 'matched':
+        return 'Matched — batch found a buyer';
+      case 'closed':
+        return 'Closed — batch delivered and paid';
+      default:
+        return BATCH_STATUS_DESCRIPTIONS[status];
+    }
+  }
+};
+
 export function BatchFSMPanel({
   currentStatus,
   batchId,
@@ -85,6 +119,7 @@ export function BatchFSMPanel({
   timeLockTooltip = 'Edits are locked due to the Matching Window deadline.',
   matchingWindow,
 }: BatchFSMPanelProps) {
+  const { t } = useTranslation();
   const { role } = useRole();
   const { toast } = useToast();
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -104,27 +139,17 @@ export function BatchFSMPanel({
   const currentIndex = getStatusIndex(currentStatus);
   const userRole = role as 'farmer' | 'admin' | 'mpk';
 
-  // Get all allowed transitions for current user (array-based, no linear assumptions)
+  // Get all allowed transitions for current user
   const allowedTransitions = getAllowedTransitions(currentStatus, userRole);
 
-  // Get current language
-  const getCurrentLang = (): 'en' | 'ru' => {
-    if (typeof window !== 'undefined') {
-      const lang = localStorage.getItem('i18nextLng') || 'ru';
-      return lang.startsWith('ru') ? 'ru' : 'en';
-    }
-    return 'ru';
-  };
-
   /**
-   * UNIFIED TRANSITION GUARD
-   * Re-validates BOTH FSM rules AND time constraints immediately before execution.
-   * This prevents race conditions, stale state, and ensures all constraints are checked.
+   * Execute transition with validation
    */
   const executeValidatedTransition = async (toStatus: BatchLifecycleStatus): Promise<boolean> => {
-    const lang = getCurrentLang();
+    // Get current language for validation
+    const lang = localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en';
     
-    // UNIFIED VALIDATION: Combines FSM + time-based checks
+    // Validate transition
     const validation = validateBatchTransition(
       currentStatus,
       toStatus,
@@ -149,8 +174,8 @@ export function BatchFSMPanel({
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: lang === 'ru' ? 'Ошибка перехода' : 'Transition Failed',
-        description: error instanceof Error ? error.message : (lang === 'ru' ? 'Произошла непредвиденная ошибка.' : 'An unexpected error occurred.'),
+        title: t('common.error', 'Error'),
+        description: error instanceof Error ? error.message : t('common.unexpectedError', 'An unexpected error occurred.'),
       });
       return false;
     }
@@ -158,9 +183,10 @@ export function BatchFSMPanel({
 
   // Handle transition with confirmation for critical ones
   const handleTransitionClick = async (toStatus: BatchLifecycleStatus) => {
-    const lang = getCurrentLang();
+    // Get current language for validation
+    const lang = localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en';
     
-    // PRE-VALIDATE with unified guard before showing confirmation dialog
+    // Pre-validate before showing confirmation dialog
     const preValidation = validateBatchTransition(
       currentStatus,
       toStatus,
@@ -179,7 +205,7 @@ export function BatchFSMPanel({
       return;
     }
 
-    // Check if transition requires confirmation (from domain layer)
+    // Check if transition requires confirmation
     const confirmation = getTransitionConfirmation(currentStatus, toStatus, lang);
     
     if (requiresTransitionConfirmation(currentStatus, toStatus)) {
@@ -193,13 +219,12 @@ export function BatchFSMPanel({
       return;
     }
 
-    // Direct transition for non-critical ones (with validation)
+    // Direct transition for non-critical ones
     await executeValidatedTransition(toStatus);
   };
 
   const handleConfirmTransition = async () => {
     if (confirmDialog.toStatus) {
-      // Re-validate after confirmation dialog (prevents stale state)
       await executeValidatedTransition(confirmDialog.toStatus);
     }
     setConfirmDialog({ open: false, toStatus: null, title: '', message: '' });
@@ -211,7 +236,7 @@ export function BatchFSMPanel({
       return 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2';
     }
     if (index < currentIndex) {
-      return 'bg-muted text-muted-foreground line-through opacity-60';
+      return 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20';
     }
     return 'bg-secondary text-muted-foreground';
   };
@@ -222,7 +247,7 @@ export function BatchFSMPanel({
       return <CheckCircle2 className="w-3.5 h-3.5" />;
     }
     if (index < currentIndex) {
-      return <CheckCircle2 className="w-3.5 h-3.5 opacity-50" />;
+      return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />;
     }
     if (isBatchReadOnly(status)) {
       return <Lock className="w-3.5 h-3.5" />;
@@ -247,7 +272,7 @@ export function BatchFSMPanel({
     if (adminValidation.valid && userRole !== 'admin') {
       return { 
         allowed: false, 
-        reason: 'This action requires Admin privileges.', 
+        reason: t('batchLifecycle.adminOnly', 'This action requires Admin privileges.'), 
         type: 'admin_only' 
       };
     }
@@ -257,15 +282,15 @@ export function BatchFSMPanel({
     if (toIndex < currentIndex) {
       return {
         allowed: false,
-        reason: 'Cannot revert to a previous status. The batch lifecycle is irreversible.',
+        reason: t('batchLifecycle.cannotRevert', 'Cannot revert to a previous status. The batch lifecycle is irreversible.'),
         type: 'blocked',
       };
     }
 
-    // Transition not defined in FSM
+    // Transition not defined
     return {
       allowed: false,
-      reason: validation.error || 'This transition is not allowed from the current status.',
+      reason: validation.error || t('batchLifecycle.cannotSkip', 'This transition is not allowed from the current status.'),
       type: 'invalid',
     };
   };
@@ -277,44 +302,44 @@ export function BatchFSMPanel({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                Batch Status & Rules
+                <TrendingUp className="w-4 h-4 text-primary" />
+                {t('batchStatusPanel.title')}
               </CardTitle>
               <CardDescription className="text-xs mt-1">
-                FSM Verification Panel
+                {t('batchStatusPanel.description')}
               </CardDescription>
             </div>
             {isReadOnly && (
               <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">
                 <Lock className="w-3 h-3 mr-1" />
-                Read-Only
+                {t('batchStatusPanel.readOnly')}
               </Badge>
             )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Current Status Display */}
-          <div className="bg-muted/50 rounded-lg p-3">
+          <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-              Current Status
+              {t('batchStatusPanel.currentStatus')}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-2">
               <Badge className="bg-primary text-primary-foreground text-sm px-3 py-1">
                 {BATCH_STATUS_LABELS[currentStatus]}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                Stage {currentIndex + 1} of {BATCH_STATUSES.length}
+                {t('batchStatusPanel.stage')} {currentIndex + 1} {t('common.of', 'of')} {BATCH_STATUSES.length}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {BATCH_STATUS_DESCRIPTIONS[currentStatus]}
+            <p className="text-sm text-foreground mt-2">
+              {getSimpleStatusDescription(currentStatus, localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en')}
             </p>
           </div>
 
-          {/* Lifecycle Progress (Read-Only Visualization) */}
+          {/* Lifecycle Progress */}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-              Lifecycle Progress
+              {t('batchStatusPanel.lifecycle')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {BATCH_STATUSES.map((status, index) => {
@@ -323,22 +348,38 @@ export function BatchFSMPanel({
                 const isFuture = index > currentIndex;
                 const isLocked = isBatchReadOnly(status);
                 const isAdminOnly = status === 'matched' || status === 'closed';
+                const lang = localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en';
                 
-                // Determine tooltip content based on stage state
+                // Determine tooltip content
                 const getTooltipInfo = () => {
                   if (isPast) {
-                    return { label: '✓ Completed', className: 'text-emerald-500' };
+                    return { 
+                      label: t('batchStatusPanel.statusLabels.completed'), 
+                      className: 'text-emerald-500' 
+                    };
                   }
                   if (isCurrent) {
-                    return { label: '● Current Stage', className: 'text-primary' };
+                    return { 
+                      label: t('batchStatusPanel.statusLabels.current'), 
+                      className: 'text-primary' 
+                    };
                   }
                   if (isAdminOnly) {
-                    return { label: '🔒 Admin Only', className: 'text-amber-500' };
+                    return { 
+                      label: t('batchStatusPanel.statusLabels.adminOnly'), 
+                      className: 'text-amber-500' 
+                    };
                   }
                   if (isLocked) {
-                    return { label: '🔒 Locked Stage', className: 'text-muted-foreground' };
+                    return { 
+                      label: t('batchStatusPanel.statusLabels.locked'), 
+                      className: 'text-muted-foreground' 
+                    };
                   }
-                  return { label: '○ Pending', className: 'text-muted-foreground' };
+                  return { 
+                    label: t('batchStatusPanel.statusLabels.pending'), 
+                    className: 'text-muted-foreground' 
+                  };
                 };
                 
                 const tooltipInfo = getTooltipInfo();
@@ -357,13 +398,12 @@ export function BatchFSMPanel({
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="max-w-[200px]">
                         <p className="font-medium">{BATCH_STATUS_LABELS[status]}</p>
-                        <p className="text-xs text-muted-foreground">{BATCH_STATUS_DESCRIPTIONS[status]}</p>
-                        <p className={`text-xs mt-1 ${tooltipInfo.className}`}>{tooltipInfo.label}</p>
-                        {isFuture && !isCurrent && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">
-                            Transitions are managed via the Actions panel below.
-                          </p>
-                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {getSimpleStatusDescription(status, lang)}
+                        </p>
+                        <p className={`text-xs mt-1 ${tooltipInfo.className}`}>
+                          {tooltipInfo.label}
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -371,16 +411,16 @@ export function BatchFSMPanel({
               })}
             </div>
             <p className="text-[10px] text-muted-foreground mt-2 italic">
-              Timeline is read-only. Use Available Actions below to transition.
+              {t('batchStatusPanel.useButtons')}
             </p>
           </div>
 
           {/* Time-Locked Message */}
           {isTimeLocked && (
             <Alert className="border-amber-500/30 bg-amber-500/5">
-              <Lock className="h-4 w-4 text-amber-600" />
+              <Clock className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-700">
-                {timeLockTooltip}
+                {timeLockTooltip || t('batchStatusPanel.timeLocked')}
               </AlertDescription>
             </Alert>
           )}
@@ -390,22 +430,22 @@ export function BatchFSMPanel({
             <Alert className="border-amber-500/30 bg-amber-500/5">
               <Lock className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-700">
-                This batch is locked due to its confirmed status. All fields are read-only.
+                {t('batchStatusPanel.readOnlyMessage')}
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Allowed Actions */}
+          {/* Available Actions */}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-              Available Actions
+              {t('batchStatusPanel.availableActions')}
             </p>
             
             {isTimeLocked ? (
               <div className="text-center py-4 text-muted-foreground">
                 <Lock className="w-5 h-5 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
-                  Status transitions are locked due to the Matching Window deadline.
+                  {t('batchStatusPanel.timeLocked')}
                 </p>
               </div>
             ) : allowedTransitions.length > 0 ? (
@@ -433,74 +473,23 @@ export function BatchFSMPanel({
                 <Info className="w-5 h-5 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
                   {isReadOnly 
-                    ? 'No actions available. Batch is in read-only state.'
+                    ? t('batchStatusPanel.noActionsReadOnly')
                     : userRole === 'farmer'
-                    ? 'No further actions available at this stage.'
-                    : 'No actions available for this batch status.'}
+                    ? t('batchStatusPanel.noActionsFarmer')
+                    : t('batchStatusPanel.noActionsOther')}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Blocked Actions (Visible but Disabled) */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-              Restricted Actions
-            </p>
-            <div className="space-y-2">
-              {BATCH_STATUSES.filter(s => {
-                const actionStatus = getActionStatus(s);
-                return s !== currentStatus && 
-                       !allowedTransitions.includes(s) && 
-                       (actionStatus.type === 'admin_only' || 
-                        actionStatus.type === 'blocked' || 
-                        actionStatus.type === 'invalid');
-              }).slice(0, 4).map((status) => {
-                const actionStatus = getActionStatus(status);
-                return (
-                  <TooltipProvider key={status}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          className="w-full justify-between opacity-50 cursor-not-allowed"
-                          variant="ghost"
-                          disabled
-                        >
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            {actionStatus.type === 'admin_only' ? (
-                              <Shield className="w-4 h-4" />
-                            ) : actionStatus.type === 'blocked' ? (
-                              <XCircle className="w-4 h-4" />
-                            ) : (
-                              <AlertTriangle className="w-4 h-4" />
-                            )}
-                            {getTransitionActionLabel(status)}
-                          </span>
-                          <Badge variant="outline" className="ml-2 text-muted-foreground">
-                            {actionStatus.type === 'admin_only' ? 'Admin Only' : 
-                             actionStatus.type === 'blocked' ? 'Blocked' : 'Invalid'}
-                          </Badge>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="max-w-[250px]">
-                        <p className="font-medium text-destructive">
-                          {getCurrentLang() === 'ru' ? 'Действие недоступно' : 'Action Unavailable'}
-                        </p>
-                        <p className="text-xs">{actionStatus.reason}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Role & Permissions Info */}
+          {/* Helpful Info */}
           <div className="pt-3 border-t">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Your Role: <span className="font-medium text-foreground capitalize">{role}</span></span>
-              <span>Batch: <span className="font-mono text-foreground">{batchId}</span></span>
-            </div>
+            <Alert className="border-blue-500/30 bg-blue-500/5">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-xs text-muted-foreground">
+                {t('batchStatusPanel.helpText')}
+              </AlertDescription>
+            </Alert>
           </div>
         </CardContent>
       </Card>
@@ -528,9 +517,11 @@ export function BatchFSMPanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{getConfirmationDialogLabels(getCurrentLang()).cancel}</AlertDialogCancel>
+            <AlertDialogCancel>
+              {getConfirmationDialogLabels(localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en').cancel}
+            </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmTransition}>
-              {getConfirmationDialogLabels(getCurrentLang()).confirm}
+              {getConfirmationDialogLabels(localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en').confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

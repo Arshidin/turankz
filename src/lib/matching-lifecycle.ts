@@ -9,7 +9,7 @@
  * Active → Cancelled (with reason)
  */
 
-import { type MatchingWindow } from './matching-window';
+import { type MatchingWindow, getEffectiveWindowStatus } from './matching-window';
 
 // Matching lifecycle statuses
 export type MatchingLifecycleStatus = 'active' | 'finalized' | 'cancelled';
@@ -62,6 +62,7 @@ export function validateMatchingTransition(
 
 /**
  * Check if matching can be created based on matching window state
+ * Uses computed effective status instead of database status
  */
 export function canCreateMatching(matchingWindow: MatchingWindow | null): {
   allowed: boolean;
@@ -71,26 +72,31 @@ export function canCreateMatching(matchingWindow: MatchingWindow | null): {
     return { allowed: false, reason: 'No active matching window' };
   }
 
+  // Use computed effective status (based on dates) instead of stored status
+  const effectiveStatus = getEffectiveWindowStatus(matchingWindow);
+
+  // Can create matchings when window is locked or closed (computed from dates)
+  // This allows matching creation after lock_date, regardless of manual status updates
+  if (effectiveStatus === 'locked' || effectiveStatus === 'closed') {
+    return { allowed: true };
+  }
+
+  // Window is upcoming or active and before lock_date
   const now = new Date();
   const lockDate = new Date(matchingWindow.lock_date);
+  lockDate.setHours(23, 59, 59, 999); // End of lock date
 
-  // Can only create matchings after lock_date
-  if (now < lockDate) {
-    return {
-      allowed: false,
-      reason: `Matching window is not yet locked. Lock date: ${matchingWindow.lock_date}`,
-    };
+  if (now >= lockDate && effectiveStatus === 'active') {
+    // Edge case: we're past lock_date but status computation might not have caught up
+    // Allow matching creation if we're past lock_date
+    return { allowed: true };
   }
 
-  // Window must be in locked or closed status (not upcoming or active)
-  if (matchingWindow.status !== 'locked' && matchingWindow.status !== 'closed') {
-    return {
-      allowed: false,
-      reason: `Matching window must be locked. Current status: ${matchingWindow.status}`,
-    };
-  }
-
-  return { allowed: true };
+  // Window is upcoming or active and before lock_date
+  return {
+    allowed: false,
+    reason: `Matching window is not yet locked. Lock date: ${matchingWindow.lock_date}. Current effective status: ${effectiveStatus}`,
+  };
 }
 
 /**

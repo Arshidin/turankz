@@ -10,8 +10,18 @@ import {
 
 /**
  * Enhance a matching window with its computed effective status based on real dates
+ * IMPORTANT: If admin has manually set status to 'locked' or 'closed', 
+ * we respect that manual override and don't recompute from dates.
+ * This allows admins to lock windows early or keep them locked past the lock_date.
  */
 function withEffectiveStatus(window: MatchingWindow): MatchingWindow {
+  // If status is manually set to 'locked' or 'closed', respect the manual override
+  // This allows admins to lock windows early or keep them locked past the lock_date
+  if (window.status === 'locked' || window.status === 'closed') {
+    return window; // Keep the manually set status
+  }
+  
+  // For 'upcoming' and 'active', compute effective status from dates
   const effectiveStatus = getEffectiveWindowStatus(window);
   return {
     ...window,

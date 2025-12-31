@@ -233,7 +233,7 @@ export function useCreatePoolRequest() {
           ...request,
           request_number: generateRequestNumber(),
           matched_volume: 0,
-          status: 'submitted' as PoolRequestStatus, // New requests start as 'submitted' (skip draft for now)
+          status: 'draft' as PoolRequestStatus, // All new requests start as 'draft' (must be submitted explicitly)
           target_delivery_period: request.target_delivery_period || 'short_term',
           accepted_breeds: request.accepted_breeds || [],
           accepted_genders: request.accepted_genders || [],
@@ -252,7 +252,7 @@ export function useCreatePoolRequest() {
       queryClient.invalidateQueries({ queryKey: ['pool-requests'] });
       toast({
         title: 'Request created',
-        description: 'Your purchase request has been submitted to the pool.',
+        description: 'Your purchase request has been created as draft. Submit it when ready.',
       });
     },
     onError: (error) => {
