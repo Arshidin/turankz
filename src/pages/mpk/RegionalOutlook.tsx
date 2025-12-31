@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -27,35 +27,51 @@ export default function RegionalOutlook() {
   const calvingRate = coefficients?.find(c => c.coefficient_type === 'calving_rate')?.coefficient_value || 0.85;
 
   // Filter herd data by region
-  const filteredHerdData = herdData?.filter(row => {
-    if (regionFilter !== 'all' && row.region !== regionFilter) return false;
-    return true;
-  }) || [];
+  const filteredHerdData = useMemo(() => {
+    if (!herdData) return [];
+    if (regionFilter === 'all') return herdData;
+    return herdData.filter(row => row.region === regionFilter);
+  }, [herdData, regionFilter]);
 
   // Filter forecast data by region
-  const filteredForecastData = forecastData?.filter(row => {
-    if (regionFilter !== 'all' && row.region !== regionFilter) return false;
-    return true;
-  }) || [];
+  const filteredForecastData = useMemo(() => {
+    if (!forecastData) return [];
+    if (regionFilter === 'all') return forecastData;
+    return forecastData.filter(row => row.region === regionFilter);
+  }, [forecastData, regionFilter]);
 
   // Calculate herd totals
-  const totalHerdHeads = filteredHerdData.reduce((sum, row) => sum + row.total_count, 0);
-  const herdUniqueRegions = new Set(filteredHerdData.map(row => row.region)).size;
+  const totalHerdHeads = useMemo(
+    () => filteredHerdData.reduce((sum, row) => sum + row.total_count, 0),
+    [filteredHerdData]
+  );
+  const herdUniqueRegions = useMemo(
+    () => new Set(filteredHerdData.map(row => row.region)).size,
+    [filteredHerdData]
+  );
 
   // Calculate forecast totals
-  const totalBreedingCows = filteredForecastData.reduce((sum, r) => sum + r.breeding_cows_count, 0);
-  const totalEstimatedCalves = filteredForecastData.reduce((sum, r) => sum + r.estimated_calves, 0);
+  const totalBreedingCows = useMemo(
+    () => filteredForecastData.reduce((sum, r) => sum + r.breeding_cows_count, 0),
+    [filteredForecastData]
+  );
+  const totalEstimatedCalves = useMemo(
+    () => filteredForecastData.reduce((sum, r) => sum + r.estimated_calves, 0),
+    [filteredForecastData]
+  );
 
   // Group herd by region
-  const herdByRegion = filteredHerdData.reduce((acc, row) => {
-    if (!acc[row.region]) {
-      acc[row.region] = { total: 0, farmers: 0, categories: {} as Record<LivestockCategory, number> };
-    }
-    acc[row.region].total += row.total_count;
-    acc[row.region].farmers = Math.max(acc[row.region].farmers, row.farmer_count);
-    acc[row.region].categories[row.category] = (acc[row.region].categories[row.category] || 0) + row.total_count;
-    return acc;
-  }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number> }>);
+  const herdByRegion = useMemo(() => {
+    return filteredHerdData.reduce((acc, row) => {
+      if (!acc[row.region]) {
+        acc[row.region] = { total: 0, farmers: 0, categories: {} as Record<LivestockCategory, number> };
+      }
+      acc[row.region].total += row.total_count;
+      acc[row.region].farmers = Math.max(acc[row.region].farmers, row.farmer_count);
+      acc[row.region].categories[row.category] = (acc[row.region].categories[row.category] || 0) + row.total_count;
+      return acc;
+    }, {} as Record<string, { total: number; farmers: number; categories: Record<LivestockCategory, number> }>);
+  }, [filteredHerdData]);
 
   return (
     <MainLayout>

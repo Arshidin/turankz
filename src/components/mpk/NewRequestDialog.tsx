@@ -35,6 +35,7 @@ import { useCreatePoolRequest } from '@/hooks/usePoolRequests';
 import { useCurrentMatchingWindow } from '@/hooks/useMatchingWindows';
 import { useCanCreateRequests } from '@/hooks/useCurrentMpk';
 import { Loader2, Info, AlertTriangle, Clock, Ban } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE, type AcceptanceCriteria } from '@/lib/livestock-criteria';
 import { canSubmitPoolRequest } from '@/lib/pool-request-lifecycle';
 import { calculateCountdown } from '@/lib/matching-window';
@@ -74,21 +75,69 @@ function getTargetWeekOptions() {
   return options;
 }
 
+// Helper to validate target week is within reasonable range (next 12 weeks)
+function validateTargetWeek(targetWeek: string): boolean {
+  if (!targetWeek) return false;
+  
+  // Parse target week (format: YYYY-WXX)
+  let year: number;
+  let week: number;
+  
+  if (targetWeek.includes('-W')) {
+    const [yearStr, weekStr] = targetWeek.split('-W');
+    year = parseInt(yearStr);
+    week = parseInt(weekStr);
+  } else {
+    return false; // Invalid format
+  }
+  
+  // Calculate date from week
+  const targetDate = new Date(year, 0, 1);
+  targetDate.setDate(targetDate.getDate() + (week - 1) * 7);
+  
+  // Check if within next 12 weeks
+  const now = new Date();
+  const maxDate = new Date(now);
+  maxDate.setDate(maxDate.getDate() + 12 * 7); // 12 weeks from now
+  
+  // Check if not in the past and not more than 12 weeks ahead
+  return targetDate >= now && targetDate <= maxDate;
+}
+
 const formSchema = z.object({
   required_volume: z.coerce.number().min(1, 'At least 1 head required').max(10000, 'Maximum 10,000 heads'),
   required_grade: z.string().min(1, 'Grade is required'),
   regions: z.array(z.string()).min(1, 'Select at least one region'),
-  target_week: z.string().min(1, 'Target week is required'),
+  target_week: z.string()
+    .min(1, 'Target week is required')
+    .refine(
+      (val) => validateTargetWeek(val),
+      { message: 'Target week must be within the next 12 weeks' }
+    ),
   target_delivery_period: z.enum(['short_term', 'mid_term', 'long_term']).default('short_term'),
   notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
-  // Acceptance criteria
+  // Acceptance criteria - at least one field must be specified
   accepted_breeds: z.array(z.string()),
   accepted_genders: z.array(z.string()),
   age_range_min: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional(),
   age_range_max: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional(),
   weight_range_min: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional(),
   weight_range_max: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional(),
-});
+}).refine(
+  (data) => {
+    // At least one acceptance criteria must be specified
+    const hasBreeds = data.accepted_breeds && data.accepted_breeds.length > 0;
+    const hasGenders = data.accepted_genders && data.accepted_genders.length > 0;
+    const hasAgeRange = data.age_range_min !== undefined || data.age_range_max !== undefined;
+    const hasWeightRange = data.weight_range_min !== undefined || data.weight_range_max !== undefined;
+    
+    return hasBreeds || hasGenders || hasAgeRange || hasWeightRange;
+  },
+  {
+    message: 'Specify at least one acceptance criteria (breeds, genders, age, or weight)',
+    path: ['accepted_breeds'], // Show error on first criteria field
+  }
+);
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -105,7 +154,7 @@ interface NewRequestDialogProps {
 export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCriteria, defaultRegions = [], commonTargetWeeks = [] }: NewRequestDialogProps) {
   const createRequest = useCreatePoolRequest();
   const { data: matchingWindow } = useCurrentMatchingWindow();
-  const canCreateRequests = useCanCreateRequests();
+  const canCreateRequestsResult = useCanCreateRequests();
   const weekOptions = getTargetWeekOptions();
   
   // Check submission validation based on matching window
@@ -115,7 +164,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
     : null;
   
   // Combined can submit check (window validation + MPK restriction)
-  const canSubmit = submissionValidation.canSubmit && canCreateRequests;
+  const canSubmit = submissionValidation.canSubmit && canCreateRequestsResult.canCreate;
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -205,24 +254,29 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
         </DialogHeader>
 
         {/* MPK Restriction Alert */}
-        {!canCreateRequests && (
+        {!canCreateRequestsResult.canCreate && (
           <Alert variant="destructive">
             <Ban className="h-4 w-4" />
             <AlertDescription>
-              Your account is currently restricted from creating new requests. Contact admin for assistance.
+              {canCreateRequestsResult.reason || 'Your account is currently restricted from creating new requests. Contact admin for assistance.'}
+              {canCreateRequestsResult.maxActiveRequests && canCreateRequestsResult.activeRequestsCount !== undefined && (
+                <div className="mt-2 text-sm">
+                  Active requests: {canCreateRequestsResult.activeRequestsCount} / {canCreateRequestsResult.maxActiveRequests}
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}
 
         {/* Submission Status Alert */}
-        {canCreateRequests && !submissionValidation.canSubmit ? (
+        {canCreateRequestsResult.canCreate && !submissionValidation.canSubmit ? (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               {submissionValidation.reason}
             </AlertDescription>
           </Alert>
-        ) : canCreateRequests && countdown && !countdown.isExpired && (
+        ) : canCreateRequestsResult.canCreate && countdown && !countdown.isExpired && (
           <Alert className={countdown.days === 0 ? 'border-amber-500/50 bg-amber-500/5' : ''}>
             <Clock className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
@@ -306,7 +360,7 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
                     </SelectContent>
                   </Select>
                   <FormDescription className="text-xs">
-                    When do you need this volume delivered?
+                    When do you need this volume delivered? Must be within the next 12 weeks.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -377,9 +431,21 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
 
             {/* Acceptance Criteria Section */}
             <div>
-              <h4 className="text-sm font-medium mb-1">Acceptance Criteria</h4>
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="text-sm font-medium">Acceptance Criteria</h4>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Specify at least one criteria to narrow down matching batches</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <p className="text-xs text-muted-foreground mb-4">
-                Define livestock characteristics you can accept
+                Define livestock characteristics you can accept. <span className="font-medium text-foreground">At least one criteria is required.</span>
               </p>
 
               {/* Breeds */}
@@ -551,10 +617,21 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
               {/* Helper Text */}
               <div className="flex items-start gap-2 p-3 mt-4 rounded-lg bg-muted/50 border">
                 <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  Only batches matching acceptance criteria can be included in pool matching.
-                </p>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Only batches matching acceptance criteria can be included in pool matching.
+                  </p>
+                  <p className="text-xs text-amber-600 font-medium">
+                    ⚠️ You must specify at least one criteria (breeds, genders, age, or weight) to create a request.
+                  </p>
+                </div>
               </div>
+              {/* Show validation error if no criteria selected */}
+              {form.formState.errors.accepted_breeds && (
+                <p className="text-xs text-destructive mt-2">
+                  {form.formState.errors.accepted_breeds.message}
+                </p>
+              )}
             </div>
 
             <Separator />
@@ -588,14 +665,14 @@ export function NewRequestDialog({ open, onOpenChange, mpkId, mpkName, defaultCr
               </Button>
               <Button 
                 type="submit" 
-                disabled={createRequest.isPending}
+                disabled={createRequest.isPending || !canSubmit}
               >
                 {createRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {!canCreateRequests ? 'Account Restricted' : 'Create Draft Request'}
+                {!canCreateRequestsResult.canCreate ? 'Account Restricted' : 'Create Draft Request'}
               </Button>
-              {!canCreateRequests && (
+              {!canCreateRequestsResult.canCreate && (
                 <p className="text-xs text-muted-foreground text-center mt-2">
-                  Your account is restricted. Contact administrator.
+                  {canCreateRequestsResult.reason || 'Your account is restricted. Contact administrator.'}
                 </p>
               )}
             </div>

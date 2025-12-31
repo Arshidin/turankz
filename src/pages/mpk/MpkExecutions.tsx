@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -35,8 +35,13 @@ export default function MpkExecutions() {
 
   const isLoading = checkingExecutions || loadingExecutions;
 
-  // For MPK, show all executions (in production would filter by their requests)
-  const mpkExecutions = allExecutions;
+  // Filter executions by MPK's requests only
+  const mpkExecutions = useMemo(() => {
+    if (role !== 'mpk' || !currentMpk?.mpk_id) return allExecutions;
+    return allExecutions.filter(execution => 
+      execution.request && execution.request.mpk_id === currentMpk.mpk_id
+    );
+  }, [allExecutions, currentMpk?.mpk_id, role]);
 
   // Check if MPK can confirm delivery for a specific execution
   const canConfirmDelivery = (execution: ExecutionWithDetails): boolean => {
@@ -137,8 +142,11 @@ export default function MpkExecutions() {
                       <p className="font-medium">{execution.matched_volume} heads</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Farmer Batch</p>
-                      <p className="font-medium">#{execution.batch?.batch_number || 'N/A'}</p>
+                      <p className="text-muted-foreground">Supply Details</p>
+                      <p className="font-medium">
+                        {execution.batch?.region || 'N/A'}
+                        {execution.batch?.grade && ` • Grade ${execution.batch.grade}`}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Delivery Period</p>

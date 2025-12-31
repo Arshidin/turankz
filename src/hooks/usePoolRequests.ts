@@ -8,6 +8,8 @@ import {
   validatePoolRequestTransition,
   type PoolRequestRole,
 } from '@/lib/pool-request-lifecycle';
+import { useCurrentMpk } from './useCurrentMpk';
+import { retryWithBackoff } from '@/lib/retry';
 
 // Updated status type to match new lifecycle
 export type PoolRequestStatus = PoolRequestLifecycleStatus;
@@ -227,23 +229,29 @@ export function useCreatePoolRequest() {
       weight_range_min?: number | null;
       weight_range_max?: number | null;
     }) => {
-      const { data, error } = await supabase
-        .from('purchase_pool_requests')
-        .insert({
-          ...request,
-          request_number: generateRequestNumber(),
-          matched_volume: 0,
-          status: 'draft' as PoolRequestStatus, // All new requests start as 'draft' (must be submitted explicitly)
-          target_delivery_period: request.target_delivery_period || 'short_term',
-          accepted_breeds: request.accepted_breeds || [],
-          accepted_genders: request.accepted_genders || [],
-          age_range_min: request.age_range_min ?? null,
-          age_range_max: request.age_range_max ?? null,
-          weight_range_min: request.weight_range_min ?? null,
-          weight_range_max: request.weight_range_max ?? null,
-        })
-        .select()
-        .single();
+      // Use retry logic for network errors
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('purchase_pool_requests')
+          .insert({
+            ...request,
+            request_number: generateRequestNumber(),
+            matched_volume: 0,
+            status: 'draft' as PoolRequestStatus, // All new requests start as 'draft' (must be submitted explicitly)
+            target_delivery_period: request.target_delivery_period || 'short_term',
+            accepted_breeds: request.accepted_breeds || [],
+            accepted_genders: request.accepted_genders || [],
+            age_range_min: request.age_range_min ?? null,
+            age_range_max: request.age_range_max ?? null,
+            weight_range_min: request.weight_range_min ?? null,
+            weight_range_max: request.weight_range_max ?? null,
+          })
+          .select()
+          .single();
+
+        if (result.error) throw result.error;
+        return result;
+      }, { maxRetries: 3 });
 
       if (error) throw error;
       return data as PoolRequest;
@@ -303,6 +311,8 @@ export function useCancelPoolRequest() {
 export function useTransitionPoolRequestStatus() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { data: currentMpk } = useCurrentMpk();
+  const { data: requests } = usePoolRequests();
 
   return useMutation({
     mutationFn: async ({
@@ -321,6 +331,26 @@ export function useTransitionPoolRequestStatus() {
       
       if (!validation.valid) {
         throw new Error(validation.error);
+      }
+
+      // Additional validation: Check max_active_requests when transitioning from draft to submitted
+      if (fromStatus === 'draft' && toStatus === 'submitted' && role === 'mpk' && currentMpk) {
+        if (currentMpk.max_active_requests !== null && currentMpk.max_active_requests > 0) {
+          // Count active requests (excluding draft, cancelled, closed, and the current request)
+          const activeRequests = requests?.filter(r => 
+            r.id !== id &&
+            r.mpk_id === currentMpk.mpk_id && 
+            r.status !== 'draft' && 
+            r.status !== 'cancelled' && 
+            r.status !== 'closed'
+          ) || [];
+          
+          if (activeRequests.length >= currentMpk.max_active_requests) {
+            throw new Error(
+              `Maximum active requests limit reached (${currentMpk.max_active_requests}). Cancel or close existing requests to submit this one.`
+            );
+          }
+        }
       }
 
       const { data, error } = await supabase

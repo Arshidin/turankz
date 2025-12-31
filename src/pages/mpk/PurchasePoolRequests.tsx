@@ -30,6 +30,7 @@ import { NewRequestDialog } from '@/components/mpk/NewRequestDialog';
 import type { AcceptanceCriteria } from '@/lib/livestock-criteria';
 import { EditRequestDialog } from '@/components/mpk/EditRequestDialog';
 import { MatchingWindowStatusBanner } from '@/components/mpk/MatchingWindowStatusBanner';
+import { MpkMatchingView } from '@/components/pool/MpkMatchingView';
 import { format, parseISO } from 'date-fns';
 import {
   DropdownMenu,
@@ -256,6 +257,7 @@ export default function PurchasePoolRequests() {
                     size="sm" 
                     onClick={() => setNewRequestOpen(true)}
                     disabled={!canSubmitRequests}
+                    title={!canSubmitRequests ? 'Submissions are closed. Wait for an active matching window.' : undefined}
                   >
                     {canSubmitRequests ? (
                       <Plus className="w-4 h-4 mr-2" />
@@ -514,6 +516,13 @@ export default function PurchasePoolRequests() {
                             {getPoolRequestLockedTooltip(request.status as PoolRequestLifecycleStatus, USER_ROLE)}
                           </span>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Matching View - Show for requests with matches or in matching status */}
+                    {(request.status === 'matching' || request.status === 'partial' || request.status === 'fulfilled' || request.matched_volume > 0) && (
+                      <div className="pt-4 mt-4 border-t">
+                        <MpkMatchingView requestId={request.id} />
                       </div>
                     )}
 

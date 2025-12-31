@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, CheckCircle2, Clock, Eye, Heart, Info, AlertCircle, Award } from 'lucide-react';
 import { CriteriaFilter, defaultCriteriaFilters, hasActiveFilters, type CriteriaFilterState } from '@/components/livestock';
-import { useFilteredMarketData, type RegionSupply, aggregateByRegion } from '@/hooks/useMarketData';
+import { useFilteredMarketData, type RegionSupply, aggregateByRegion, aggregateBatchesForMpk, type AggregatedBatchGroup } from '@/hooks/useMarketData';
 import { useStandardPremiums } from '@/hooks/usePremiums';
 import { type Batch, type BatchStatus } from '@/hooks/useBatches';
 import { format, parseISO } from 'date-fns';
@@ -92,18 +92,24 @@ export default function MarketOverview() {
   const displaySummary = realSummary;
   const displayRegions = realRegions;
   
-  // Apply grade filter to displayed batches
-  const gradedBatches = gradeFilter === 'all' 
-    ? displayBatches 
-    : displayBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
+  // Aggregate batches to prevent deanonymization (group by region, target_week, grade, status)
+  const aggregatedBatches = useMemo(
+    () => aggregateBatchesForMpk(displayBatches),
+    [displayBatches]
+  );
+  
+  // Apply grade filter to aggregated batches
+  const gradedBatches = useMemo(() => {
+    if (gradeFilter === 'all') return aggregatedBatches;
+    return aggregatedBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
+  }, [aggregatedBatches, gradeFilter]);
   
   // Apply grade filter to regions data
-  const filteredRegions = gradeFilter === 'all'
-    ? displayRegions
-    : (() => {
-        const filteredBatchesForRegions = displayBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
-        return aggregateByRegion(filteredBatchesForRegions);
-      })();
+  const filteredRegions = useMemo(() => {
+    if (gradeFilter === 'all') return displayRegions;
+    const filteredBatchesForRegions = displayBatches.filter(b => b.grade?.toLowerCase() === gradeFilter);
+    return aggregateByRegion(filteredBatchesForRegions);
+  }, [displayRegions, displayBatches, gradeFilter]);
   
   const handleAddToWatchlist = async (batch: Batch) => {
     try {
@@ -354,41 +360,47 @@ export default function MarketOverview() {
             ) : (
               <div className="space-y-3">
                 {gradedBatches.length > 0 ? (
-                  gradedBatches.slice(0, 5).map((batch) => (
-                    <div key={batch.id} className="p-3 bg-secondary/50 rounded-lg">
+                  gradedBatches.slice(0, 5).map((group, index) => (
+                    <div key={`${group.region}-${group.target_week}-${group.grade}-${group.status}-${index}`} className="p-3 bg-secondary/50 rounded-lg">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-secondary rounded flex items-center justify-center">
-                            <span className="text-sm font-medium text-foreground">{batch.grade}</span>
+                            <span className="text-sm font-medium text-foreground">{group.grade || 'N/A'}</span>
                           </div>
                           <div>
                             <p className="text-sm font-medium text-foreground">
-                              {batch.region} • {batch.target_week}
+                              {group.region} • {group.target_week}
                             </p>
-                            <p className="text-xs text-muted-foreground">{batch.heads} heads</p>
+                            <p className="text-xs text-muted-foreground">
+                              {group.total_heads} heads
+                              {group.batch_count > 1 && ` (${group.batch_count} batches)`}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <StatusBadge status={mapStatus(batch.status as BatchStatus)} />
-                          <p className="text-xs text-muted-foreground mt-1">{batch.target_week}</p>
+                          <StatusBadge status={mapStatus(group.status as BatchStatus)} />
                         </div>
                       </div>
-                      {/* Show criteria info */}
+                      {/* Show aggregated criteria info */}
                       <div className="flex flex-wrap gap-1 mb-2">
-                        {batch.breed && (
-                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.breed}</span>
-                        )}
-                        {batch.gender && (
-                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{batch.gender}</span>
-                        )}
-                        {(batch.age_min || batch.age_max) && (
+                        {group.breeds.length > 0 && (
                           <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
-                            {batch.age_min ?? '–'}–{batch.age_max ?? '–'} mo
+                            {group.breeds.join(', ')}
                           </span>
                         )}
-                        {(batch.weight_min || batch.weight_max) && (
+                        {group.genders.length > 0 && (
                           <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
-                            {batch.weight_min ?? '–'}–{batch.weight_max ?? '–'} kg
+                            {group.genders.join(', ')}
+                          </span>
+                        )}
+                        {(group.age_min !== null || group.age_max !== null) && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                            {group.age_min ?? '–'}–{group.age_max ?? '–'} mo
+                          </span>
+                        )}
+                        {(group.weight_min !== null || group.weight_max !== null) && (
+                          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+                            {group.weight_min ?? '–'}–{group.weight_max ?? '–'} kg
                           </span>
                         )}
                       </div>
@@ -397,13 +409,30 @@ export default function MarketOverview() {
                           variant="outline" 
                           size="sm" 
                           className="flex-1 text-xs"
-                          onClick={() => handleAddToWatchlist(batch)}
+                          onClick={() => {
+                            // Create a synthetic batch object for watchlist (using aggregated data)
+                            const syntheticBatch: Batch = {
+                              id: `aggregated-${index}`,
+                              region: group.region,
+                              target_week: group.target_week,
+                              grade: group.grade || undefined,
+                              status: group.status,
+                              heads: group.total_heads,
+                              breed: group.breeds[0] || undefined,
+                              gender: group.genders[0] || undefined,
+                              age_min: group.age_min || undefined,
+                              age_max: group.age_max || undefined,
+                              weight_min: group.weight_min || undefined,
+                              weight_max: group.weight_max || undefined,
+                            } as Batch;
+                            handleAddToWatchlist(syntheticBatch);
+                          }}
                           disabled={addToWatchlist.isPending}
                         >
                           <Heart className="w-3 h-3 mr-1" />
                           Add to Watchlist
                         </Button>
-                        <Button variant="default" size="sm" className="flex-1 text-xs">
+                        <Button variant="default" size="sm" className="flex-1 text-xs" disabled>
                           Express Interest
                         </Button>
                       </div>

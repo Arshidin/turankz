@@ -100,6 +100,101 @@ export function aggregateByRegion(batches: Batch[]): RegionSupply[] {
   return Array.from(regionMap.values()).sort((a, b) => b.total - a.total);
 }
 
+// Aggregated batch group for MPK view (prevents deanonymization)
+export interface AggregatedBatchGroup {
+  region: string;
+  target_week: string;
+  grade: string | null;
+  status: BatchStatus;
+  total_heads: number;
+  avg_weight: number | null;
+  // Aggregated criteria ranges (min of mins, max of maxs)
+  breeds: string[];
+  genders: string[];
+  age_min: number | null;
+  age_max: number | null;
+  weight_min: number | null;
+  weight_max: number | null;
+  // Count of batches in this group (for reference, but not identifying)
+  batch_count: number;
+}
+
+// Aggregate batches by region, target_week, grade, and status to prevent deanonymization
+export function aggregateBatchesForMpk(batches: Batch[]): AggregatedBatchGroup[] {
+  const groupMap = new Map<string, AggregatedBatchGroup>();
+  
+  for (const batch of batches) {
+    // Create a unique key: region + target_week + grade + status
+    const key = `${batch.region}|${batch.target_week || 'unknown'}|${batch.grade || 'no-grade'}|${batch.status}`;
+    
+    const existing = groupMap.get(key);
+    
+    if (existing) {
+      // Aggregate: sum heads, update ranges, collect unique breeds/genders
+      existing.total_heads += batch.heads;
+      existing.batch_count += 1;
+      
+      // Update age range (min of mins, max of maxs)
+      if (batch.age_min !== null) {
+        existing.age_min = existing.age_min === null ? batch.age_min : Math.min(existing.age_min, batch.age_min);
+      }
+      if (batch.age_max !== null) {
+        existing.age_max = existing.age_max === null ? batch.age_max : Math.max(existing.age_max, batch.age_max);
+      }
+      
+      // Update weight range
+      if (batch.weight_min !== null) {
+        existing.weight_min = existing.weight_min === null ? batch.weight_min : Math.min(existing.weight_min, batch.weight_min);
+      }
+      if (batch.weight_max !== null) {
+        existing.weight_max = existing.weight_max === null ? batch.weight_max : Math.max(existing.weight_max, batch.weight_max);
+      }
+      
+      // Collect unique breeds and genders
+      if (batch.breed && !existing.breeds.includes(batch.breed)) {
+        existing.breeds.push(batch.breed);
+      }
+      if (batch.gender && !existing.genders.includes(batch.gender)) {
+        existing.genders.push(batch.gender);
+      }
+      
+      // Update avg_weight (weighted average)
+      if (batch.avg_weight !== null) {
+        const totalWeight = (existing.avg_weight || 0) * (existing.total_heads - batch.heads) + batch.avg_weight * batch.heads;
+        existing.avg_weight = totalWeight / existing.total_heads;
+      }
+    } else {
+      // Create new group
+      groupMap.set(key, {
+        region: batch.region,
+        target_week: batch.target_week || 'unknown',
+        grade: batch.grade || null,
+        status: batch.status,
+        total_heads: batch.heads,
+        avg_weight: batch.avg_weight,
+        breeds: batch.breed ? [batch.breed] : [],
+        genders: batch.gender ? [batch.gender] : [],
+        age_min: batch.age_min,
+        age_max: batch.age_max,
+        weight_min: batch.weight_min,
+        weight_max: batch.weight_max,
+        batch_count: 1,
+      });
+    }
+  }
+  
+  // Sort by target_week, then by region, then by total_heads (descending)
+  return Array.from(groupMap.values()).sort((a, b) => {
+    if (a.target_week !== b.target_week) {
+      return a.target_week.localeCompare(b.target_week);
+    }
+    if (a.region !== b.region) {
+      return a.region.localeCompare(b.region);
+    }
+    return b.total_heads - a.total_heads;
+  });
+}
+
 // Calculate market summary
 export function calculateMarketSummary(batches: Batch[]): MarketSummary {
   return batches.reduce(

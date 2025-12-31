@@ -13,7 +13,7 @@
  * - Submitted requests auto-transition to Matching after lock_date
  */
 
-import { type MatchingWindow, type MatchingWindowStatus, calculateCountdown } from './matching-window';
+import { type MatchingWindow, type MatchingWindowStatus, calculateCountdown, getEffectiveWindowStatus } from './matching-window';
 
 // Pool Request lifecycle statuses
 export type PoolRequestLifecycleStatus = 
@@ -413,11 +413,13 @@ export function canSubmitPoolRequest(
     };
   }
 
-  const { status, lock_date } = matchingWindow;
+  const { lock_date } = matchingWindow;
+  // Use effective status (computed from dates) as single source of truth
+  const effectiveStatus = getEffectiveWindowStatus(matchingWindow);
   const countdown = calculateCountdown(lock_date);
 
   // Window must be active for submissions
-  if (status === 'upcoming') {
+  if (effectiveStatus === 'upcoming') {
     return {
       canSubmit: false,
       reason: 'Matching window has not started yet. Wait for it to open.',
@@ -428,7 +430,7 @@ export function canSubmitPoolRequest(
     };
   }
 
-  if (status === 'locked' || status === 'closed') {
+  if (effectiveStatus === 'locked' || effectiveStatus === 'closed') {
     return {
       canSubmit: false,
       reason: 'Matching window is locked. No new submissions allowed.',
@@ -439,7 +441,7 @@ export function canSubmitPoolRequest(
     };
   }
 
-  // Check if past lock_date even if window is still "active"
+  // Check if past lock_date even if window is still "active" (defense in depth)
   if (countdown.isExpired) {
     return {
       canSubmit: false,

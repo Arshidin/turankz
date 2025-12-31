@@ -281,7 +281,10 @@ export default function PoolMatching() {
     });
   }, [activeRequest, supplyBlocks, showOnlyMatching, hasCriteria, readinessFilter]);
 
-  const selectedSupply = filteredSupply.filter(s => selectedBatchIds.has(s.id));
+  const selectedSupply = useMemo(
+    () => filteredSupply.filter(s => selectedBatchIds.has(s.id)),
+    [filteredSupply, selectedBatchIds]
+  );
   
   // Calculate selected heads using available_heads (not total heads)
   // This is the maximum we can match from selected batches
@@ -335,11 +338,11 @@ export default function PoolMatching() {
   }, [filteredSupply]);
 
   // Calculate readiness mix
-  const readinessMix = {
+  const readinessMix = useMemo(() => ({
     confirmed: selectedSupply.filter(s => s.readiness === 'confirmed').reduce((sum, s) => sum + s.heads, 0),
     soft: selectedSupply.filter(s => s.readiness === 'soft_committed').reduce((sum, s) => sum + s.heads, 0),
     forecast: selectedSupply.filter(s => s.readiness === 'forecast').reduce((sum, s) => sum + s.heads, 0),
-  };
+  }), [selectedSupply]);
 
   // Determine pool health
   const getPoolHealth = (): PoolHealth => {

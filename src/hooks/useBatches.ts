@@ -67,8 +67,7 @@ export const useBatches = () => {
           schema: 'public',
           table: 'batches',
         },
-        (payload) => {
-          console.log('Batch change:', payload);
+        () => {
           queryClient.invalidateQueries({ queryKey: ['batches'] });
         }
       )

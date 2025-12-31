@@ -813,6 +813,7 @@ export const en = {
       getStarted: 'Get Started',
     },
     hero: {
+      label: 'Governed Platform',
       title: 'Livestock Market Coordination',
       subtitle: 'A governed platform for ensuring predictability, standards, and year-round supply for Kazakhstan\'s meat industry.',
       point1: 'Transparent coordination between farmers and meat processing plants',

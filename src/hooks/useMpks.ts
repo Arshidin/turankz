@@ -18,6 +18,10 @@ export interface Mpk {
   max_active_requests: number | null;
   typical_volume_min: number | null;
   typical_volume_max: number | null;
+  default_age_range_min: number | null;
+  default_age_range_max: number | null;
+  default_weight_range_min: number | null;
+  default_weight_range_max: number | null;
   common_target_weeks: string[] | null;
   total_requests: number;
   fulfilled_requests: number;

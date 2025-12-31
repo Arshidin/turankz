@@ -31,7 +31,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useConfirmDelivery } from '@/hooks/useExecutions';
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Info, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -100,6 +102,20 @@ export function DeliveryConfirmationDialog({
             Confirm the delivery details for this execution. This will be reviewed by admin for compliance.
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Instructions Alert */}
+        <Alert className="bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm text-blue-800">
+            <p className="font-medium mb-1">What to confirm:</p>
+            <ul className="list-disc list-inside space-y-1 text-xs">
+              <li>Actual delivery date when livestock arrived</li>
+              <li>Actual volume delivered (may differ from matched volume)</li>
+              <li>Delivery condition based on quality standards</li>
+              <li>Any notes about the delivery</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -144,12 +160,29 @@ export function DeliveryConfirmationDialog({
               name="delivered_volume"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivered Volume (heads)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Delivered Volume (heads)</FormLabel>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Actual number of heads delivered. May differ from matched volume due to logistics.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="Enter volume"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : '')}
+                    />
                   </FormControl>
                   <FormDescription className="text-xs">
-                    Original matched volume: {matchedVolume} heads
+                    Matched volume: {matchedVolume} heads
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -161,7 +194,19 @@ export function DeliveryConfirmationDialog({
               name="delivery_condition"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Condition</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Delivery Condition</FormLabel>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Assess the quality and condition of delivered livestock based on platform standards.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -176,6 +221,9 @@ export function DeliveryConfirmationDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormDescription className="text-xs">
+                    Select the condition that best describes the delivered livestock quality
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
