@@ -36,7 +36,8 @@ import {
   ChevronRight,
   Beef,
   TrendingUp,
-  GraduationCap
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -194,6 +195,7 @@ const adminNavGroups: NavGroup[] = [
       { labelKey: 'nav.nationalHerd', path: '/admin/herd-structure', icon: Beef },
       { labelKey: 'nav.marketIntentOverview', path: '/admin/market-intent', icon: TrendingUp },
       { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
+      { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen },
     ],
     collapsible: true,
     defaultOpen: false,
@@ -405,42 +407,63 @@ export function Sidebar() {
                   {group.items.map((item) => {
                     const indicator = getNavItemIndicator(item.path);
                     const tooltipText = getNavItemTooltip(item);
+                    const isExternalLink = item.path.startsWith('/docs') || item.path.startsWith('http');
                     
                     return (
                       <li key={item.path}>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <NavLink
-                                to={item.path}
-                                className={cn(
-                                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative",
-                                  isActive(item.path)
-                                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                                )}
-                              >
-                                <item.icon className={cn(
-                                  "w-4 h-4",
-                                  isActive(item.path) 
-                                    ? "text-primary" 
-                                    : "text-sidebar-muted"
-                                )} />
-                                <span className="flex-1 truncate">{t(item.labelKey)}</span>
-                                <div className="flex items-center gap-1.5 flex-shrink-0">
-                                  {indicator !== null && indicator > 0 && (
-                                    <Badge 
-                                      variant="destructive" 
-                                      className="h-5 min-w-5 px-1.5 text-[10px] font-semibold flex items-center justify-center"
-                                    >
-                                      {indicator > 99 ? '99+' : indicator}
-                                    </Badge>
+                              {isExternalLink ? (
+                                <a
+                                  href={item.path}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={cn(
+                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative",
+                                    "text-sidebar-foreground hover:bg-sidebar-accent/50"
                                   )}
-                                  {item.readOnly && (
-                                    <Eye className="w-3 h-3 text-muted-foreground" />
+                                >
+                                  <item.icon className="w-4 h-4 text-sidebar-muted" />
+                                  <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {item.readOnly && (
+                                      <Eye className="w-3 h-3 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                </a>
+                              ) : (
+                                <NavLink
+                                  to={item.path}
+                                  className={cn(
+                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative",
+                                    isActive(item.path)
+                                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                                   )}
-                                </div>
-                              </NavLink>
+                                >
+                                  <item.icon className={cn(
+                                    "w-4 h-4",
+                                    isActive(item.path) 
+                                      ? "text-primary" 
+                                      : "text-sidebar-muted"
+                                  )} />
+                                  <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {indicator !== null && indicator > 0 && (
+                                      <Badge 
+                                        variant="destructive" 
+                                        className="h-5 min-w-5 px-1.5 text-[10px] font-semibold flex items-center justify-center"
+                                      >
+                                        {indicator > 99 ? '99+' : indicator}
+                                      </Badge>
+                                    )}
+                                    {item.readOnly && (
+                                      <Eye className="w-3 h-3 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                </NavLink>
+                              )}
                             </TooltipTrigger>
                             <TooltipContent side="right" className="max-w-[200px]">
                               <p className="font-medium">{t(item.labelKey)}</p>

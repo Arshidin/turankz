@@ -62,6 +62,7 @@ export const en = {
     priceGridManagement: 'Reference Price Grid Management',
     premiumRulesIncentives: 'Premium Rules & Incentives',
     activityLog: 'Activity Log',
+    documentation: 'Documentation',
     nationalHerd: 'National Herd Structure',
     marketWorkflow: 'How Market Works',
     herdStructure: 'Herd Structure',
