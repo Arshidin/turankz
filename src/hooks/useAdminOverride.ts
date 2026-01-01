@@ -74,7 +74,7 @@ export function useAdminOverride() {
         });
 
       if (logError) {
-        logger.error('Failed to log admin override', logError, { action: 'logAdminOverride', overrideType, targetId });
+        logger.error('Failed to log admin override', logError, { action: 'logAdminOverride', overrideType: 'batch_unlock', targetId: batchId });
         // Don't throw - the main action succeeded
       }
 
@@ -142,7 +142,7 @@ export function useAdminOverride() {
         });
 
       if (logError) {
-        logger.error('Failed to log admin relock', logError, { action: 'logAdminRelock', targetId });
+        logger.error('Failed to log admin relock', logError, { action: 'logAdminRelock', targetId: batchId });
       }
 
       return { batchId };

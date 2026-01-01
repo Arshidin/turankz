@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AuditableAction, AuditLogEntry } from '@/lib/access-control';
 import { useRole } from '@/contexts/RoleContext';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook for logging permission-sensitive actions
@@ -52,7 +53,7 @@ export function useAuditLog() {
         // For batch, pool_request, pool_match - could add dedicated log tables
         // or a unified audit_logs table in the future
         default:
-          logger.debug('Audit log action', undefined, { action, targetType, targetId, logEntry });
+          logger.debug('Audit log action', { action, targetType, targetId });
       }
       
       return { success: true };
@@ -170,7 +171,7 @@ export function useAuditLog() {
       
       return { success: true };
     } catch (error) {
-      logger.error('Failed to log matching window change', error, { action: 'logMatchingWindowChange', windowName, action: windowAction });
+      logger.error('Failed to log matching window change', error, { logAction: 'logMatchingWindowChange', windowName, windowAction: action });
       return { success: false, error };
     }
   }, []);

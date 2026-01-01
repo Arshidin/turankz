@@ -38,7 +38,7 @@ import ExecutionManagement from "./pages/admin/ExecutionManagement";
 import MatchingWindowsManagement from "./pages/admin/MatchingWindowsManagement";
 import NationalHerdStructure from "./pages/admin/NationalHerdStructure";
 import MarketIntentOverview from "./pages/admin/MarketIntentOverview";
-import DocsManagement from "./pages/admin/DocsManagement";
+// DocsManagement removed - feature not implemented
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 import AccessRestricted from "./pages/AccessRestricted";

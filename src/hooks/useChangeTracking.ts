@@ -52,7 +52,7 @@ export function useChangeTracking() {
       
       return { success: true };
     } catch (error) {
-      logger.error('Failed to log change tracking', error, { action: 'logChange', changeRecord });
+      logger.error('Failed to log change tracking', error, { action: 'logChange', changeRecord: record });
       return { success: false, error };
     }
   }, [role, roleName]);

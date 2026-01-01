@@ -624,6 +624,53 @@ export type Database = {
           },
         ]
       }
+      mpk_watchlist: {
+        Row: {
+          created_at: string
+          id: string
+          last_viewed_at: string | null
+          min_volume: number | null
+          mpk_id: string
+          notes: string | null
+          region: string
+          target_month: string | null
+          target_week: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_viewed_at?: string | null
+          min_volume?: number | null
+          mpk_id: string
+          notes?: string | null
+          region: string
+          target_month?: string | null
+          target_week: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_viewed_at?: string | null
+          min_volume?: number | null
+          mpk_id?: string
+          notes?: string | null
+          region?: string
+          target_month?: string | null
+          target_week?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mpk_watchlist_mpk_id_fkey"
+            columns: ["mpk_id"]
+            isOneToOne: false
+            referencedRelation: "mpks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mpks: {
         Row: {
           admin_notes: string | null

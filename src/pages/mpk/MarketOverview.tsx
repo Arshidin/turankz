@@ -119,14 +119,7 @@ export default function MarketOverview() {
         region: batch.region,
         target_month: targetMonth,
         target_week: targetWeekLabel,
-        criteria: {
-          breeds: batch.breed ? [batch.breed] : undefined,
-          genders: batch.gender ? [batch.gender] : undefined,
-          ageMin: batch.age_min || undefined,
-          ageMax: batch.age_max || undefined,
-          weightMin: batch.weight_min || undefined,
-          weightMax: batch.weight_max || undefined,
-        },
+        notes: `Breed: ${batch.breed || 'Any'}, Gender: ${batch.gender || 'Any'}`,
       });
       
       toast({
@@ -175,7 +168,7 @@ export default function MarketOverview() {
             No supply data available. Real supply data will appear when farmers declare batches with status "Soft Committed" or "Confirmed".
           </p>
         )}
-        {!isLoading && hasData && isFiltered && filteredBatches.length === 0 && (
+        {!isLoading && hasData && isFiltered && gradedBatches.length === 0 && (
           <p className="text-xs text-muted-foreground mt-2">
             No batches match your current filter criteria. Try adjusting your filters.
           </p>

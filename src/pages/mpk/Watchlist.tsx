@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 interface EnhancedWatchlistItem {
   id: string;
   region: string;
-  targetMonth: string;
+  targetMonth: string | null;
   targetWeek: string;
   totalHeads: number;
   confirmed: number;
@@ -27,7 +27,7 @@ interface EnhancedWatchlistItem {
   gradeB: number;
   gradeC: number;
   addedOn: string;
-  criteria: DBWatchlistItem['criteria'];
+  notes: string | null;
   isApproachingWindow: boolean;
 }
 
@@ -72,10 +72,6 @@ function WatchlistCard({ item, onRemove }: { item: EnhancedWatchlistItem; onRemo
       description: `${item.region} ${item.targetWeek} has been removed from your watchlist.`,
     });
   };
-
-  const criteria = item.criteria;
-  const breeds = criteria?.breeds || [];
-  const genders = criteria?.genders || [];
 
   return (
     <Card className={`${item.isApproachingWindow ? 'ring-1 ring-amber-400 bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
@@ -124,27 +120,12 @@ function WatchlistCard({ item, onRemove }: { item: EnhancedWatchlistItem; onRemo
           </div>
         </div>
 
-        {/* Criteria summary */}
-        {criteria && (breeds.length > 0 || genders.length > 0 || criteria.ageMin || criteria.ageMax || criteria.weightMin || criteria.weightMax) && (
+        {/* Notes summary */}
+        {item.notes && (
           <div className="flex flex-wrap gap-1 mb-3">
-            {breeds.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
-                {breeds.slice(0, 2).join(', ')}{breeds.length > 2 ? ` +${breeds.length - 2}` : ''}
-              </span>
-            )}
-            {genders.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">{genders.join('/')}</span>
-            )}
-            {(criteria.ageMin || criteria.ageMax) && (
-              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
-                {criteria.ageMin || 0}–{criteria.ageMax || '∞'} mo
-              </span>
-            )}
-            {(criteria.weightMin || criteria.weightMax) && (
-              <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
-                {criteria.weightMin || 0}–{criteria.weightMax || '∞'} kg
-              </span>
-            )}
+            <span className="text-xs px-1.5 py-0.5 bg-muted rounded">
+              {item.notes}
+            </span>
           </div>
         )}
 
@@ -209,8 +190,8 @@ export default function Watchlist() {
         gradeA: 0,
         gradeB: 0,
         gradeC: 0,
-        addedOn: format(new Date(item.added_at), 'MMM d'),
-        criteria: item.criteria,
+        addedOn: format(new Date(item.created_at), 'MMM d'),
+        notes: item.notes,
         isApproachingWindow: false, // TODO: Calculate based on matching window dates
       }));
     }
@@ -224,20 +205,7 @@ export default function Watchlist() {
         const regionMatch = batch.region.toLowerCase().includes(item.region.toLowerCase());
         const weekMatch = batch.target_week === item.target_week;
         
-        // Also check criteria if specified
-        let criteriaMatch = true;
-        if (item.criteria) {
-          criteriaMatch = batchMatchesCriteria(batch, {
-            breeds: item.criteria.breeds || [],
-            genders: item.criteria.genders || [],
-            ageMin: item.criteria.ageMin ?? null,
-            ageMax: item.criteria.ageMax ?? null,
-            weightMin: item.criteria.weightMin ?? null,
-            weightMax: item.criteria.weightMax ?? null,
-          });
-        }
-        
-        return regionMatch && weekMatch && criteriaMatch;
+        return regionMatch && weekMatch;
       });
       
       // Calculate stats from matching batches
@@ -269,55 +237,18 @@ export default function Watchlist() {
         gradeA,
         gradeB,
         gradeC,
-        addedOn: format(new Date(item.added_at), 'MMM d'),
-        criteria: item.criteria,
+        addedOn: format(new Date(item.created_at), 'MMM d'),
+        notes: item.notes,
         isApproachingWindow: false, // TODO: Calculate based on matching window dates
       };
     });
   }, [watchlistItems, realBatches]);
   
-  // Filter by criteria if active
+  // Filter by criteria if active - simplified since we no longer have criteria field
   const filteredItems = useMemo(() => {
     if (!isFiltered) return enhancedItems;
-    
-    return enhancedItems.filter(item => {
-      if (!item.criteria) return true;
-      
-      // Breed filter
-      if (criteriaFilters.breeds.length > 0) {
-        const itemBreeds = item.criteria.breeds || [];
-        if (!criteriaFilters.breeds.some(b => itemBreeds.includes(b))) {
-          return false;
-        }
-      }
-      
-      // Gender filter
-      if (criteriaFilters.genders.length > 0) {
-        const itemGenders = item.criteria.genders || [];
-        if (!criteriaFilters.genders.some(g => itemGenders.includes(g))) {
-          return false;
-        }
-      }
-      
-      // Age filter
-      if (criteriaFilters.ageMin !== null && item.criteria.ageMax && item.criteria.ageMax < criteriaFilters.ageMin) {
-        return false;
-      }
-      if (criteriaFilters.ageMax !== null && item.criteria.ageMin && item.criteria.ageMin > criteriaFilters.ageMax) {
-        return false;
-      }
-      
-      // Weight filter
-      if (criteriaFilters.weightMin !== null && item.criteria.weightMax && item.criteria.weightMax < criteriaFilters.weightMin) {
-        return false;
-      }
-      if (criteriaFilters.weightMax !== null && item.criteria.weightMin && item.criteria.weightMin > criteriaFilters.weightMax) {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [enhancedItems, criteriaFilters, isFiltered]);
+    return enhancedItems;
+  }, [enhancedItems, isFiltered]);
   
   const groupedByMonth = filteredItems.reduce((acc, item) => {
     if (!acc[item.targetMonth]) {

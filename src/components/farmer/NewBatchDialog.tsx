@@ -45,6 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 const REGIONS = [
   'Almaty',
@@ -111,6 +112,7 @@ function generateBatchNumber() {
 
 export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const createBatch = useCreateBatch();
   const { user } = useAuthContext();
   const canCreateBatches = useCanCreateBatches();
