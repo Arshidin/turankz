@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { calculateStandardStatus, type StandardStatus } from '@/lib/standard-status';
+import { logger } from '@/lib/logger';
 
 interface UpdateStandardStatusParams {
   batchId: string;
@@ -44,7 +45,7 @@ export function useUpdateBatchStandardStatus() {
       toast.success(`Batch standard status updated to ${variables.standardStatus.replace('_', ' ')}`);
     },
     onError: (error) => {
-      console.error('Error updating standard status:', error);
+      logger.error('Failed to update batch standard status', error, { action: 'updateStandardStatus' });
       toast.error('Failed to update standard status');
     },
   });
@@ -78,7 +79,7 @@ export function useBulkUpdateStandardStatus() {
       toast.success(`${variables.batchIds.length} batches updated to ${variables.standardStatus.replace('_', ' ')}`);
     },
     onError: (error) => {
-      console.error('Error bulk updating standard status:', error);
+      logger.error('Failed to bulk update standard status', error, { action: 'bulkUpdateStandardStatus' });
       toast.error('Failed to update standard status');
     },
   });
@@ -164,7 +165,7 @@ export function useAutoCalculateStandardStatus() {
       );
     },
     onError: (error) => {
-      console.error('Error auto-calculating standard status:', error);
+      logger.error('Failed to auto-calculate standard status', error, { action: 'autoCalculateStandardStatus' });
       toast.error('Failed to auto-calculate standard status');
     },
   });

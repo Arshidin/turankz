@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export type MpkStatus = 'active' | 'restricted' | 'inactive';
 export type RegistrationStatus = 'pending' | 'active' | 'rejected' | 'clarification_needed';
@@ -486,7 +487,7 @@ export function useUpdateMpkRegistration() {
         description: 'Failed to update registration. Please try again.',
         variant: 'destructive',
       });
-      console.error('Registration update error:', error);
+      logger.error('Failed to update MPK registration', error, { action: 'updateRegistration' });
     },
   });
 }

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRole } from '@/contexts/RoleContext';
 import { logActivity, type ActivityEventType } from '@/hooks/useActivityLog';
+import { logger } from '@/lib/logger';
 
 export interface ChangeRecord {
   entityType: 'batch' | 'pool_request';
@@ -51,7 +52,7 @@ export function useChangeTracking() {
       
       return { success: true };
     } catch (error) {
-      console.error('[ChangeTracking] Failed to log change:', error);
+      logger.error('Failed to log change tracking', error, { action: 'logChange', changeRecord });
       return { success: false, error };
     }
   }, [role, roleName]);

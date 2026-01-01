@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { useEffect } from 'react';
 
 export type FarmerGrading = 'observer' | 'declared_supplier' | 'standard_supplier';
@@ -403,7 +404,7 @@ export function useUpdateFarmerRegistration() {
         description: 'Failed to update registration. Please try again.',
         variant: 'destructive',
       });
-      console.error('Registration update error:', error);
+      logger.error('Failed to update farmer registration', error, { action: 'updateFarmerRegistration' });
     },
   });
 }

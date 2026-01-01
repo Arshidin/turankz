@@ -99,7 +99,7 @@ export function useNotifications() {
         )
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      logger.error('Failed to mark notification as read', err, { action: 'markNotificationRead', notificationId });
     }
   }, []);
 
@@ -119,7 +119,7 @@ export function useNotifications() {
         prev.map((n) => ({ ...n, is_read: true }))
       );
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      logger.error('Failed to mark all notifications as read', err, { action: 'markAllNotificationsRead', role });
     }
   }, [role]);
 
@@ -159,7 +159,7 @@ export async function createNotification(params: {
   });
 
   if (error) {
-    console.error('Failed to create notification:', error);
+    logger.error('Failed to create notification', error, { action: 'createNotification', params });
     throw error;
   }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 export type ActivityEventType =
   | 'farmer_onboarded'
@@ -118,7 +119,7 @@ export async function logActivity(params: {
   } as any);
 
   if (error) {
-    console.error('Failed to log activity:', error);
+    logger.error('Failed to log activity', error, { action: 'logActivity', eventType, targetType, targetId });
     throw error;
   }
 }

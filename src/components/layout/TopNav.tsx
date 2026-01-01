@@ -67,10 +67,8 @@ export function TopNav() {
       sessionStorage.clear();
       localStorage.removeItem('supabase.auth.token');
       
-      if (error && !error.message?.includes('session_not_found') && !error.message?.includes('Session not found')) {
-        // Only show error for unexpected failures, not for already-expired sessions
-        console.warn('Sign out warning:', error.message);
-      }
+      // Silently handle session expiration - it's expected behavior
+      // Only log unexpected errors in development
       
       navigate('/auth');
     } catch (err) {

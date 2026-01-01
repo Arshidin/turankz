@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
+import { logger } from '@/lib/logger';
 import type { PoolRequest, PoolRequestStatus } from './usePoolRequests';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -82,7 +83,8 @@ export function usePoolRequestAuditLog() {
       });
     },
     onError: (error) => {
-      console.error('Failed to log pool request action:', error);
+      logger.error('Failed to log pool request action', error, { action: 'logPoolRequestAction' });
+      // Silent failure - audit logging should not block user actions
     },
   });
 

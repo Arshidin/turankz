@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { 
   type BatchLifecycleStatus, 
   isTransitionAllowed, 
@@ -119,10 +120,9 @@ export const useUpdateBatch = () => {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
     },
     onError: (error) => {
-      console.error('Error updating batch:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update batch. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to update batch. Please try again.',
         variant: 'destructive',
       });
     },
@@ -156,10 +156,9 @@ export const useConfirmBatch = () => {
       });
     },
     onError: (error) => {
-      console.error('Error confirming batch:', error);
       toast({
         title: 'Error',
-        description: 'Failed to confirm batch. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to confirm batch. Please try again.',
         variant: 'destructive',
       });
     },
@@ -192,10 +191,10 @@ export const useCreateBatch = () => {
       });
     },
     onError: (error) => {
-      console.error('Error creating batch:', error);
+      logger.error('Failed to create batch', error, { action: 'createBatch' });
       toast({
         title: 'Error',
-        description: 'Failed to create batch. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to create batch. Please try again.',
         variant: 'destructive',
       });
     },

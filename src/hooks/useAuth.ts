@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 export type AppRole = 'admin' | 'farmer' | 'mpk';
 export type RegistrationStatus = 'pending' | 'active' | 'rejected' | 'clarification_needed';
@@ -114,7 +115,7 @@ export function useAuth() {
         }));
       }
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      logger.error('Failed to fetch user role', error, { action: 'fetchUserRole' });
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
   };

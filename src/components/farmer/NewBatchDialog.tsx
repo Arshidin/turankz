@@ -217,7 +217,11 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
 
   const onSubmit = async (data: FormData) => {
     if (!user?.id) {
-      console.error('No authenticated user');
+      toast({
+        title: 'Authentication Error',
+        description: 'Please log in to create a batch.',
+        variant: 'destructive',
+      });
       return;
     }
     

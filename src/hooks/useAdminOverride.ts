@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
+import { logger } from '@/lib/logger';
 
 export interface AdminOverride {
   id: string;
@@ -141,7 +142,7 @@ export function useAdminOverride() {
         });
 
       if (logError) {
-        console.error('Failed to log relock:', logError);
+        logger.error('Failed to log admin relock', logError, { action: 'logAdminRelock', targetId });
       }
 
       return { batchId };

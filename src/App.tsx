@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Docs from "./pages/Docs";
 import DocPage from "./pages/DocPage";
 
@@ -53,14 +54,15 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <RoleProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <RoleProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
               {/* Redirect root to welcome */}
               <Route path="/" element={<Navigate to="/welcome" replace />} />
               
@@ -240,12 +242,13 @@ const App = () => {
               } />
               
               <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </RoleProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+                </Routes>
+              </BrowserRouter>
+            </RoleProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

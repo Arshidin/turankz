@@ -81,6 +81,7 @@ import {
 } from '@/lib/matching-window';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 // Form schema for creating/editing windows
 const windowFormSchema = z.object({
@@ -243,7 +244,12 @@ export function MatchingWindowManagement() {
       setCreateDialogOpen(false);
       createForm.reset();
     } catch (error) {
-      console.error('Failed to create window:', error);
+      logger.error('Failed to create matching window', error, { action: 'createMatchingWindow' });
+      toast({
+        title: 'Error',
+        description: 'Failed to create matching window. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -269,7 +275,12 @@ export function MatchingWindowManagement() {
 
       setEditDialog({ open: false, window: null });
     } catch (error) {
-      console.error('Failed to update window:', error);
+      logger.error('Failed to update matching window', error, { action: 'updateMatchingWindow', windowId: editDialog.window?.id });
+      toast({
+        title: 'Error',
+        description: 'Failed to update matching window. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -291,7 +302,12 @@ export function MatchingWindowManagement() {
 
       setTransitionConfirm(null);
     } catch (error) {
-      console.error('Failed to update status:', error);
+      logger.error('Failed to update matching window status', error, { action: 'updateMatchingWindowStatus', windowId: transitionConfirm?.windowId });
+      toast({
+        title: 'Error',
+        description: 'Failed to update window status. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 

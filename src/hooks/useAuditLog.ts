@@ -52,12 +52,12 @@ export function useAuditLog() {
         // For batch, pool_request, pool_match - could add dedicated log tables
         // or a unified audit_logs table in the future
         default:
-          console.log('[Audit]', action, targetType, targetId, logEntry);
+          logger.debug('Audit log action', undefined, { action, targetType, targetId, logEntry });
       }
       
       return { success: true };
     } catch (error) {
-      console.error('[Audit] Failed to log action:', error);
+      logger.error('Failed to log audit action', error, { action, targetType, targetId });
       return { success: false, error };
     }
   }, [role, roleName]);
@@ -170,7 +170,7 @@ export function useAuditLog() {
       
       return { success: true };
     } catch (error) {
-      console.error('[Audit] Failed to log matching window change:', error);
+      logger.error('Failed to log matching window change', error, { action: 'logMatchingWindowChange', windowName, action: windowAction });
       return { success: false, error };
     }
   }, []);

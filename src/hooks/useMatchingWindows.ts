@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { 
   type MatchingWindow, 
   type MatchingWindowStatus,
@@ -109,10 +110,10 @@ export const useCreateMatchingWindow = () => {
       });
     },
     onError: (error) => {
-      console.error('Error creating matching window:', error);
+      logger.error('Failed to create matching window', error, { action: 'createMatchingWindow' });
       toast({
         title: 'Error',
-        description: 'Failed to create matching window.',
+        description: error instanceof Error ? error.message : 'Failed to create matching window.',
         variant: 'destructive',
       });
     },
@@ -172,7 +173,7 @@ export const useUpdateMatchingWindowStatus = () => {
       });
     },
     onError: (error) => {
-      console.error('Error updating matching window:', error);
+      logger.error('Failed to update matching window status', error, { action: 'updateMatchingWindowStatus' });
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to update window status.',
@@ -208,10 +209,10 @@ export const useUpdateMatchingWindow = () => {
       });
     },
     onError: (error) => {
-      console.error('Error updating matching window:', error);
+      logger.error('Failed to update matching window details', error, { action: 'updateMatchingWindowDetails' });
       toast({
         title: 'Error',
-        description: 'Failed to update matching window.',
+        description: error instanceof Error ? error.message : 'Failed to update matching window.',
         variant: 'destructive',
       });
     },

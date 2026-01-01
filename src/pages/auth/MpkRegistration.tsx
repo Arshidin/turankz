@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
@@ -156,7 +157,12 @@ export default function MpkRegistration() {
       // Assign mpk role
       const { error: roleError } = await assignRole(authData.user.id, 'mpk');
       if (roleError) {
-        console.error('Role assignment error:', roleError);
+        logger.error('Failed to assign MPK role during registration', roleError, { 
+          action: 'assignRole', 
+          userId: authData.user.id,
+          role: 'mpk' 
+        });
+        // Continue registration even if role assignment fails - admin can fix later
       }
 
       // Generate mpk_id
@@ -192,7 +198,10 @@ export default function MpkRegistration() {
         });
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        logger.error('Failed to create MPK profile during registration', profileError, { 
+          action: 'createMpkProfile', 
+          userId: authData.user.id 
+        });
         toast({
           title: 'Ошибка создания профиля',
           description: 'Аккаунт создан, но настройка профиля не удалась. Свяжитесь с поддержкой.',
@@ -204,7 +213,7 @@ export default function MpkRegistration() {
 
       setStep(4); // Move to pending status screen
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('MPK registration failed', error, { action: 'mpkRegistration' });
       toast({
         title: 'Ошибка регистрации',
         description: 'Произошла непредвиденная ошибка. Попробуйте снова.',

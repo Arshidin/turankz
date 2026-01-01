@@ -51,7 +51,7 @@ export function useHasExecutions() {
           .in('status', activeStatuses);
 
         if (error) {
-          console.error('Error checking farmer executions:', error);
+          logger.error('Failed to check farmer executions', error, { action: 'checkFarmerExecutions', role: 'farmer' });
           return false;
         }
 
@@ -78,7 +78,7 @@ export function useHasExecutions() {
           .in('status', activeStatuses);
 
         if (error) {
-          console.error('Error checking MPK executions:', error);
+          logger.error('Failed to check MPK executions', error, { action: 'checkMpkExecutions', role: 'mpk' });
           return false;
         }
 

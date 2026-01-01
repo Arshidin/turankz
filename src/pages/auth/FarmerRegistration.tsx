@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
@@ -135,7 +136,12 @@ export default function FarmerRegistration() {
       // Assign farmer role
       const { error: roleError } = await assignRole(authData.user.id, 'farmer');
       if (roleError) {
-        console.error('Role assignment error:', roleError);
+        logger.error('Failed to assign farmer role during registration', roleError, { 
+          action: 'assignRole', 
+          userId: authData.user.id,
+          role: 'farmer' 
+        });
+        // Continue registration even if role assignment fails - admin can fix later
       }
 
       // Generate farmer_id
@@ -159,7 +165,10 @@ export default function FarmerRegistration() {
         });
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        logger.error('Failed to create farmer profile during registration', profileError, { 
+          action: 'createFarmerProfile', 
+          userId: authData.user.id 
+        });
         toast({
           title: 'Ошибка создания профиля',
           description: 'Аккаунт создан, но настройка профиля не удалась. Свяжитесь с поддержкой.',
@@ -171,7 +180,7 @@ export default function FarmerRegistration() {
 
       setStep(4); // Move to pending status screen
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Farmer registration failed', error, { action: 'farmerRegistration' });
       toast({
         title: 'Ошибка регистрации',
         description: 'Произошла непредвиденная ошибка. Попробуйте снова.',

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
+import { logger } from '@/lib/logger';
 import { useEffect } from 'react';
 import {
   type MatchingLifecycleStatus,
@@ -465,8 +466,12 @@ export function useFinalizeMatching() {
           });
 
         if (execError) {
-          console.error('Error creating execution record:', execError);
-          // Don't fail the finalization, just log the error
+          logger.error('Failed to create execution record after finalization', execError, { 
+            action: 'createExecutionAfterFinalization', 
+            matchId 
+          });
+          // Don't fail the finalization, but this is a critical error
+          // Execution should be created manually or via reconciliation
         } else {
           // Log execution creation
           await supabase.from('activity_log').insert({
