@@ -926,4 +926,40 @@ export const en = {
       rights: 'All rights reserved',
     },
   },
+  
+  docs: {
+    title: 'Turan Standard Pool Documentation',
+    description: 'Complete guide to using the livestock market coordination platform',
+    readMore: 'Read more',
+    view: 'View',
+    sections: {
+      gettingStarted: {
+        title: 'Getting Started',
+        description: 'Quick start with Turan Standard Pool platform',
+      },
+      farmerGuide: {
+        title: 'Farmer Guide',
+        description: 'How to create batches, manage livestock and track executions',
+      },
+      mpkGuide: {
+        title: 'MPK Guide',
+        description: 'How to create purchase requests, track matches and manage executions',
+      },
+      adminGuide: {
+        title: 'Admin Guide',
+        description: 'Platform management, pool matching and system configuration',
+      },
+      api: {
+        title: 'API and Technical Documentation',
+        description: 'Technical documentation, API endpoints and integrations',
+      },
+    },
+    quickLinks: {
+      title: 'Quick Links',
+      faq: 'Frequently Asked Questions',
+      faqDescription: 'Answers to popular questions about the platform',
+      support: 'Support',
+      supportDescription: 'Contact us for assistance',
+    },
+  },
 };

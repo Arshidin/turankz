@@ -6,8 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { isDocsSubdomain } from "@/lib/hostname";
-import { DocsRouter } from "@/components/docs/DocsRouter";
+import Docs from "./pages/Docs";
 
 import Landing from "./pages/Landing";
 import Overview from "./pages/Overview";
@@ -52,9 +51,6 @@ import PendingActivation from "./pages/auth/PendingActivation";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Check if we're on docs subdomain
-  const isDocs = isDocsSubdomain();
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -63,10 +59,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              {isDocs ? (
-                <DocsRouter />
-              ) : (
-                <Routes>
+              <Routes>
               {/* Redirect root to welcome */}
               <Route path="/" element={<Navigate to="/welcome" replace />} />
               
@@ -220,11 +213,8 @@ const App = () => {
                   <MarketIntentOverview />
                 </ProtectedRoute>
               } />
-              <Route path="/admin/docs" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <DocsManagement />
-                </ProtectedRoute>
-              } />
+              {/* Documentation - Public */}
+              <Route path="/docs" element={<Docs />} />
               
               {/* Shared Routes */}
               <Route path="/price-grid" element={
@@ -248,8 +238,7 @@ const App = () => {
               } />
               
               <Route path="*" element={<NotFound />} />
-                </Routes>
-              )}
+              </Routes>
             </BrowserRouter>
           </RoleProvider>
         </AuthProvider>

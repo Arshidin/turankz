@@ -87,6 +87,7 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.marketWorkflow', path: '/market-workflow', icon: GraduationCap, requiredStatus: ['observer', 'active'], readOnly: true },
       // National Herd Structure - read-only for observers (uses public route)
       { labelKey: 'nav.nationalHerd', path: '/herd-overview', icon: Beef, requiredStatus: ['observer', 'active'], readOnly: true },
+      { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
   // DATA & OUTLOOK: Informational only - never auto-generates batches (active only)
@@ -195,6 +196,7 @@ const adminNavGroups: NavGroup[] = [
       { labelKey: 'nav.nationalHerd', path: '/admin/herd-structure', icon: Beef },
       { labelKey: 'nav.marketIntentOverview', path: '/admin/market-intent', icon: TrendingUp },
       { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
+      { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen },
       { labelKey: 'nav.docsManagement', path: '/admin/docs', icon: BookOpen },
     ],
     collapsible: true,
