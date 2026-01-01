@@ -61,6 +61,7 @@ export const ru = {
     premiumRulesIncentives: 'Правила премий и стимулы',
     activityLog: 'Журнал активности',
     documentation: 'Документация',
+    docsManagement: 'Управление документацией',
     nationalHerd: 'Структура национального поголовья',
     marketWorkflow: 'Как работает рынок',
     herdStructure: 'Структура поголовья',

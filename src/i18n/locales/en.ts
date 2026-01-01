@@ -63,6 +63,7 @@ export const en = {
     premiumRulesIncentives: 'Premium Rules & Incentives',
     activityLog: 'Activity Log',
     documentation: 'Documentation',
+    docsManagement: 'Documentation Management',
     nationalHerd: 'National Herd Structure',
     marketWorkflow: 'How Market Works',
     herdStructure: 'Herd Structure',

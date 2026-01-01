@@ -16,6 +16,9 @@ dist-ssr
 docs-site/.vitepress/dist
 docs-site/.vitepress/cache
 
+# Exported documentation files
+docs-export/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -195,7 +195,7 @@ const adminNavGroups: NavGroup[] = [
       { labelKey: 'nav.nationalHerd', path: '/admin/herd-structure', icon: Beef },
       { labelKey: 'nav.marketIntentOverview', path: '/admin/market-intent', icon: TrendingUp },
       { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
-      { labelKey: 'nav.documentation', path: import.meta.env.VITE_DOCS_URL || 'https://turanstandard.kz/docs', icon: BookOpen },
+      { labelKey: 'nav.docsManagement', path: '/admin/docs', icon: BookOpen },
     ],
     collapsible: true,
     defaultOpen: false,

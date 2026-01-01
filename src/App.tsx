@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { isDocsSubdomain } from "@/lib/hostname";
+import { DocsRouter } from "@/components/docs/DocsRouter";
 
 import Landing from "./pages/Landing";
 import Overview from "./pages/Overview";
@@ -35,6 +37,7 @@ import ExecutionManagement from "./pages/admin/ExecutionManagement";
 import MatchingWindowsManagement from "./pages/admin/MatchingWindowsManagement";
 import NationalHerdStructure from "./pages/admin/NationalHerdStructure";
 import MarketIntentOverview from "./pages/admin/MarketIntentOverview";
+import DocsManagement from "./pages/admin/DocsManagement";
 import PriceGrid from "./pages/PriceGrid";
 import NotFound from "./pages/NotFound";
 import AccessRestricted from "./pages/AccessRestricted";
@@ -48,15 +51,22 @@ import PendingActivation from "./pages/auth/PendingActivation";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <RoleProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
+const App = () => {
+  // Check if we're on docs subdomain
+  const isDocs = isDocsSubdomain();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <RoleProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              {isDocs ? (
+                <DocsRouter />
+              ) : (
+                <Routes>
               {/* Redirect root to welcome */}
               <Route path="/" element={<Navigate to="/welcome" replace />} />
               
@@ -210,6 +220,11 @@ const App = () => (
                   <MarketIntentOverview />
                 </ProtectedRoute>
               } />
+              <Route path="/admin/docs" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <DocsManagement />
+                </ProtectedRoute>
+              } />
               
               {/* Shared Routes */}
               <Route path="/price-grid" element={
@@ -233,12 +248,14 @@ const App = () => (
               } />
               
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </RoleProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+                </Routes>
+              )}
+            </BrowserRouter>
+          </RoleProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
