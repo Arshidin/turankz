@@ -17,6 +17,7 @@ import { ReliabilityPremiumCard } from '@/components/premium';
 import { ObserverDashboard } from '@/components/farmer/ObserverDashboard';
 import { ObserverMpkDashboard } from '@/components/mpk/ObserverMpkDashboard';
 import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
+import { RelevantMarketSignals } from '@/components/farmer/RelevantMarketSignals';
 import { BatchOnboarding } from '@/components/farmer/BatchOnboarding';
 import { FirstActionPrompt } from '@/components/auth/FirstActionPrompt';
 import { useFarmers } from '@/hooks/useFarmers';
@@ -661,6 +662,13 @@ export default function Overview() {
           </Card>
         ))}
       </div>
+
+      {/* Relevant Market Signals for Farmer */}
+      {role === 'farmer' && (
+        <div className="mb-6">
+          <RelevantMarketSignals />
+        </div>
+      )}
 
       {/* Aggregated Demand Signals for Farmer */}
       {role === 'farmer' && (
