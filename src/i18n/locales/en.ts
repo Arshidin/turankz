@@ -572,6 +572,17 @@ export const en = {
     maxActiveRequests: 'Max Active Requests',
   },
   
+  admin: {
+    systemHealth: 'System Health',
+    supplyVsDemand: 'Supply vs Demand',
+    attentionRequired: 'Attention Required',
+    platformOverview: 'Platform Overview',
+    commandControl: 'TURAN / ZENGI — Control Panel',
+    marketOrchestration: 'Market orchestration: window scheduling, process states, and audit',
+    completeActionsBefore: 'Complete actions before this date',
+    week: 'Week',
+  },
+  
   premiums: {
     title: 'Premium Management',
     description: 'Configure quality and reliability premiums',
