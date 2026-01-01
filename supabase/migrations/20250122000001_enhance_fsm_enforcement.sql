@@ -105,13 +105,23 @@ BEGIN
 END;
 $$;
 
--- Create trigger
-DROP TRIGGER IF EXISTS matching_status_validation ON public.pool_matches;
-CREATE TRIGGER matching_status_validation
-BEFORE UPDATE ON public.pool_matches
-FOR EACH ROW
-WHEN (OLD.status IS DISTINCT FROM NEW.status)
-EXECUTE FUNCTION public.validate_matching_status_transition();
+-- Create trigger (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'pool_matches'
+  ) THEN
+    DROP TRIGGER IF EXISTS matching_status_validation ON public.pool_matches;
+    CREATE TRIGGER matching_status_validation
+    BEFORE UPDATE ON public.pool_matches
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION public.validate_matching_status_transition();
+  END IF;
+END $$;
 
 -- ============================================================================
 -- COMMENTS
