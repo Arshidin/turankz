@@ -285,7 +285,7 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
       onSuccess: () => {
         form.reset();
         setCurrentStep(1);
-        onOpenChange(false);
+        handleOpenChange(false);
       },
     });
   };
