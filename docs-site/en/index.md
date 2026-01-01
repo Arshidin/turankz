@@ -15,37 +15,37 @@ This documentation is:
 ## Quick Navigation
 
 ### For Farmers
-- [Registration & Activation](/docs/en/farmer-guide/registration)
-- [Batch Lifecycle](/docs/en/farmer-guide/batch-lifecycle)
-- [Observer State](/docs/en/farmer-guide/observer-state)
+- [Registration & Activation](/farmer-guide/)
+- [Batch Lifecycle](/farmer-guide/)
+- [Observer State](/farmer-guide/)
 
 ### For MPKs
-- [Registration & Activation](/docs/en/mpk-guide/registration)
-- [Pool Request Creation](/docs/en/mpk-guide/pool-requests)
-- [Matching Results](/docs/en/mpk-guide/matching)
+- [Registration & Activation](/mpk-guide/)
+- [Pool Request Creation](/mpk-guide/)
+- [Matching Results](/mpk-guide/)
 
 ### For Admins
-- [Coordinator Role](/docs/en/admin-guide/coordinator-role)
-- [Matching Windows](/docs/en/admin-guide/matching-windows)
-- [Pool Matching](/docs/en/admin-guide/pool-matching)
+- [Coordinator Role](/admin-guide/)
+- [Matching Windows](/admin-guide/)
+- [Pool Matching](/admin-guide/)
 
 ## Documentation Sections
 
-1. [Introduction](/docs/en/introduction/) - Platform overview and core principles
-2. [Role Model & Access Control](/docs/en/roles/) - Roles, permissions, and data visibility
-3. [Farmer Guide](/docs/en/farmer-guide/) - Complete guide for supply-side participants
-4. [MPK Guide](/docs/en/mpk-guide/) - Complete guide for demand-side participants
-5. [Admin Guide](/docs/en/admin-guide/) - Complete guide for platform coordinators
-6. [Core System Modules](/docs/en/modules/) - Detailed module documentation
-7. [Business Logic & Guardrails](/docs/en/business-logic/) - Critical business rules
-8. [Status Machines (FSM)](/docs/en/fsm/) - Finite state machine documentation
-9. [Data & Security Model](/docs/en/security/) - Security and data architecture
-10. [Limitations & Non-Goals](/docs/en/limitations/) - What the platform does NOT do
-11. [Glossary](/docs/en/glossary/) - Domain terminology
+1. [Introduction](/introduction/) - Platform overview and core principles
+2. [Role Model & Access Control](/roles/) - Roles, permissions, and data visibility
+3. [Farmer Guide](/farmer-guide/) - Complete guide for supply-side participants
+4. [MPK Guide](/mpk-guide/) - Complete guide for demand-side participants
+5. [Admin Guide](/admin-guide/) - Complete guide for platform coordinators
+6. [Core System Modules](/modules/) - Detailed module documentation
+7. [Business Logic & Guardrails](/business-logic/) - Critical business rules
+8. [Status Machines (FSM)](/fsm/) - Finite state machine documentation
+9. [Data & Security Model](/security/) - Security and data architecture
+10. [Limitations & Non-Goals](/limitations/) - What the platform does NOT do
+11. [Glossary](/glossary/) - Domain terminology
 
 ## Language
 
-[Русский](/docs/ru/) | English
+[Русский](/ru/) | English
 
 ---
 

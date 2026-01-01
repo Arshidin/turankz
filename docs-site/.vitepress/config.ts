@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Turan Standard Pool Documentation',
   description: 'Complete documentation for Turan Standard Pool platform',
-  base: '/',
+  base: '/docs/',
   
   // Custom theme styles
   head: [
