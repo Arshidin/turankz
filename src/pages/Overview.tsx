@@ -18,6 +18,7 @@ import { ObserverDashboard } from '@/components/farmer/ObserverDashboard';
 import { ObserverMpkDashboard } from '@/components/mpk/ObserverMpkDashboard';
 import { AggregatedDemandCard } from '@/components/farmer/AggregatedDemandCard';
 import { RelevantMarketSignals } from '@/components/farmer/RelevantMarketSignals';
+import { MarketCalendar } from '@/components/shared/MarketCalendar';
 import { BatchOnboarding } from '@/components/farmer/BatchOnboarding';
 import { FirstActionPrompt } from '@/components/auth/FirstActionPrompt';
 import { useFarmers } from '@/hooks/useFarmers';
@@ -618,6 +619,13 @@ export default function Overview() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Market Calendar - for Farmer and MPK */}
+      {(role === 'farmer' || role === 'mpk') && (
+        <div className="mb-6">
+          <MarketCalendar />
+        </div>
       )}
 
       {/* Current Matching Window Banner */}
