@@ -54,6 +54,8 @@ import { BatchStatusExplanation } from '@/components/farmer/BatchStatusExplanati
 import { CurrentMatchingWindowBanner } from '@/components/admin/CurrentMatchingWindowBanner';
 import { useAggregatedDemand } from '@/hooks/useAggregatedDemand';
 import { toast } from '@/hooks/use-toast';
+import { BatchEligibilityBadge } from '@/components/farmer/BatchEligibilityBadge';
+import { useMatchingWindows } from '@/hooks/useMatchingWindows';
 
 // Map database status to StatusBadge status
 const mapStatus = (status: BatchStatus): BatchStatus => {
@@ -95,6 +97,7 @@ export default function LivestockBatches() {
   const { isObserver } = useIsObserver();
   const canCreateBatches = useCanCreateBatches();
   const { checkBatchLock } = useGlobalBatchLockStatus();
+  const { data: matchingWindows } = useMatchingWindows();
   
   const [withdrawBatchId, setWithdrawBatchId] = useState<string | null>(null);
   const [escalateBatch, setEscalateBatch] = useState<{ id: string; currentStatus: BatchStatus } | null>(null);

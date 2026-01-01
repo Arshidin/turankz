@@ -87,6 +87,8 @@ import { AdminOverrideBadge } from '@/components/admin/AdminOverrideBadge';
 import { RoleAwarePremiumBreakdown } from '@/components/premium/RoleAwarePremiumBreakdown';
 import { useCalculatePremiumEligibility } from '@/hooks/usePremiumEligibility';
 import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
+import { BatchEligibilityBadge } from '@/components/farmer/BatchEligibilityBadge';
+import { useMatchingWindows } from '@/hooks/useMatchingWindows';
 
 const REGIONS = [
   'Almaty',
@@ -785,6 +787,7 @@ export default function BatchDetail() {
                       </TooltipProvider>
                     )}
                     <StatusBadge status={mapStatus(batch.status)} />
+                    {batch && <BatchEligibilityBadge batch={batch} windows={matchingWindows} />}
                   </div>
                 </div>
               </CardHeader>
