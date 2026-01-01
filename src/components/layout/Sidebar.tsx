@@ -161,30 +161,31 @@ const mpkNavGroups: NavGroup[] = [
   },
 ];
 
-// ADMIN navigation - grouped by function
+// ADMIN navigation - grouped by orchestration function
+// Emphasizes market coordination and rules-based execution, not manual control
 const adminNavGroups: NavGroup[] = [
   {
     key: 'overview',
     labelKey: 'nav.groups.overview',
     items: [
       { labelKey: 'nav.platformOverview', path: '/overview', icon: Home },
-      { labelKey: 'nav.matchingWindows', path: '/admin/windows', icon: CalendarClock },
     ],
   },
   {
-    key: 'matching',
-    labelKey: 'nav.groups.matching',
+    key: 'scheduling-coordination',
+    labelKey: 'nav.groups.schedulingCoordination',
+    items: [
+      { labelKey: 'nav.matchingWindows', path: '/admin/windows', icon: CalendarClock },
+      { labelKey: 'nav.participantCoordination', path: '/admin/farmers', icon: Users },
+      { labelKey: 'nav.mpkCoordination', path: '/admin/mpks', icon: Building2 },
+    ],
+  },
+  {
+    key: 'matching-execution',
+    labelKey: 'nav.groups.matchingExecution',
     items: [
       { labelKey: 'nav.poolMatching', path: '/admin/matching', icon: GitMerge },
       { labelKey: 'nav.contractsExecution', path: '/admin/executions', icon: ClipboardList },
-    ],
-  },
-  {
-    key: 'participants',
-    labelKey: 'nav.groups.participants',
-    items: [
-      { labelKey: 'nav.farmerManagement', path: '/admin/farmers', icon: Users },
-      { labelKey: 'nav.mpkManagement', path: '/admin/mpks', icon: Building2 },
     ],
   },
   {

@@ -7,7 +7,7 @@ export default function MatchingWindowsManagement() {
     <MainLayout>
       <PageHeader 
         title="Matching Windows" 
-        description="Manage time-based market coordination windows. Only one window can be active at a time." 
+        description="Schedule market coordination windows. Windows define timing rules for batch commitments and matching execution." 
       />
       <MatchingWindowManagement />
     </MainLayout>

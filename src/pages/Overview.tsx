@@ -481,7 +481,7 @@ export default function Overview() {
       <MainLayout>
         <PageHeader 
           title={t('admin.platformOverview')} 
-          description={t('admin.commandControl')} 
+          description={t('admin.marketOrchestration')} 
         />
 
         {/* Matching Window Banner */}

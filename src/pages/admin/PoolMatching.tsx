@@ -480,7 +480,7 @@ export default function PoolMatching() {
     <MainLayout>
       <PageHeader 
         title="Pool Matching" 
-        description="Coordinate supply and demand to form matched pools" 
+        description="Rules-based matching execution following window timing and criteria" 
       />
 
       <Tabs defaultValue="requests" className="space-y-4">

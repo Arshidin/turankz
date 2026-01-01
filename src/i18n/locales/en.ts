@@ -81,7 +81,11 @@ export const en = {
       matching: 'Pool Matching',
       participants: 'Participants',
       governance: 'Governance',
+      schedulingCoordination: 'Scheduling & Coordination',
+      matchingExecution: 'Matching Execution',
     },
+    participantCoordination: 'Participant Coordination',
+    mpkCoordination: 'MPK Coordination',
     tooltips: {
       overview: 'Dashboard with overview of your activity',
       batches: 'Manage your livestock batches',
@@ -500,7 +504,7 @@ export const en = {
   
   matching: {
     title: 'Pool Matching',
-    description: 'Manual matching of requests with available supply',
+    description: 'Rules-based matching execution following window timing and criteria',
     activeRequests: 'Active Requests',
     availableSupply: 'Available Supply',
     matchingSummary: 'Matching Summary',
@@ -513,8 +517,8 @@ export const en = {
   },
   
   farmers: {
-    title: 'Farmer Management',
-    description: 'Manage farmer base, control access, and enforce discipline through grading',
+    title: 'Participant Coordination',
+    description: 'Coordinate farmer participation, access rules, and standard compliance tracking',
     totalFarmers: 'Total Farmers',
     standardSuppliers: 'Standard Suppliers',
     declaredSuppliers: 'Declared Suppliers',
@@ -545,8 +549,8 @@ export const en = {
   },
   
   mpks: {
-    title: 'MPK Management',
-    description: 'Control onboarding, visibility, and demand discipline of meat processing plants',
+    title: 'MPK Coordination',
+    description: 'Coordinate MPK onboarding, visibility rules, and demand signaling discipline',
     totalMpks: 'Total MPKs',
     active: 'Active',
     restricted: 'Restricted',
