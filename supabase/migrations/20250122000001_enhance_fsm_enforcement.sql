@@ -13,7 +13,9 @@
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.validate_execution_status_transition()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
   -- If status hasn't changed, allow
   IF OLD.status = NEW.status THEN
@@ -54,7 +56,7 @@ BEGIN
       OLD.status, NEW.status;
   END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create trigger
 DROP TRIGGER IF EXISTS execution_status_validation ON public.offtake_executions;
@@ -69,7 +71,9 @@ EXECUTE FUNCTION public.validate_execution_status_transition();
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.validate_matching_status_transition()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
   -- If status hasn't changed, allow
   IF OLD.status = NEW.status THEN
@@ -89,7 +93,7 @@ BEGIN
       OLD.status, NEW.status;
   END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create trigger
 DROP TRIGGER IF EXISTS matching_status_validation ON public.pool_matches;
