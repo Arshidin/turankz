@@ -14,6 +14,7 @@ import { useFarmerForecast, useForecastCoefficients } from '@/hooks/useForecast'
 import { ConfidenceBadge } from '@/components/data-integrity/ConfidenceBadge';
 import { HerdSnapshotWizard } from '@/components/herd/HerdSnapshotWizard';
 import { format, differenceInHours } from 'date-fns';
+import { toast } from 'sonner';
 
 function formatPeriod(snapshot: HerdStructureSnapshot): string {
   if (snapshot.reporting_period_type === 'annual') {

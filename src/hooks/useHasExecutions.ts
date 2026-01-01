@@ -5,6 +5,7 @@ import { useRole } from '@/contexts/RoleContext';
 import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
 import { useCurrentMpk } from '@/hooks/useCurrentMpk';
 import { Database } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 type ExecutionStatus = Database['public']['Enums']['execution_status'];
 

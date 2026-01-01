@@ -194,38 +194,54 @@ export function useCreateMatching() {
 
       for (const match of matches) {
         try {
-          const { data: result, error: rpcError } = await supabase.rpc('create_matching_with_updates', {
-            p_batch_id: match.batch_id,
-            p_request_id: match.request_id,
-            p_heads_matched: match.heads_matched,
-            p_matching_window_id: matchingWindow?.id || null,
-            p_notes: notes || null,
-            p_created_by: `${roleName} (${role})`,
-          });
-
-          if (rpcError) {
-            errors.push(`Failed to create matching for batch ${match.batch_id}: ${rpcError.message}`);
-            continue;
-          }
-
-          if (!result || result.length === 0 || !result[0].success) {
-            errors.push(`Failed to create matching for batch ${match.batch_id}: ${result?.[0]?.error_message || 'Unknown error'}`);
-            continue;
-          }
-
-          // Fetch the created matching
-          const { data: createdMatching, error: fetchError } = await supabase
+          // Create the matching directly via insert
+          const { data: createdMatch, error: insertError } = await supabase
             .from('pool_matches')
-            .select('*')
-            .eq('id', result[0].matching_id)
+            .insert({
+              batch_id: match.batch_id,
+              request_id: match.request_id,
+              heads_matched: match.heads_matched,
+              matching_window_id: matchingWindow?.id || null,
+              notes: notes || null,
+              created_by: `${roleName} (${role})`,
+              status: 'active',
+              matching_date: new Date().toISOString().split('T')[0],
+            })
+            .select()
             .single();
 
-          if (fetchError) {
-            errors.push(`Failed to fetch created matching ${result[0].matching_id}: ${fetchError.message}`);
+          if (insertError) {
+            errors.push(`Failed to create matching for batch ${match.batch_id}: ${insertError.message}`);
             continue;
           }
 
-          createdMatchings.push(createdMatching as Matching);
+          // Update batch status to 'matched'
+          await supabase
+            .from('batches')
+            .update({ status: 'matched' })
+            .eq('id', match.batch_id);
+
+          // Update request matched_volume
+          const { data: request } = await supabase
+            .from('purchase_pool_requests')
+            .select('matched_volume, required_volume')
+            .eq('id', match.request_id)
+            .single();
+
+          if (request) {
+            const newMatchedVolume = (request.matched_volume || 0) + match.heads_matched;
+            const newStatus = newMatchedVolume >= request.required_volume ? 'fulfilled' : 'partial';
+            
+            await supabase
+              .from('purchase_pool_requests')
+              .update({ 
+                matched_volume: newMatchedVolume,
+                status: newStatus 
+              })
+              .eq('id', match.request_id);
+          }
+
+          createdMatchings.push(createdMatch as Matching);
         } catch (error) {
           errors.push(`Error creating matching for batch ${match.batch_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -238,11 +254,10 @@ export function useCreateMatching() {
           throw new Error(`Failed to create all matchings:\n${errors.join('\n')}`);
         } else {
           // Partial success - log warnings but return what was created
-          logger.warn('Some matchings failed to create', undefined, { 
+          logger.warn('Some matchings failed to create', { 
             action: 'createMatching', 
             created: createdMatchings.length,
             failed: errors.length,
-            errors 
           });
         }
       }
@@ -304,41 +319,69 @@ export function useFinalizeMatching() {
         throw new Error('Only admins can finalize matchings');
       }
 
-      // Use atomic database function for finalization
-      // This ensures matching finalization and execution creation happen atomically
+      // Get the current matching to get batch and request info
+      const { data: currentMatch, error: matchError } = await supabase
+        .from('pool_matches')
+        .select('batch_id, request_id, heads_matched')
+        .eq('id', matchId)
+        .single();
+
+      if (matchError) throw matchError;
+
       const standardPremium = premiumBreakdown?.premiums.find(p => p.type === 'standard');
       const predictabilityPremium = premiumBreakdown?.premiums.find(p => p.type === 'predictability');
       const volumeConsistencyPremium = premiumBreakdown?.premiums.find(p => p.type === 'volume_consistency');
       const reliabilityPremium = premiumBreakdown?.premiums.find(p => p.type === 'reliability');
 
-      const { data: result, error } = await supabase.rpc('finalize_matching_with_execution', {
-        p_match_id: matchId,
-        p_base_price_per_kg: premiumBreakdown?.basePricePerKg || null,
-        p_standard_premium: standardPremium?.eligible ? standardPremium.value : 0,
-        p_predictability_premium: predictabilityPremium?.eligible ? predictabilityPremium.value : 0,
-        p_volume_consistency_premium: volumeConsistencyPremium?.eligible ? volumeConsistencyPremium.value : 0,
-        p_reliability_premium: reliabilityPremium?.eligible ? reliabilityPremium.value : 0,
-        p_total_premium: premiumBreakdown?.totalPremium || 0,
-        p_total_price_per_kg: premiumBreakdown?.totalPricePerKg || null,
-        p_premium_breakdown: premiumBreakdown ? {
-          premiums: premiumBreakdown.premiums,
-          calculatedAt: new Date().toISOString(),
-        } : null,
-        p_note: note || null,
-        p_performed_by: `${roleName} (${role})`,
+      // Update matching with premium data and finalize
+      const { error: updateError } = await supabase
+        .from('pool_matches')
+        .update({
+          status: 'finalized',
+          finalized_at: new Date().toISOString(),
+          base_price_per_kg: premiumBreakdown?.basePricePerKg || null,
+          standard_premium: standardPremium?.eligible ? standardPremium.value : 0,
+          predictability_premium: predictabilityPremium?.eligible ? predictabilityPremium.value : 0,
+          volume_consistency_premium: volumeConsistencyPremium?.eligible ? volumeConsistencyPremium.value : 0,
+          reliability_premium: reliabilityPremium?.eligible ? reliabilityPremium.value : 0,
+          total_premium: premiumBreakdown?.totalPremium || 0,
+          total_price_per_kg: premiumBreakdown?.totalPricePerKg || null,
+          premium_breakdown: premiumBreakdown ? {
+            premiums: premiumBreakdown.premiums,
+            calculatedAt: new Date().toISOString(),
+          } : null,
+          premium_locked: true,
+          premium_locked_at: new Date().toISOString(),
+        })
+        .eq('id', matchId);
+
+      if (updateError) throw updateError;
+
+      // Create execution record
+      const { error: execError } = await supabase
+        .from('offtake_executions')
+        .insert({
+          match_id: matchId,
+          batch_id: currentMatch.batch_id,
+          request_id: currentMatch.request_id,
+          matched_volume: currentMatch.heads_matched,
+          reference_price_at_match: premiumBreakdown?.basePricePerKg || null,
+          status: 'matched',
+        });
+
+      if (execError) {
+        logger.warn('Failed to create execution record', { matchId, error: execError.message });
+      }
+
+      // Log activity
+      await supabase.from('matching_activity_log').insert({
+        match_id: matchId,
+        action_type: 'finalized',
+        previous_value: 'active',
+        new_value: 'finalized',
+        performed_by: `${roleName} (${role})`,
+        note: note || null,
       });
-
-      if (error) throw error;
-
-      if (!result || result.length === 0) {
-        throw new Error('Failed to finalize matching: No result returned');
-      }
-
-      const finalizeResult = result[0];
-
-      if (!finalizeResult.success) {
-        throw new Error(finalizeResult.error_message || 'Failed to finalize matching');
-      }
 
       // Fetch the updated matching to return
       const { data: updatedMatching, error: fetchError } = await supabase

@@ -6,18 +6,13 @@ export interface WatchlistItem {
   id: string;
   mpk_id: string;
   region: string;
-  target_month: string;
+  target_month: string | null;
   target_week: string;
-  criteria: {
-    breeds?: string[];
-    genders?: string[];
-    ageMin?: number;
-    ageMax?: number;
-    weightMin?: number;
-    weightMax?: number;
-  } | null;
-  added_at: string;
+  min_volume: number | null;
+  notes: string | null;
   last_viewed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -36,7 +31,7 @@ export function useWatchlist() {
         .from('mpk_watchlist')
         .select('*')
         .eq('mpk_id', mpkId)
-        .order('added_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as WatchlistItem[];
@@ -58,7 +53,8 @@ export function useAddToWatchlist() {
       region: string;
       target_month: string;
       target_week: string;
-      criteria?: WatchlistItem['criteria'];
+      min_volume?: number;
+      notes?: string;
     }) => {
       if (!mpkId) throw new Error('MPK not found');
 
@@ -69,7 +65,8 @@ export function useAddToWatchlist() {
           region: item.region,
           target_month: item.target_month,
           target_week: item.target_week,
-          criteria: item.criteria || null,
+          min_volume: item.min_volume || null,
+          notes: item.notes || null,
         })
         .select()
         .single();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRole } from '@/contexts/RoleContext';
+import { logger } from '@/lib/logger';
 
 export type NotificationType = 
   | 'pool_invitation'

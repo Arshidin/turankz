@@ -119,7 +119,7 @@ export async function logActivity(params: {
   } as any);
 
   if (error) {
-    logger.error('Failed to log activity', error, { action: 'logActivity', eventType, targetType, targetId });
+    logger.error('Failed to log activity', error, { action: 'logActivity', eventType: params.event_type, targetType: params.target_type, targetId: params.target_id });
     throw error;
   }
 }
