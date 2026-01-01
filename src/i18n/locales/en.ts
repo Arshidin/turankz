@@ -961,5 +961,129 @@ export const en = {
       support: 'Support',
       supportDescription: 'Contact us for assistance',
     },
+    backToDocs: 'Back to Documentation',
+    notFound: 'Documentation section not found',
+    gettingStarted: {
+      welcome: {
+        title: 'Welcome',
+        content: 'Turan Standard Pool is a managed livestock market coordination platform designed to ensure predictability, standards, and year-round supply for Kazakhstan\'s meat industry.',
+      },
+      whatIs: {
+        title: 'What is the platform',
+        content: 'The platform is not an exchange or marketplace. It is a coordination tool that ensures transparency, quality standards, and efficient matching of supply and demand while maintaining market neutrality.',
+      },
+      howToStart: {
+        title: 'How to get started',
+        step1: '1. Register on the platform by selecting your role (farmer or MPK)',
+        step2: '2. Wait for your account to be activated by an administrator',
+        step3: '3. After activation, start using platform features according to your role',
+      },
+    },
+    farmerGuide: {
+      creatingBatches: {
+        title: 'Creating Livestock Batches',
+        content1: 'A livestock batch is the main unit of work on the platform. To create a batch:',
+        item1: 'Specify the number of heads',
+        item2: 'Select the region and target delivery week',
+        item3: 'Specify characteristics (breed, gender, age, weight)',
+        item4: 'Select the grade (A, B, C)',
+      },
+      batchStatus: {
+        title: 'Batch Statuses',
+        content: 'Batches go through several statuses:',
+        draft: 'Draft',
+        draftDesc: 'batch created but not yet published',
+        softCommitted: 'Soft Committed',
+        softCommittedDesc: 'batch published and available for matching',
+        confirmed: 'Confirmed',
+        confirmedDesc: 'batch confirmed and has high priority',
+        matched: 'Matched',
+        matchedDesc: 'batch matched with MPK request',
+      },
+      executions: {
+        title: 'Contract Execution',
+        content: 'After matching a batch with an MPK request, the execution process begins. You can track delivery status, confirm compliance, and manage settlements.',
+      },
+    },
+    mpkGuide: {
+      creatingRequests: {
+        title: 'Creating Purchase Requests',
+        content1: 'A purchase request (Pool Request) allows you to specify livestock requirements:',
+        item1: 'Purchase volume (number of heads)',
+        item2: 'Target delivery week',
+        item3: 'Delivery regions',
+        item4: 'Acceptance criteria (breed, gender, age, weight)',
+      },
+      matching: {
+        title: 'Pool Matching',
+        content: 'The platform automatically matches your requests with available livestock batches within matching windows. You can view matching results and confirm matches.',
+      },
+      watchlist: {
+        title: 'Watchlist',
+        content: 'Use Watchlist to track livestock batches of interest. This allows you to stay informed about available supply and plan purchases.',
+      },
+    },
+    adminGuide: {
+      overview: {
+        title: 'Platform Overview',
+        content: 'The admin dashboard provides a complete overview of platform activity: statistics on participants, batches, requests, and executions.',
+      },
+      matching: {
+        title: 'Pool Matching',
+        content: 'Administrators can manually manage the matching process, create matches between MPK requests and farmer batches, and control matching windows.',
+      },
+      settings: {
+        title: 'System Settings',
+        content1: 'Administrators can manage:',
+        item1: 'Price grid',
+        item2: 'Premium rules and incentives',
+        item3: 'Matching windows',
+        item4: 'National herd structure',
+      },
+    },
+    api: {
+      overview: {
+        title: 'API Overview',
+        content: 'The Turan Standard Pool platform API provides programmatic access to core platform features. The API uses RESTful architecture and requires authentication.',
+      },
+      authentication: {
+        title: 'Authentication',
+        content: 'All API requests require authentication via Supabase Auth. Use the access token in the Authorization header.',
+      },
+      endpoints: {
+        title: 'Main Endpoints',
+        content: 'Main API endpoints:',
+        batches: 'batch management',
+        requests: 'request management',
+        matches: 'matches',
+        executions: 'executions',
+      },
+    },
+    faq: {
+      registration: {
+        title: 'How to register?',
+        content: 'Go to the registration page, select your role (farmer or MPK) and fill out the form. After registration, your account will be reviewed by an administrator.',
+      },
+      activation: {
+        title: 'How long does activation take?',
+        content: 'Activation usually takes 1-3 business days. You will receive an email notification after activation.',
+      },
+      batches: {
+        title: 'How to create a livestock batch?',
+        content: 'After activation, go to the "Livestock Batches" section and click "Create Batch". Fill in all required fields and publish the batch.',
+      },
+    },
+    support: {
+      contact: {
+        title: 'Contact Support',
+        content: 'If you have questions or issues, contact us:',
+        email: 'Email: support@turanstandard.kz',
+        phone: 'Phone: +7 (XXX) XXX-XX-XX',
+      },
+      hours: {
+        title: 'Business Hours',
+        content: 'Support service is available Monday through Friday from 9:00 AM to 6:00 PM Astana time.',
+      },
+    },
   },
 };

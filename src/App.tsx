@@ -7,6 +7,7 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Docs from "./pages/Docs";
+import DocPage from "./pages/DocPage";
 
 import Landing from "./pages/Landing";
 import Overview from "./pages/Overview";
@@ -215,6 +216,7 @@ const App = () => {
               } />
               {/* Documentation - Public */}
               <Route path="/docs" element={<Docs />} />
+              <Route path="/docs/:slug" element={<DocPage />} />
               
               {/* Shared Routes */}
               <Route path="/price-grid" element={
