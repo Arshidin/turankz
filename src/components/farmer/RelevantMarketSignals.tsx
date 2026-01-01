@@ -10,23 +10,34 @@
  * - Cattle category (grade/breed) compatibility
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAggregatedDemand } from '@/hooks/useAggregatedDemand';
 import { useBatches } from '@/hooks/useBatches';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
+import { useCurrentFarmer, useIsObserver } from '@/hooks/useCurrentFarmer';
+import { NewBatchDialog } from '@/components/farmer/NewBatchDialog';
 import { 
   TrendingUp, 
   MapPin, 
   Calendar, 
   Scale, 
   Info,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  FileText
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface RelevantSignal {
   target_week: string;
@@ -47,8 +58,20 @@ export function RelevantMarketSignals() {
   const { t } = useTranslation();
   const { user } = useAuthContext();
   const { data: farmer } = useCurrentFarmer();
+  const { isObserver } = useIsObserver();
   const { data: demands, isLoading: demandsLoading } = useAggregatedDemand();
   const { data: batches = [], isLoading: batchesLoading } = useBatches();
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [prefilledData, setPrefilledData] = useState<{
+    region?: string;
+    grade?: string;
+    target_week?: string;
+    delivery_period?: 'short_term' | 'mid_term' | 'long_term';
+    weight_min?: number;
+    weight_max?: number;
+    age_min?: number;
+    age_max?: number;
+  } | null>(null);
 
   // Filter batches for current farmer
   const farmerBatches = useMemo(() => {
@@ -57,8 +80,28 @@ export function RelevantMarketSignals() {
   }, [batches, user?.id]);
 
   // Calculate relevant signals by matching farmer batches with aggregated demand
+  // Also show signals that match farmer's region (even if no batches yet)
   const relevantSignals = useMemo(() => {
-    if (!demands || !farmerBatches.length) return [];
+    if (!demands) return [];
+
+    // If farmer has no batches, we can still show signals matching their region
+    // This helps them understand what's available and prepare their first batch
+    if (!farmerBatches.length && farmer?.region) {
+      // Show signals matching farmer's region
+      return demands
+        .filter(demand => 
+          demand.regions.includes('Any') || 
+          demand.regions.includes(farmer.region!)
+        )
+        .slice(0, 5)
+        .map(demand => ({
+          ...demand,
+          matchReasons: ['region'],
+          relevanceScore: 3,
+        }));
+    }
+
+    if (!farmerBatches.length) return [];
 
     const signals: RelevantSignal[] = [];
 
@@ -177,9 +220,8 @@ export function RelevantMarketSignals() {
     );
   }
 
-  if (!farmerBatches.length) {
-    return null; // Don't show if farmer has no batches
-  }
+  // Show component even if farmer has no batches - they can prepare one
+  // But we still need to check if there are relevant signals
 
   if (relevantSignals.length === 0) {
     return (
@@ -208,28 +250,59 @@ export function RelevantMarketSignals() {
     0
   );
 
+  const handlePrepareBatch = (signal: RelevantSignal) => {
+    // Prefill data from signal
+    setPrefilledData({
+      region: signal.regions[0] !== 'Any' ? signal.regions[0] : undefined,
+      grade: signal.required_grade !== 'Any' ? signal.required_grade : undefined,
+      target_week: signal.target_week,
+      delivery_period: 'short_term', // Default, can be changed
+      weight_min: signal.weight_min ?? undefined,
+      weight_max: signal.weight_max ?? undefined,
+      age_min: signal.age_min ?? undefined,
+      age_max: signal.age_max ?? undefined,
+    });
+    setBatchDialogOpen(true);
+  };
+
+  const isActiveFarmer = !isObserver && farmer?.grading !== 'observer';
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-base mb-1">Relevant Market Signals</CardTitle>
-            <CardDescription className="flex items-center gap-1.5">
-              <Info className="h-3.5 w-3.5" />
-              Market signals potentially relevant to your farm
-            </CardDescription>
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base mb-1">Relevant Market Signals</CardTitle>
+              <CardDescription className="flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5" />
+                Market signals potentially relevant to your farm
+              </CardDescription>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-lg font-semibold text-primary">
+                {totalRemainingDemand.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground">heads needed</p>
+            </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-lg font-semibold text-primary">
-              {totalRemainingDemand.toLocaleString()}
-            </p>
-            <p className="text-xs text-muted-foreground">heads needed</p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid gap-3">
-          {relevantSignals.map((signal, idx) => {
+        </CardHeader>
+        <CardContent className="pt-0">
+          {/* Helper text */}
+          <Alert className="mb-4 border-primary/20 bg-primary/5">
+            <FileText className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              To participate, prepare a batch before the matching window deadline. 
+              {!isActiveFarmer && (
+                <span className="block mt-1 text-xs text-muted-foreground">
+                  Your account activation is pending. Once activated, you'll be able to prepare batches.
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-3">
+            {relevantSignals.map((signal, idx) => {
             const remaining = signal.total_volume - signal.total_matched;
             const fulfillment = signal.total_volume > 0
               ? Math.round((signal.total_matched / signal.total_volume) * 100)
@@ -302,7 +375,7 @@ export function RelevantMarketSignals() {
                 </div>
 
                 {/* Criteria row */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {(signal.weight_min || signal.weight_max) && (
                     <Badge variant="secondary" className="text-xs">
                       <Scale className="h-3 w-3 mr-1" />
@@ -319,12 +392,57 @@ export function RelevantMarketSignals() {
                     {signal.request_count} buyer{signal.request_count > 1 ? 's' : ''}
                   </Badge>
                 </div>
+
+                {/* Prepare Batch CTA */}
+                <div className="pt-3 border-t border-border/50">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handlePrepareBatch(signal)}
+                            disabled={!isActiveFarmer}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Prepare Batch (no commitment)
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-sm">
+                          {isActiveFarmer ? (
+                            <>
+                              Creates a draft batch with prefilled information from this market signal. 
+                              No commitment is made - you can edit or delete the batch later. 
+                              The batch will remain in draft status until you explicitly confirm it.
+                            </>
+                          ) : (
+                            <>
+                              Your account activation is pending. Once activated, you'll be able to prepare batches to participate in matching.
+                            </>
+                          )}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             );
           })}
         </div>
       </CardContent>
     </Card>
+
+    {/* New Batch Dialog with prefilled data */}
+    <NewBatchDialog 
+      open={batchDialogOpen} 
+      onOpenChange={setBatchDialogOpen}
+      prefilledData={prefilledData || undefined}
+    />
+  </>
   );
 }
 

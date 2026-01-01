@@ -84,6 +84,16 @@ type FormData = z.infer<typeof formSchema>;
 interface NewBatchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  prefilledData?: {
+    region?: string;
+    grade?: string;
+    target_week?: string;
+    delivery_period?: 'short_term' | 'mid_term' | 'long_term';
+    weight_min?: number;
+    weight_max?: number;
+    age_min?: number;
+    age_max?: number;
+  };
 }
 
 // Generate target week options (next 12 weeks)
@@ -110,7 +120,7 @@ function generateBatchNumber() {
   return `BTH-${num}`;
 }
 
-export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
+export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDialogProps) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const createBatch = useCreateBatch();
@@ -132,30 +142,48 @@ export function NewBatchDialog({ open, onOpenChange }: NewBatchDialogProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      region: '',
+      region: prefilledData?.region || '',
       heads: undefined,
       avg_weight: undefined,
-      grade: '',
-      target_week: '',
-      delivery_period: 'short_term' as DeliveryPeriod,
+      grade: prefilledData?.grade || '',
+      target_week: prefilledData?.target_week || '',
+      delivery_period: (prefilledData?.delivery_period || 'short_term') as DeliveryPeriod,
       notes: '',
       breed: '',
       gender: '',
-      age_min: undefined,
-      age_max: undefined,
-      weight_min: undefined,
-      weight_max: undefined,
+      age_min: prefilledData?.age_min,
+      age_max: prefilledData?.age_max,
+      weight_min: prefilledData?.weight_min,
+      weight_max: prefilledData?.weight_max,
     },
   });
 
-  // Reset form and step when dialog opens/closes
+  // Reset form when prefilledData changes or dialog opens
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
+    if (isOpen && prefilledData) {
+      // Update form with prefilled data when dialog opens
+      form.reset({
+        region: prefilledData.region || '',
+        heads: undefined,
+        avg_weight: undefined,
+        grade: prefilledData.grade || '',
+        target_week: prefilledData.target_week || '',
+        delivery_period: (prefilledData.delivery_period || 'short_term') as DeliveryPeriod,
+        notes: '',
+        breed: '',
+        gender: '',
+        age_min: prefilledData.age_min,
+        age_max: prefilledData.age_max,
+        weight_min: prefilledData.weight_min,
+        weight_max: prefilledData.weight_max,
+      });
+    } else if (!isOpen) {
       form.reset();
       setCurrentStep(1);
     }
     onOpenChange(isOpen);
   };
+
 
   // Step validation schemas with i18n
   const step1Schema = z.object({
