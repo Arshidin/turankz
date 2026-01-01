@@ -186,127 +186,68 @@ export function useCreateMatching() {
         throw new Error(canCreate.reason);
       }
 
-      // Insert matchings
-      const insertData = matches.map(m => ({
-        request_id: m.request_id,
-        batch_id: m.batch_id,
-        heads_matched: m.heads_matched,
-        matching_date: new Date().toISOString().split('T')[0],
-        status: 'active' as MatchingLifecycleStatus,
-        created_by: roleName,
-        notes: notes || null,
-        matching_window_id: matchingWindow?.id || null,
-      }));
+      // Use atomic database function for each matching
+      // This ensures matching creation and status updates happen atomically
+      // Each matching is created individually to ensure atomicity
+      const createdMatchings: Matching[] = [];
+      const errors: string[] = [];
 
-      const { data, error } = await supabase
-        .from('pool_matches')
-        .insert(insertData)
-        .select();
+      for (const match of matches) {
+        try {
+          const { data: result, error: rpcError } = await supabase.rpc('create_matching_with_updates', {
+            p_batch_id: match.batch_id,
+            p_request_id: match.request_id,
+            p_heads_matched: match.heads_matched,
+            p_matching_window_id: matchingWindow?.id || null,
+            p_notes: notes || null,
+            p_created_by: `${roleName} (${role})`,
+          });
 
-      if (error) throw error;
+          if (rpcError) {
+            errors.push(`Failed to create matching for batch ${match.batch_id}: ${rpcError.message}`);
+            continue;
+          }
 
-      // Log each matching creation
-      for (const match of data) {
-        await supabase.from('matching_activity_log').insert({
-          match_id: match.id,
-          action_type: 'created',
-          new_value: `${match.heads_matched} heads matched`,
-          performed_by: `${roleName} (${role})`,
-          note: notes || null,
-        });
+          if (!result || result.length === 0 || !result[0].success) {
+            errors.push(`Failed to create matching for batch ${match.batch_id}: ${result?.[0]?.error_message || 'Unknown error'}`);
+            continue;
+          }
+
+          // Fetch the created matching
+          const { data: createdMatching, error: fetchError } = await supabase
+            .from('pool_matches')
+            .select('*')
+            .eq('id', result[0].matching_id)
+            .single();
+
+          if (fetchError) {
+            errors.push(`Failed to fetch created matching ${result[0].matching_id}: ${fetchError.message}`);
+            continue;
+          }
+
+          createdMatchings.push(createdMatching as Matching);
+        } catch (error) {
+          errors.push(`Error creating matching for batch ${match.batch_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
 
-      // ============================================
-      // AUTOMATIC STATUS UPDATES
-      // ============================================
-
-      // Group matches by batch and request for efficient updates
-      const batchIds = [...new Set(matches.map(m => m.batch_id))];
-      const requestIds = [...new Set(matches.map(m => m.request_id))];
-
-      // Fetch current batch data
-      const { data: batches } = await supabase
-        .from('batches')
-        .select('id, status, heads')
-        .in('id', batchIds);
-
-      // Fetch current request data
-      const { data: requests } = await supabase
-        .from('purchase_pool_requests')
-        .select('id, status, required_volume, matched_volume')
-        .in('id', requestIds);
-
-      // Update batches: Confirmed → Matched
-      for (const batch of batches || []) {
-        // Calculate total matched heads for this batch (including new matchings)
-        const matchedHeads = await getBatchMatchedHeads(batch.id);
-        
-        const newStatus = calculateAutomaticBatchStatus(
-          batch.status as any,
-          batch.heads,
-          matchedHeads
-        );
-
-        if (newStatus) {
-          await supabase
-            .from('batches')
-            .update({ status: newStatus })
-            .eq('id', batch.id);
-
-          // Log the automatic transition
-          await supabase.from('activity_log').insert({
-            event_type: 'batch_confirmed' as any, // Using closest type
-            actor_role: 'system',
-            actor_name: 'Automatic Status Update',
-            description: `Batch status automatically changed from ${batch.status} to ${newStatus} due to matching creation`,
-            target_type: 'batch',
-            target_id: batch.id,
-            metadata: { previous_status: batch.status, new_status: newStatus, trigger: 'matching_created' },
+      // If some matchings failed, throw error with details
+      if (errors.length > 0) {
+        if (createdMatchings.length === 0) {
+          // All failed
+          throw new Error(`Failed to create all matchings:\n${errors.join('\n')}`);
+        } else {
+          // Partial success - log warnings but return what was created
+          logger.warn('Some matchings failed to create', undefined, { 
+            action: 'createMatching', 
+            created: createdMatchings.length,
+            failed: errors.length,
+            errors 
           });
         }
       }
 
-      // Update requests: Matching → Partial/Fulfilled
-      for (const request of requests || []) {
-        // Calculate new matched volume
-        const additionalHeads = matches
-          .filter(m => m.request_id === request.id)
-          .reduce((sum, m) => sum + m.heads_matched, 0);
-        
-        const newMatchedVolume = request.matched_volume + additionalHeads;
-        
-        const newStatus = calculateAutomaticRequestStatus(
-          request.status as any,
-          request.required_volume,
-          newMatchedVolume
-        );
-
-        // Always update matched_volume
-        const updateData: any = { matched_volume: newMatchedVolume };
-        if (newStatus) {
-          updateData.status = newStatus;
-        }
-
-        await supabase
-          .from('purchase_pool_requests')
-          .update(updateData)
-          .eq('id', request.id);
-
-        if (newStatus) {
-          // Log the automatic transition
-          await supabase.from('activity_log').insert({
-            event_type: 'pool_request_updated' as any,
-            actor_role: 'system',
-            actor_name: 'Automatic Status Update',
-            description: `Request status automatically changed from ${request.status} to ${newStatus} (${newMatchedVolume}/${request.required_volume} matched)`,
-            target_type: 'pool_request',
-            target_id: request.id,
-            metadata: { previous_status: request.status, new_status: newStatus, trigger: 'matching_created' },
-          });
-        }
-      }
-
-      return data as Matching[];
+      return createdMatchings;
     },
     onSuccess: (data) => {
       toast({
