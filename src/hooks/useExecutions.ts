@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { retryWithBackoff } from '@/lib/retry';
 import { 
   type ExecutionStatus, 
   type ExecutionRole,
@@ -209,22 +210,24 @@ export function useCreateExecution() {
       delivery_period?: 'short_term' | 'mid_term' | 'long_term';
       reference_price_at_match?: number;
     }) => {
-      const { data, error } = await supabase
-        .from('offtake_executions')
-        .insert({
-          match_id: params.match_id,
-          batch_id: params.batch_id,
-          request_id: params.request_id,
-          matched_volume: params.matched_volume,
-          delivery_period: params.delivery_period || 'short_term',
-          reference_price_at_match: params.reference_price_at_match,
-          status: 'matched' as ExecutionStatus,
-        })
-        .select()
-        .single();
+      return retryWithBackoff(async () => {
+        const { data, error } = await supabase
+          .from('offtake_executions')
+          .insert({
+            match_id: params.match_id,
+            batch_id: params.batch_id,
+            request_id: params.request_id,
+            matched_volume: params.matched_volume,
+            delivery_period: params.delivery_period || 'short_term',
+            reference_price_at_match: params.reference_price_at_match,
+            status: 'matched' as ExecutionStatus,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data as OfftakeExecution;
+        if (error) throw error;
+        return data as OfftakeExecution;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['executions'] });

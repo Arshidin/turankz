@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
 import { logger } from '@/lib/logger';
+import { retryWithBackoff } from '@/lib/retry';
 import { useEffect } from 'react';
 import {
   type MatchingLifecycleStatus,

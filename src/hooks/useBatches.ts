@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { retryWithBackoff } from '@/lib/retry';
 import { 
   type BatchLifecycleStatus, 
   isTransitionAllowed, 
@@ -106,15 +107,17 @@ export const useUpdateBatch = () => {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Batch> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('batches')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      return retryWithBackoff(async () => {
+        const { data, error } = await supabase
+          .from('batches')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data as Batch;
+        if (error) throw error;
+        return data as Batch;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
@@ -134,19 +137,21 @@ export const useConfirmBatch = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from('batches')
-        .update({ 
-          status: 'confirmed' as BatchStatus,
-          requires_action: false,
-          action_type: null,
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      return retryWithBackoff(async () => {
+        const { data, error } = await supabase
+          .from('batches')
+          .update({ 
+            status: 'confirmed' as BatchStatus,
+            requires_action: false,
+            action_type: null,
+          })
+          .eq('id', id)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data as Batch;
+        if (error) throw error;
+        return data as Batch;
+      });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
@@ -174,14 +179,16 @@ export const useCreateBatch = () => {
       // Any external status input is ignored and overwritten
       const enforcedBatch = enforceInitialStatus(batch);
       
-      const { data, error } = await supabase
-        .from('batches')
-        .insert(enforcedBatch)
-        .select()
-        .single();
+      return retryWithBackoff(async () => {
+        const { data, error } = await supabase
+          .from('batches')
+          .insert(enforcedBatch)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data as Batch;
+        if (error) throw error;
+        return data as Batch;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
