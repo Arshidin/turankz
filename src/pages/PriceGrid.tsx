@@ -20,9 +20,7 @@ export default function PriceGrid() {
   const { data: activeGrid, isLoading, error } = useActivePriceGrid();
 
   // Handle potential errors gracefully
-  if (error) {
-    console.error('PriceGrid error:', error);
-  }
+  // Errors are handled by React Query's error state and displayed via toast notifications
 
   const getAgeCategoryLabel = (value: string) => 
     AGE_CATEGORIES.find(c => c.value === value)?.label || value;

@@ -74,7 +74,7 @@ export function useAdminOverride() {
         });
 
       if (logError) {
-        console.error('Failed to log override:', logError);
+        logger.error('Failed to log admin override', logError, { action: 'logAdminOverride', overrideType, targetId });
         // Don't throw - the main action succeeded
       }
 
