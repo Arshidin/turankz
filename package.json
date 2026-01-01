@@ -13,7 +13,8 @@
     "docs:build": "vitepress build docs-site",
     "docs:preview": "vitepress preview docs-site",
     "docs:serve": "cd docs-site && python3 -m http.server 8080",
-    "docs:export": "node scripts/export-docs-simple.cjs"
+    "docs:export": "node scripts/export-docs-simple.cjs",
+    "docs:migrate": "node scripts/apply-docs-migration.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
