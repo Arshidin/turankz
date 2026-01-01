@@ -58,13 +58,23 @@ BEGIN
 END;
 $$;
 
--- Create trigger
-DROP TRIGGER IF EXISTS execution_status_validation ON public.offtake_executions;
-CREATE TRIGGER execution_status_validation
-BEFORE UPDATE ON public.offtake_executions
-FOR EACH ROW
-WHEN (OLD.status IS DISTINCT FROM NEW.status)
-EXECUTE FUNCTION public.validate_execution_status_transition();
+-- Create trigger (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'offtake_executions'
+  ) THEN
+    DROP TRIGGER IF EXISTS execution_status_validation ON public.offtake_executions;
+    CREATE TRIGGER execution_status_validation
+    BEFORE UPDATE ON public.offtake_executions
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION public.validate_execution_status_transition();
+  END IF;
+END $$;
 
 -- ============================================================================
 -- MATCHING STATUS TRANSITION VALIDATION
