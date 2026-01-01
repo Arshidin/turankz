@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turan Standard Pool Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        header {
+            background: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        .lang-switcher {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+        .lang-switcher a {
+            color: #0066cc;
+            text-decoration: none;
+            margin-right: 1rem;
+        }
+        .lang-switcher a:hover {
+            text-decoration: underline;
+        }
+        .sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .section-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-card h2 {
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        .section-card ul {
+            list-style: none;
+        }
+        .section-card li {
+            margin-bottom: 0.5rem;
+        }
+        .section-card a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .section-card a:hover {
+            text-decoration: underline;
+        }
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 2rem;
+        }
+        .note strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Turan Standard Pool Documentation</h1>
+            <p class="subtitle">Complete platform documentation - 100% aligned with implementation</p>
+            <div class="lang-switcher">
+                <a href="/en/index.md">English</a>
+                <a href="/ru/index.md">Русский</a>
+            </div>
+        </header>
+
+        <div class="sections">
+            <div class="section-card">
+                <h2>For Farmers</h2>
+                <ul>
+                    <li><a href="/en/farmer-guide/index.md">Farmer Guide</a></li>
+                    <li><a href="/en/roles/index.md">Role & Access Control</a></li>
+                    <li><a href="/en/fsm/index.md">Status Machines</a></li>
+                </ul>
+            </div>
+
+            <div class="section-card">
+                <h2>For MPKs</h2>
+                <ul>
+                    <li><a href="/en/mpk-guide/index.md">MPK Guide</a></li>
+                    <li><a href="/en/roles/index.md">Role & Access Control</a></li>
+                    <li><a href="/en/fsm/index.md">Status Machines</a></li>
+                </ul>
+            </div>
+
+            <div class="section-card">
+                <h2>For Admins</h2>
+                <ul>
+                    <li><a href="/en/admin-guide/index.md">Admin Guide</a></li>
+                    <li><a href="/en/security/index.md">Security Model</a></li>
+                    <li><a href="/en/modules/index.md">System Modules</a></li>
+                </ul>
+            </div>
+
+            <div class="section-card">
+                <h2>Technical Reference</h2>
+                <ul>
+                    <li><a href="/en/business-logic/index.md">Business Logic</a></li>
+                    <li><a href="/en/security/index.md">Data & Security</a></li>
+                    <li><a href="/en/limitations/index.md">Limitations</a></li>
+                    <li><a href="/en/glossary/index.md">Glossary</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="note">
+            <strong>Note:</strong> This is a simple preview. For full documentation site with navigation and search, 
+            install VitePress: <code>npm install -D vitepress</code> then run <code>npm run docs:dev</code>
+        </div>
+    </div>
+</body>
+</html>
+
