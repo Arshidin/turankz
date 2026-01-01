@@ -195,7 +195,7 @@ const adminNavGroups: NavGroup[] = [
       { labelKey: 'nav.nationalHerd', path: '/admin/herd-structure', icon: Beef },
       { labelKey: 'nav.marketIntentOverview', path: '/admin/market-intent', icon: TrendingUp },
       { labelKey: 'nav.activityLog', path: '/admin/activity', icon: Activity },
-      { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen },
+      { labelKey: 'nav.documentation', path: import.meta.env.VITE_DOCS_URL || 'https://turanstandard.kz/docs', icon: BookOpen },
     ],
     collapsible: true,
     defaultOpen: false,
@@ -407,7 +407,8 @@ export function Sidebar() {
                   {group.items.map((item) => {
                     const indicator = getNavItemIndicator(item.path);
                     const tooltipText = getNavItemTooltip(item);
-                    const isExternalLink = item.path.startsWith('/docs') || item.path.startsWith('http');
+                    // Check if this is an external link (starts with http or is documentation)
+                    const isExternalLink = item.path.startsWith('http') || item.path.startsWith('https');
                     
                     return (
                       <li key={item.path}>
