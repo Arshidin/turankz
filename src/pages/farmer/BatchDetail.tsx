@@ -193,6 +193,9 @@ export default function BatchDetail() {
   const statusLockedTooltip = batch ? getLockedFieldTooltip(batch.status) : '';
   const editRules = batch ? getEditRulesForStatus(batch.status) : null;
 
+  // Matching windows for eligibility
+  const { data: matchingWindows } = useMatchingWindows();
+
   // Admin override hooks
   const { data: adminUnlockStatus } = useBatchAdminUnlockStatus(batch?.id || '');
   const { unlockBatch, relockBatch, isAdmin } = useAdminOverride();

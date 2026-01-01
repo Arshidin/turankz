@@ -396,8 +396,9 @@ export default function LivestockBatches() {
                                     onClick={() => handleRowClick(batch.batch_number)}
                                   >
                                     <TableCell className="font-medium">
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2 flex-wrap">
                                         {batch.batch_number}
+                                        <BatchEligibilityBadge batch={batch} windows={matchingWindows} compact />
                                       </div>
                                     </TableCell>
                                     <TableCell>{batch.region}</TableCell>
