@@ -1,0 +1,58 @@
+name: Deploy Documentation to Vercel (Auto)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs-site/**'
+      - '.vitepress/**'
+      - 'package.json'
+      - 'vercel.json'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build documentation
+        run: npm run docs:build
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod --yes'
+          working-directory: ./
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Configure Custom Domain
+        if: success()
+        run: |
+          echo "✅ Документация задеплоена на Vercel!"
+          echo "📝 Для настройки кастомного домена turanstandard.kz/docs:"
+          echo "   1. Перейдите в Vercel Dashboard → Project Settings → Domains"
+          echo "   2. Добавьте домен: turanstandard.kz"
+          echo "   3. Настройте DNS записи согласно инструкциям Vercel"
+          echo "   4. Vercel автоматически настроит SSL сертификат"
+
