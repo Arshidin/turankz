@@ -1,231 +1,392 @@
 /**
  * LANDING PAGE - TURAN Standard Pool
- * 
- * McKinsey-style institutional design:
- * - Enhanced institutional branding
- * - Improved CTA contrast
- * - Flat, minimal icons
+ *
+ * Institutional Infrastructure Design (Blackstone/BRS inspired)
+ *
+ * TSP is INFRASTRUCTURE, not a marketplace.
+ *
+ * Design principles:
+ * - Playfair Display for headings (serif)
+ * - DM Sans for body (sans-serif)
+ * - Dark hero (#0A0A0A)
+ * - Pill buttons for primary CTA
+ * - Sharp corners for cards
+ * - Institutional tone, no promotional language
  */
 
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { 
+import { LandingNav, ParticipantCard, BoundaryList } from '@/components/landing';
+import {
   ArrowRight,
-  TrendingUp,
+  Wheat,
+  Factory,
+  Building2,
+  Handshake,
+  FileText,
+  Scale,
   Shield,
-  BarChart3,
-  Network
 } from 'lucide-react';
 
 export default function Landing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  // Participant data
+  const participants = [
+    {
+      key: 'farmers',
+      icon: Wheat,
+      title: t('landing.participants.farmers.title', 'Фермерам'),
+      subtitle: t('landing.participants.farmers.subtitle', 'Координация поставок'),
+      items: t('landing.participants.farmers.items', { returnObjects: true }) as string[] || [
+        'Заявление о доступности скота',
+        'Формирование обязательств',
+        'Планирование поставок',
+      ],
+      cta: t('landing.participants.farmers.cta', 'Подробнее для фермеров'),
+      href: '/auth',
+    },
+    {
+      key: 'processors',
+      icon: Factory,
+      title: t('landing.participants.processors.title', 'Переработчикам'),
+      subtitle: t('landing.participants.processors.subtitle', 'Координация закупок'),
+      items: t('landing.participants.processors.items', { returnObjects: true }) as string[] || [
+        'Сигнализация потребности',
+        'Участие в пулах',
+        'Управление приёмкой',
+      ],
+      cta: t('landing.participants.processors.cta', 'Подробнее для переработчиков'),
+      href: '/auth',
+    },
+    {
+      key: 'institutions',
+      icon: Building2,
+      title: t('landing.participants.institutions.title', 'Институтам'),
+      subtitle: t('landing.participants.institutions.subtitle', 'Программная поддержка'),
+      items: t('landing.participants.institutions.items', { returnObjects: true }) as string[] || [
+        'Отраслевой анализ',
+        'Нормативное содействие',
+        'Экспертная оценка',
+      ],
+      cta: t('landing.participants.institutions.cta', 'Связаться с нами'),
+      href: '#contact',
+    },
+    {
+      key: 'partners',
+      icon: Handshake,
+      title: t('landing.participants.partners.title', 'Партнёрам'),
+      subtitle: t('landing.participants.partners.subtitle', 'Техническое содействие'),
+      items: t('landing.participants.partners.items', { returnObjects: true }) as string[] || [
+        'Интеграционные возможности',
+        'Аналитические данные',
+        'Операционная поддержка',
+      ],
+      cta: t('landing.participants.partners.cta', 'Партнёрская программа'),
+      href: '#contact',
+    },
+  ];
+
+  // Boundary items
+  const boundaryItems = t('landing.boundaries.items', { returnObjects: true }) as string[] || [
+    'Не является биржей или маркетплейсом',
+    'Не устанавливает и не гарантирует цены',
+    'Не выступает стороной сделок',
+    'Не предоставляет финансовых гарантий',
+    'Не осуществляет торговое посредничество',
+    'Не принимает решений за участников',
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a1628] via-[#0f1b2e] to-[#0a1628] flex flex-col overflow-hidden">
-      {/* Hero Section - Optimized for single viewport */}
-      <main className="flex-1 flex items-center justify-center py-20">
-        <div className="max-w-[1600px] mx-auto px-8 lg:px-16 xl:px-20 w-full">
-          <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-20 items-center">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-6 space-y-8">
-              {/* Brand Header - Aligned with H1 */}
-              <div className="flex items-center gap-4">
-                <div className="w-1 h-8 bg-white/30" />
-                <div>
-                  <div className="font-serif text-2xl lg:text-3xl text-white italic tracking-tight font-normal leading-none">
-                    TURAN
-                  </div>
-                  <div className="text-[9px] lg:text-[10px] tracking-[0.3em] uppercase text-white/50 font-medium leading-none mt-1">
-                    STANDARD POOL
-                  </div>
+    <div className="min-h-screen bg-white">
+      {/* ============================================
+          SECTION 1: DARK HERO
+          ============================================ */}
+      <section className="relative min-h-screen bg-[#0A0A0A] text-white">
+        <LandingNav variant="dark" />
+
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 pb-20 lg:pt-40 lg:pb-32">
+          <div className="max-w-3xl">
+            {/* Brand Mark */}
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-0.5 h-12 bg-white/30" />
+              <div>
+                <div className="font-landing-heading text-2xl lg:text-3xl font-medium tracking-tight">
+                  TURAN
+                </div>
+                <div className="text-[10px] lg:text-[11px] tracking-[0.25em] uppercase text-white/50 font-medium mt-0.5">
+                  STANDARD POOL
                 </div>
               </div>
+            </div>
 
-              {/* Headline */}
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal text-white leading-[1.1] tracking-[-0.02em]">
-                {t('landing.hero.title', 'Координация рынка живого скота')}
-              </h1>
-              
-              {/* Subheadline */}
-              <p className="text-base md:text-lg lg:text-xl text-white/70 font-light leading-[1.6] max-w-xl">
-                {t('landing.hero.subtitle', 'Управляемая платформа для обеспечения предсказуемости, стандартов и круглогодичных поставок для мясной отрасли Казахстана.')}
+            {/* Institutional Statement */}
+            <h1 className="font-landing-heading text-4xl md:text-5xl lg:text-6xl font-semibold text-white leading-[1.15] tracking-tight mb-8">
+              {t('landing.hero.statement', 'Инфраструктура координации рынка живого скота Казахстана, обеспечивающая предсказуемость обязательств и прозрачность операций.')}
+            </h1>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Button
+                onClick={() => navigate('/auth')}
+                className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full h-12 px-8 text-base font-medium transition-all hover:-translate-y-0.5 group"
+              >
+                {t('landing.hero.cta.primary', 'Узнать об участии')}
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button
+                onClick={() => navigate('/auth/login')}
+                variant="outline"
+                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:border-white/50 rounded-full h-12 px-8 text-base font-medium transition-all"
+              >
+                {t('landing.hero.cta.secondary', 'Войти на платформу')}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/40">
+          <div className="w-px h-12 bg-white/20" />
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 2: SYSTEM DEFINITION
+          ============================================ */}
+      <section id="about" className="py-20 lg:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-3xl">
+            {/* Section Label */}
+            <div className="text-xs tracking-[0.2em] uppercase text-gray-400 font-medium mb-4">
+              {t('landing.systemDefinition.label', 'О системе')}
+            </div>
+
+            {/* Title */}
+            <h2 className="font-landing-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-gray-900 leading-tight mb-8">
+              {t('landing.systemDefinition.title', 'Что такое TURAN Standard Pool')}
+            </h2>
+
+            {/* Not Exchange Disclaimer */}
+            <p className="text-xl lg:text-2xl text-gray-900 font-medium mb-6">
+              {t('landing.systemDefinition.notExchange', 'TSP — это не биржа, не маркетплейс и не торговая площадка.')}
+            </p>
+
+            {/* Description */}
+            <p className="text-lg text-gray-600 leading-relaxed mb-6">
+              {t('landing.systemDefinition.description', 'TSP — это инфраструктура координации, позволяющая участникам мясной отрасли заявлять о намерениях, формировать обязательства и планировать поставки в рамках единых стандартов и правил.')}
+            </p>
+
+            {/* Disclaimer */}
+            <p className="text-base text-gray-500 leading-relaxed border-l-2 border-gray-200 pl-4">
+              {t('landing.systemDefinition.disclaimer', 'Система не устанавливает цены, не гарантирует сделки и не выступает стороной коммерческих отношений между участниками.')}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 3: EXPLICIT BOUNDARIES
+          ============================================ */}
+      <section className="py-20 lg:py-28 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
+            {/* Left: Title */}
+            <div>
+              <div className="text-xs tracking-[0.2em] uppercase text-gray-400 font-medium mb-4">
+                {t('landing.boundaries.label', 'Ограничения')}
+              </div>
+              <h2 className="font-landing-heading text-3xl md:text-4xl font-semibold text-gray-900 leading-tight mb-4">
+                {t('landing.boundaries.title', 'Чего TSP не делает')}
+              </h2>
+              <p className="text-lg text-gray-600">
+                {t('landing.boundaries.subtitle', 'Явные границы системы координации')}
+              </p>
+            </div>
+
+            {/* Right: Boundary List */}
+            <div>
+              <BoundaryList items={boundaryItems} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 4: PARTICIPANT PATHWAYS
+          ============================================ */}
+      <section id="participants" className="py-20 lg:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="text-xs tracking-[0.2em] uppercase text-gray-400 font-medium mb-4">
+              {t('landing.participants.label', 'Участники')}
+            </div>
+            <h2 className="font-landing-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-gray-900 leading-tight mb-4">
+              {t('landing.participants.title', 'Для кого создана система')}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {t('landing.participants.subtitle', 'Добровольное участие в координации рынка')}
+            </p>
+          </div>
+
+          {/* Participant Cards Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {participants.map((participant) => (
+              <ParticipantCard
+                key={participant.key}
+                icon={participant.icon}
+                title={participant.title}
+                subtitle={participant.subtitle}
+                items={participant.items}
+                cta={participant.cta}
+                onClick={() => navigate(participant.href)}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 5: GOVERNANCE
+          ============================================ */}
+      <section className="py-20 lg:py-28 bg-[#0A0A0A] text-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left: Content */}
+            <div>
+              <div className="text-xs tracking-[0.2em] uppercase text-white/40 font-medium mb-4">
+                {t('landing.governance.label', 'Управление')}
+              </div>
+              <h2 className="font-landing-heading text-3xl md:text-4xl font-semibold text-white leading-tight mb-6">
+                {t('landing.governance.title', 'Управление и поддержка')}
+              </h2>
+              <p className="text-lg text-white/70 leading-relaxed mb-8">
+                {t('landing.governance.description', 'TSP управляется ассоциационной структурой с участием представителей всех сторон рынка.')}
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Button
-                  onClick={() => navigate('/auth')}
-                  className="bg-white text-[#0a1628] hover:bg-white/95 h-12 px-8 text-sm font-medium tracking-wide rounded-none group transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  {t('landing.hero.getStarted', 'Начать работу')}
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
-                </Button>
-                <Button
-                  onClick={() => navigate('/auth/login')}
-                  variant="outline"
-                  className="border-white/40 bg-white/5 text-white hover:bg-white/10 hover:border-white/60 h-12 px-8 text-sm font-medium tracking-wide rounded-none transition-all duration-200"
-                >
-                  {t('landing.nav.login', 'Войти')}
-                </Button>
-              </div>
-            </div>
-
-            {/* Right Column - Enhanced Editorial Cards Grid with Icons */}
-            <div className="lg:col-span-6 hidden lg:block">
-              <div className="grid grid-cols-2 gap-3">
-                {/* Card 1: Predictability - Spans 2 columns */}
-                <div className="col-span-2 bg-white/5 border border-white/10 p-6 hover:bg-white/8 hover:border-white/15 transition-all duration-300 cursor-default">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm flex-shrink-0">
-                      <TrendingUp className="w-5 h-5 text-white/60 stroke-[1.5]" />
-                    </div>
-                    <div className="space-y-3 flex-1">
-                      <div className="text-[10px] tracking-[0.2em] uppercase text-white/50 font-medium leading-tight">
-                        PLATFORM CAPABILITY
-                      </div>
-                      <h3 className="font-serif text-xl lg:text-2xl text-white italic leading-[1.2] font-normal">
-                        Предсказуемость поставок
-                      </h3>
-                      <p className="text-xs text-white/60 font-light leading-[1.5]">
-                        Круглогодичное планирование через окна сопоставления и целевые недели
-                      </p>
-                    </div>
+              {/* Governance Features */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-none">
+                    <Scale className="w-5 h-5 text-white/60" />
                   </div>
+                  <span className="text-white/80">
+                    {t('landing.governance.regulatory', 'Соответствие нормативным требованиям')}
+                  </span>
                 </div>
-
-                {/* Card 2: Standards */}
-                <div className="bg-white/5 border border-white/10 p-5 hover:bg-white/8 hover:border-white/15 transition-all duration-300 cursor-default">
-                  <div className="space-y-2.5">
-                    <div className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm mb-2">
-                      <Shield className="w-4 h-4 text-white/60 stroke-[1.5]" />
-                    </div>
-                    <div className="text-[9px] tracking-[0.2em] uppercase text-white/50 font-medium leading-tight">
-                      QUALITY SYSTEM
-                    </div>
-                    <h3 className="font-serif text-lg lg:text-xl text-white italic leading-[1.2] font-normal">
-                      Стандарты
-                    </h3>
-                    <p className="text-xs text-white/60 font-light leading-[1.5]">
-                      Единые требования качества и система премий
-                    </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-none">
+                    <Shield className="w-5 h-5 text-white/60" />
                   </div>
-                </div>
-
-                {/* Card 3: Transparency */}
-                <div className="bg-white/5 border border-white/10 p-5 hover:bg-white/8 hover:border-white/15 transition-all duration-300 cursor-default">
-                  <div className="space-y-2.5">
-                    <div className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm mb-2">
-                      <BarChart3 className="w-4 h-4 text-white/60 stroke-[1.5]" />
-                    </div>
-                    <div className="text-[9px] tracking-[0.2em] uppercase text-white/50 font-medium leading-tight">
-                      MARKET INTELLIGENCE
-                    </div>
-                    <h3 className="font-serif text-lg lg:text-xl text-white italic leading-[1.2] font-normal">
-                      Прозрачность
-                    </h3>
-                    <p className="text-xs text-white/60 font-light leading-[1.5]">
-                      Агрегированные сигналы спроса и предложения
-                    </p>
-                  </div>
-                </div>
-
-                {/* Card 4: Coordination - Spans 2 columns */}
-                <div className="col-span-2 bg-white/5 border border-white/10 p-6 hover:bg-white/8 hover:border-white/15 transition-all duration-300 cursor-default">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm flex-shrink-0">
-                      <Network className="w-5 h-5 text-white/60 stroke-[1.5]" />
-                    </div>
-                    <div className="space-y-3 flex-1">
-                      <div className="text-[10px] tracking-[0.2em] uppercase text-white/50 font-medium leading-tight">
-                        GOVERNANCE
-                      </div>
-                      <h3 className="font-serif text-xl lg:text-2xl text-white italic leading-[1.2] font-normal">
-                        Координация
-                      </h3>
-                      <p className="text-xs text-white/60 font-light leading-[1.5]">
-                        Управляемое взаимодействие участников рынка в рамках единых правил
-                      </p>
-                    </div>
-                  </div>
+                  <span className="text-white/80">
+                    {t('landing.governance.transparency', 'Прозрачность правил и процессов')}
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </main>
 
-      {/* Mobile Cards - Optimized with Icons */}
-      <div className="lg:hidden px-8 pb-12">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 bg-white/5 border border-white/10 p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm flex-shrink-0">
-                <TrendingUp className="w-4 h-4 text-white/60 stroke-[1.5]" />
-              </div>
-              <div className="space-y-2.5 flex-1">
-                <div className="text-[9px] tracking-[0.2em] uppercase text-white/50 font-medium leading-tight">
-                  PLATFORM CAPABILITY
+            {/* Right: Association Badge */}
+            <div className="flex justify-center lg:justify-end">
+              <div className="bg-white/5 border border-white/10 rounded-none p-8 lg:p-12 text-center max-w-sm">
+                <div className="text-xs tracking-[0.2em] uppercase text-white/40 font-medium mb-4">
+                  {t('landing.governance.label', 'Управление')}
                 </div>
-                <h3 className="font-serif text-lg text-white italic leading-[1.2] font-normal">
-                  Предсказуемость поставок
-                </h3>
-                <p className="text-xs text-white/60 font-light leading-[1.5]">
-                  Круглогодичное планирование через окна сопоставления
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/5 border border-white/10 p-4">
-            <div className="space-y-2">
-              <div className="w-7 h-7 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm mb-1.5">
-                <Shield className="w-3.5 h-3.5 text-white/60 stroke-[1.5]" />
-              </div>
-              <div className="text-[8px] tracking-[0.15em] uppercase text-white/50 font-medium leading-tight">
-                QUALITY SYSTEM
-              </div>
-              <h3 className="font-serif text-base text-white italic leading-[1.2] font-normal">
-                Стандарты
-              </h3>
-            </div>
-          </div>
-
-          <div className="bg-white/5 border border-white/10 p-4">
-            <div className="space-y-2">
-              <div className="w-7 h-7 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm mb-1.5">
-                <BarChart3 className="w-3.5 h-3.5 text-white/60 stroke-[1.5]" />
-              </div>
-              <div className="text-[8px] tracking-[0.15em] uppercase text-white/50 font-medium leading-tight">
-                MARKET INTELLIGENCE
-              </div>
-              <h3 className="font-serif text-base text-white italic leading-[1.2] font-normal">
-                Прозрачность
-              </h3>
-            </div>
-          </div>
-
-          <div className="col-span-2 bg-white/5 border border-white/10 p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm flex-shrink-0">
-                <Network className="w-4 h-4 text-white/60 stroke-[1.5]" />
-              </div>
-              <div className="space-y-2.5 flex-1">
-                <div className="text-[9px] tracking-[0.2em] uppercase text-white/50 font-medium leading-tight">
-                  GOVERNANCE
-                </div>
-                <h3 className="font-serif text-lg text-white italic leading-[1.2] font-normal">
-                  Координация
-                </h3>
-                <p className="text-xs text-white/60 font-light leading-[1.5]">
-                  Управляемое взаимодействие участников рынка
+                <p className="text-xl lg:text-2xl text-white font-landing-heading font-medium">
+                  {t('landing.governance.association', 'При поддержке отраслевого сообщества')}
                 </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* ============================================
+          SECTION 6: FOOTER
+          ============================================ */}
+      <footer className="py-12 lg:py-16 bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
+            {/* Brand */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-0.5 h-8 bg-white/30" />
+                <div>
+                  <div className="font-landing-heading text-lg font-medium">TURAN</div>
+                  <div className="text-[8px] tracking-[0.2em] uppercase text-white/50">STANDARD POOL</div>
+                </div>
+              </div>
+              <p className="text-sm text-white/50 leading-relaxed">
+                {t('landing.governance.description', 'TSP управляется ассоциационной структурой с участием представителей всех сторон рынка.')}
+              </p>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h4 className="text-sm font-medium text-white mb-4">
+                {t('landing.footer.documentation', 'Документация')}
+              </h4>
+              <ul className="space-y-2">
+                <li>
+                  <a href="/docs" className="text-sm text-white/50 hover:text-white transition-colors">
+                    {t('landing.footer.documentation', 'Документация')}
+                  </a>
+                </li>
+                <li>
+                  <a href="#standards" className="text-sm text-white/50 hover:text-white transition-colors">
+                    {t('landing.footer.standards', 'Стандарты')}
+                  </a>
+                </li>
+                <li>
+                  <a href="#governance" className="text-sm text-white/50 hover:text-white transition-colors">
+                    {t('landing.footer.governance', 'Управление')}
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-sm font-medium text-white mb-4">
+                {t('common.legal', 'Правовая информация')}
+              </h4>
+              <ul className="space-y-2">
+                <li>
+                  <a href="#terms" className="text-sm text-white/50 hover:text-white transition-colors">
+                    {t('landing.footer.terms', 'Условия использования')}
+                  </a>
+                </li>
+                <li>
+                  <a href="#privacy" className="text-sm text-white/50 hover:text-white transition-colors">
+                    {t('landing.footer.privacy', 'Политика конфиденциальности')}
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className="text-sm font-medium text-white mb-4">
+                {t('landing.footer.contact', 'Контакты')}
+              </h4>
+              <ul className="space-y-2">
+                <li className="text-sm text-white/50">
+                  info@turanstandard.kz
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Copyright */}
+          <div className="border-t border-white/10 pt-8">
+            <p className="text-sm text-white/40 text-center">
+              {t('landing.footer.copyright', '© 2025 TURAN Standard Pool. Все права защищены.')}
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

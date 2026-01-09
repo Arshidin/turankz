@@ -16,6 +16,9 @@ export default {
       fontFamily: {
         sans: ['DM Sans', 'system-ui', 'sans-serif'],
         serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+        'landing-heading': ['"Playfair Display"', 'Georgia', 'serif'],
+        'landing-body': ['"DM Sans"', 'system-ui', 'sans-serif'],
+        'landing-mono': ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -115,6 +118,20 @@ export default {
           border: "hsl(var(--landing-border))",
           card: "hsl(var(--landing-card))",
           "card-hover": "hsl(var(--landing-card-hover))",
+        },
+        "landing-v2": {
+          "bg-inverse": "hsl(var(--landing-v2-bg-inverse))",
+          "text-inverse": "hsl(var(--landing-v2-text-inverse))",
+          brand: "hsl(var(--landing-v2-brand))",
+          "brand-hover": "hsl(var(--landing-v2-brand-hover))",
+          "brand-active": "hsl(var(--landing-v2-brand-active))",
+          "bg-light": "hsl(var(--landing-v2-bg-light))",
+          "bg-muted": "hsl(var(--landing-v2-bg-muted))",
+          "text-primary": "hsl(var(--landing-v2-text-primary))",
+          "text-secondary": "hsl(var(--landing-v2-text-secondary))",
+          "text-muted": "hsl(var(--landing-v2-text-muted))",
+          "border-default": "hsl(var(--landing-v2-border-default))",
+          "border-subtle": "hsl(var(--landing-v2-border-subtle))",
         },
       },
       borderRadius: {

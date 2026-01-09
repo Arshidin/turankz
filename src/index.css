@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -20,6 +22,24 @@
     --landing-border: 210 30% 30%;
     --landing-card: 215 40% 18%;
     --landing-card-hover: 215 45% 22%;
+
+    /* ===========================================
+       LANDING V2 - INSTITUTIONAL INFRASTRUCTURE
+       Blackstone/BRS inspired design system
+       =========================================== */
+    --landing-v2-bg-inverse: 0 0% 4%;
+    --landing-v2-text-inverse: 0 0% 100%;
+    --landing-v2-brand: 217 91% 60%;
+    --landing-v2-brand-hover: 217 91% 55%;
+    --landing-v2-brand-active: 217 91% 50%;
+    --landing-v2-bg-light: 210 20% 98%;
+    --landing-v2-bg-muted: 210 20% 96%;
+    --landing-v2-text-primary: 0 0% 9%;
+    --landing-v2-text-secondary: 0 0% 45%;
+    --landing-v2-text-muted: 0 0% 55%;
+    --landing-v2-border-default: 0 0% 90%;
+    --landing-v2-border-subtle: 0 0% 94%;
+
     --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
