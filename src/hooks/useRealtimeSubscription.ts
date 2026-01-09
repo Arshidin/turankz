@@ -137,11 +137,12 @@ export function useRealtimeSubscription<T = Record<string, unknown>>(
     }
 
     // Create and subscribe to channel
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const channel = supabase
       .channel(channelName)
       .on(
-        'postgres_changes',
-        channelConfig,
+        'postgres_changes' as any,
+        channelConfig as any,
         handleChange as (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void
       )
       .subscribe((status) => {

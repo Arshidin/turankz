@@ -565,6 +565,35 @@ describe('getNextPoolRequestStatus', () => {
 // ============================================================================
 // MATCHING WINDOW SUBMISSION VALIDATION
 // ============================================================================
+
+// Helper to create test MatchingWindow objects with all required fields
+const createTestWindow = (overrides: Partial<{
+  id: string;
+  name: string;
+  status: 'upcoming' | 'active' | 'locked' | 'closed';
+  start_date: string;
+  lock_date: string;
+  close_date: string;
+  target_week: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}> = {}) => ({
+  id: 'window-1',
+  name: 'Test Window',
+  status: 'active' as const,
+  start_date: '2025-01-01',
+  lock_date: '2025-01-15',
+  close_date: '2025-01-20',
+  target_week: '2025-W03',
+  notes: null,
+  created_at: '2025-01-01',
+  updated_at: '2025-01-01',
+  created_by: null,
+  ...overrides,
+});
+
 describe('canSubmitPoolRequest', () => {
   it('should return false when no matching window', () => {
     const result = canSubmitPoolRequest(null);
@@ -582,16 +611,12 @@ describe('canSubmitPoolRequest', () => {
     const futureClose = new Date();
     futureClose.setDate(futureClose.getDate() + 60);
 
-    const upcomingWindow = {
-      id: 'window-1',
-      name: 'Test Window',
-      status: 'upcoming' as const,
-      submission_start_date: futureStart.toISOString(),
-      start_date: futureStart.toISOString(), // This is what getEffectiveWindowStatus uses
+    const upcomingWindow = createTestWindow({
+      status: 'upcoming',
+      start_date: futureStart.toISOString(),
       lock_date: futureLock.toISOString(),
       close_date: futureClose.toISOString(),
-      created_at: '2025-01-01',
-    };
+    });
 
     const result = canSubmitPoolRequest(upcomingWindow);
     expect(result.canSubmit).toBe(false);
@@ -601,14 +626,10 @@ describe('canSubmitPoolRequest', () => {
   });
 
   it('should return false for locked window', () => {
-    const lockedWindow = {
-      id: 'window-1',
-      name: 'Test Window',
-      status: 'locked' as const,
-      submission_start_date: '2025-01-01',
+    const lockedWindow = createTestWindow({
+      status: 'locked',
       lock_date: '2025-01-10',
-      created_at: '2025-01-01',
-    };
+    });
 
     const result = canSubmitPoolRequest(lockedWindow);
     expect(result.canSubmit).toBe(false);
@@ -620,15 +641,15 @@ describe('canSubmitPoolRequest', () => {
     // Create window with future lock_date
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 7);
+    const futureCloseDate = new Date();
+    futureCloseDate.setDate(futureCloseDate.getDate() + 14);
 
-    const activeWindow = {
-      id: 'window-1',
-      name: 'Test Window',
-      status: 'active' as const,
-      submission_start_date: '2025-01-01',
+    const activeWindow = createTestWindow({
+      status: 'active',
+      start_date: '2025-01-01',
       lock_date: futureDate.toISOString(),
-      created_at: '2025-01-01',
-    };
+      close_date: futureCloseDate.toISOString(),
+    });
 
     const result = canSubmitPoolRequest(activeWindow);
     expect(result.canSubmit).toBe(true);
@@ -654,14 +675,12 @@ describe('getSubmissionStatusMessage', () => {
   });
 
   it('should return upcoming message for upcoming window', () => {
-    const upcomingWindow = {
-      id: 'window-1',
-      name: 'Test Window',
-      status: 'upcoming' as const,
-      submission_start_date: '2025-02-01',
+    const upcomingWindow = createTestWindow({
+      status: 'upcoming',
+      start_date: '2025-02-01',
       lock_date: '2025-02-15',
-      created_at: '2025-01-01',
-    };
+      close_date: '2025-02-20',
+    });
 
     const result = getSubmissionStatusMessage(upcomingWindow);
     expect(result.urgency).toBe('normal');
@@ -669,14 +688,10 @@ describe('getSubmissionStatusMessage', () => {
   });
 
   it('should return blocked for locked window', () => {
-    const lockedWindow = {
-      id: 'window-1',
-      name: 'Test Window',
-      status: 'locked' as const,
-      submission_start_date: '2025-01-01',
+    const lockedWindow = createTestWindow({
+      status: 'locked',
       lock_date: '2025-01-10',
-      created_at: '2025-01-01',
-    };
+    });
 
     const result = getSubmissionStatusMessage(lockedWindow);
     expect(result.urgency).toBe('blocked');
