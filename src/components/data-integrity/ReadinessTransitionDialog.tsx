@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,20 +11,23 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { StatusBadge, type ReadinessStatus } from '@/components/ui/StatusBadge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EditHelperNote } from './EditHelperNote';
 import { requiresReadinessConfirmation } from '@/lib/change-constraints';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+import type { BatchLifecycleStatus } from '@/lib/batch-lifecycle';
 
 interface ReadinessTransitionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   batchNumber: string;
-  currentStatus: ReadinessStatus;
-  onConfirm: (newStatus: ReadinessStatus, reason?: string) => void;
+  currentStatus: BatchLifecycleStatus;
+  onConfirm: (newStatus: BatchLifecycleStatus, reason?: string) => void;
 }
 
-const STATUS_ORDER: ReadinessStatus[] = ['forecast', 'soft_committed', 'confirmed'];
+// FSM v2: Simplified status order (draft is not selectable here)
+const SELECTABLE_STATUSES: BatchLifecycleStatus[] = ['available', 'committed', 'completed'];
 
 /**
  * Dialog for changing batch readiness status
@@ -37,28 +40,29 @@ export function ReadinessTransitionDialog({
   currentStatus,
   onConfirm,
 }: ReadinessTransitionDialogProps) {
-  const [selectedStatus, setSelectedStatus] = useState<ReadinessStatus | null>(null);
+  const { t } = useTranslation();
+  const [selectedStatus, setSelectedStatus] = useState<BatchLifecycleStatus | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
-  const currentIndex = STATUS_ORDER.indexOf(currentStatus as ReadinessStatus);
-  const isDowngrade = selectedStatus 
-    ? STATUS_ORDER.indexOf(selectedStatus) < currentIndex 
+  const currentIndex = SELECTABLE_STATUSES.indexOf(currentStatus);
+  const isDowngrade = selectedStatus
+    ? SELECTABLE_STATUSES.indexOf(selectedStatus) < currentIndex
     : false;
-  const needsConfirmation = selectedStatus 
-    ? requiresReadinessConfirmation(currentStatus, selectedStatus) 
+  const needsConfirmation = selectedStatus
+    ? requiresReadinessConfirmation(currentStatus, selectedStatus)
     : false;
 
-  const handleStatusSelect = (status: ReadinessStatus) => {
+  const handleStatusSelect = (status: BatchLifecycleStatus) => {
     setSelectedStatus(status);
     setError('');
   };
 
   const handleConfirm = () => {
     if (!selectedStatus) return;
-    
+
     if (needsConfirmation && !reason.trim()) {
-      setError('Please provide a reason for downgrading status.');
+      setError(t('statusTransition.reasonRequired', 'Please provide a reason for downgrading status.'));
       return;
     }
 
@@ -77,25 +81,25 @@ export function ReadinessTransitionDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update Readiness Status</DialogTitle>
+          <DialogTitle>{t('statusTransition.title', 'Update Status')}</DialogTitle>
           <DialogDescription>
-            Change the readiness status for {batchNumber}
+            {t('statusTransition.description', 'Change the status for {{batch}}', { batch: batchNumber })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Current status */}
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground w-20">Current:</span>
+            <span className="text-sm text-muted-foreground w-20">{t('statusTransition.current', 'Current')}:</span>
             <StatusBadge status={currentStatus} />
           </div>
 
           {/* Status options */}
           <div className="space-y-2">
-            <Label>Select new status:</Label>
+            <Label>{t('statusTransition.selectNew', 'Select new status')}:</Label>
             <div className="grid grid-cols-3 gap-2">
-              {STATUS_ORDER.map((status) => {
-                const index = STATUS_ORDER.indexOf(status);
+              {SELECTABLE_STATUSES.map((status) => {
+                const index = SELECTABLE_STATUSES.indexOf(status);
                 const isSelected = selectedStatus === status;
                 const isCurrent = status === currentStatus;
                 const isUpgrade = index > currentIndex;
@@ -116,13 +120,13 @@ export function ReadinessTransitionDialog({
                   >
                     <StatusBadge status={status} size="sm" />
                     {isCurrent && (
-                      <span className="text-[10px] text-muted-foreground">Current</span>
+                      <span className="text-[10px] text-muted-foreground">{t('statusTransition.currentLabel', 'Current')}</span>
                     )}
                     {isUpgrade && !isCurrent && (
-                      <span className="text-[10px] text-status-confirmed">Upgrade</span>
+                      <span className="text-[10px] text-status-confirmed">{t('statusTransition.upgrade', 'Upgrade')}</span>
                     )}
                     {isDowngradeOption && !isCurrent && (
-                      <span className="text-[10px] text-signal-warning">Downgrade</span>
+                      <span className="text-[10px] text-signal-warning">{t('statusTransition.downgrade', 'Downgrade')}</span>
                     )}
                   </button>
                 );
@@ -143,7 +147,7 @@ export function ReadinessTransitionDialog({
           {isDowngrade && (
             <EditHelperNote
               variant="warning"
-              message="Downgrading from Confirmed status will be logged for Admin review."
+              message={t('statusTransition.downgradeWarning', 'Downgrading from Committed status will be logged for Admin review.')}
             />
           )}
 
@@ -151,11 +155,11 @@ export function ReadinessTransitionDialog({
           {needsConfirmation && (
             <div className="space-y-2">
               <Label htmlFor="downgrade-reason">
-                Reason for downgrade <span className="text-destructive">*</span>
+                {t('statusTransition.reasonLabel', 'Reason for downgrade')} <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 id="downgrade-reason"
-                placeholder="Briefly explain why you need to downgrade this batch..."
+                placeholder={t('statusTransition.reasonPlaceholder', 'Briefly explain why you need to downgrade this batch...')}
                 value={reason}
                 onChange={(e) => {
                   setReason(e.target.value);
@@ -171,10 +175,10 @@ export function ReadinessTransitionDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedStatus}>
-            {needsConfirmation ? 'Confirm Downgrade' : 'Update Status'}
+            {needsConfirmation ? t('statusTransition.confirmDowngrade', 'Confirm Downgrade') : t('statusTransition.updateStatus', 'Update Status')}
           </Button>
         </DialogFooter>
       </DialogContent>

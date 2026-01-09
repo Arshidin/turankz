@@ -125,6 +125,36 @@ export const ru = {
     },
   },
 
+  // Sprint 3: Status transition dialog
+  statusTransition: {
+    title: 'Изменить статус',
+    description: 'Изменить статус для {{batch}}',
+    current: 'Текущий',
+    currentLabel: 'Текущий',
+    selectNew: 'Выберите новый статус',
+    upgrade: 'Повысить',
+    downgrade: 'Понизить',
+    downgradeWarning: 'Понижение статуса с Committed будет записано для проверки администратором.',
+    reasonLabel: 'Причина понижения',
+    reasonPlaceholder: 'Кратко объясните, почему вам нужно понизить статус партии...',
+    reasonRequired: 'Укажите причину понижения статуса.',
+    confirmDowngrade: 'Подтвердить понижение',
+    updateStatus: 'Обновить статус',
+  },
+
+  // Sprint 3: Committed batch edit dialog
+  committedEditDialog: {
+    title: 'Подтвердить редактирование',
+    description: 'Изменение деталей партии после подтверждения может повлиять на приоритет сопоставления.',
+    warning: 'Ваша партия уже была отправлена покупателям. Частые изменения могут снизить доверие и понизить ваш приоритет в пуле сопоставления.',
+    proceed: 'Продолжить редактирование',
+  },
+
+  // Sprint 3: Inline confirmation
+  inlineConfirmation: {
+    confirm: 'Подтвердить',
+  },
+
   firstActionPrompt: {
     farmer: {
       title: 'Начните работу с платформой',

@@ -127,6 +127,36 @@ export const en = {
     },
   },
 
+  // Sprint 3: Status transition dialog
+  statusTransition: {
+    title: 'Update Status',
+    description: 'Change the status for {{batch}}',
+    current: 'Current',
+    currentLabel: 'Current',
+    selectNew: 'Select new status',
+    upgrade: 'Upgrade',
+    downgrade: 'Downgrade',
+    downgradeWarning: 'Downgrading from Committed status will be logged for Admin review.',
+    reasonLabel: 'Reason for downgrade',
+    reasonPlaceholder: 'Briefly explain why you need to downgrade this batch...',
+    reasonRequired: 'Please provide a reason for downgrading status.',
+    confirmDowngrade: 'Confirm Downgrade',
+    updateStatus: 'Update Status',
+  },
+
+  // Sprint 3: Committed batch edit dialog
+  committedEditDialog: {
+    title: 'Confirm Edit',
+    description: 'Changing batch details after commitment may affect matching priority.',
+    warning: 'Your batch has already been signaled to buyers. Frequent changes can reduce trust and lower your priority in the matching pool.',
+    proceed: 'Proceed with Edit',
+  },
+
+  // Sprint 3: Inline confirmation
+  inlineConfirmation: {
+    confirm: 'Confirm',
+  },
+
   firstActionPrompt: {
     farmer: {
       title: 'Get Started with the Platform',

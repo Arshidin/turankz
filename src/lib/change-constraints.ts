@@ -50,7 +50,7 @@ export const SENSITIVE_CHANGE_LABELS: Record<SensitiveChangeType, string> = {
 export const SENSITIVE_CHANGE_WARNINGS: Record<SensitiveChangeType, string> = {
   quantity_reduction: 'Reducing quantity may affect active pool matching.',
   month_delay: 'Moving to a later month may reduce matching priority.',
-  readiness_downgrade: 'Downgrading from Confirmed status will be logged for review.',
+  readiness_downgrade: 'Downgrading from Committed status will be logged for review.',
   volume_change: 'Changing volume after matching has begun may delay fulfillment.',
   region_change: 'Changing regions may reset matching progress.',
   target_week_change: 'Changing target week may affect matching availability.',
@@ -77,17 +77,37 @@ export const EDIT_HELPER_MESSAGES = {
 
 /**
  * Readiness transition rules
+ *
+ * FSM v2 (Sprint 1): Simplified statuses
+ * - draft → available → committed → completed
+ *
+ * Legacy statuses mapped:
+ * - forecast, soft_committed → available
+ * - confirmed → committed
+ * - matched, closed → completed
  */
 export const READINESS_TRANSITIONS = {
-  // Always allowed transitions (no confirmation needed)
+  // Always allowed transitions (no confirmation needed) - FSM v2
   allowed: [
+    { from: 'draft', to: 'available' },
+    { from: 'available', to: 'committed' },
+    { from: 'committed', to: 'completed' },
+    // Skip transitions
+    { from: 'draft', to: 'committed' },
+    { from: 'available', to: 'completed' },
+    // Legacy (for backwards compatibility during migration)
     { from: 'forecast', to: 'soft_committed' },
     { from: 'soft_committed', to: 'confirmed' },
     { from: 'forecast', to: 'confirmed' },
   ],
-  
-  // Transitions requiring confirmation
+
+  // Transitions requiring confirmation - downgrades
   requiresConfirmation: [
+    // FSM v2 downgrades
+    { from: 'committed', to: 'available' },
+    { from: 'completed', to: 'committed' },
+    { from: 'completed', to: 'available' },
+    // Legacy downgrades (for backwards compatibility)
     { from: 'confirmed', to: 'soft_committed' },
     { from: 'confirmed', to: 'forecast' },
     { from: 'soft_committed', to: 'forecast' },
