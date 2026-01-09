@@ -24,21 +24,50 @@ export const BATCH_STATUSES = [
 
 export type BatchLifecycleStatus = typeof BATCH_STATUSES[number];
 
+// Database batch status type (from Supabase) - includes legacy statuses
+// This matches the batch_status enum in the database
+export type DatabaseBatchStatus =
+  | 'draft'
+  | 'forecast'
+  | 'soft_committed'
+  | 'confirmed'
+  | 'matched'
+  | 'closed'
+  | 'delivered';
+
+// Union type for any batch status (new or legacy)
+export type AnyBatchStatus = BatchLifecycleStatus | DatabaseBatchStatus;
+
 // Legacy status mapping for migration and backward compatibility
-export const LEGACY_STATUS_MAP: Record<string, BatchLifecycleStatus> = {
+export const LEGACY_STATUS_MAP: Record<DatabaseBatchStatus, BatchLifecycleStatus> = {
   'draft': 'draft',
   'forecast': 'available',
   'soft_committed': 'available',
   'confirmed': 'committed',
   'matched': 'completed',
   'closed': 'completed',
+  'delivered': 'completed',
 };
 
 /**
- * Map legacy status to new status (for migration)
+ * Map any batch status (legacy or new) to the new FSM v2 status
+ * Safe to call with any status from database
  */
-export function mapLegacyStatus(legacyStatus: string): BatchLifecycleStatus {
-  return LEGACY_STATUS_MAP[legacyStatus] || 'draft';
+export function mapLegacyStatus(status: string): BatchLifecycleStatus {
+  // If it's already a new status, return as-is
+  if (BATCH_STATUSES.includes(status as BatchLifecycleStatus)) {
+    return status as BatchLifecycleStatus;
+  }
+  // Map legacy status
+  return LEGACY_STATUS_MAP[status as DatabaseBatchStatus] || 'draft';
+}
+
+/**
+ * Normalize any batch status to FSM v2
+ * Alias for mapLegacyStatus for clearer API
+ */
+export function normalizeStatus(status: AnyBatchStatus): BatchLifecycleStatus {
+  return mapLegacyStatus(status);
 }
 
 /**
