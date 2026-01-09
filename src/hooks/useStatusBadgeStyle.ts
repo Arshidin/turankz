@@ -39,8 +39,14 @@ import {
 
 export type StatusType = 'batch' | 'pool' | 'matching' | 'execution' | 'grading';
 
-// Batch lifecycle statuses
-export type BatchStatus = 'draft' | 'forecast' | 'soft_committed' | 'confirmed' | 'matched' | 'closed';
+// Batch lifecycle statuses (simplified FSM v2)
+export type BatchStatus = 'draft' | 'available' | 'committed' | 'completed';
+
+// Legacy batch statuses for backward compatibility
+export type LegacyBatchStatus = 'forecast' | 'soft_committed' | 'confirmed' | 'matched' | 'closed';
+
+// Combined type for migration period
+export type AnyBatchStatus = BatchStatus | LegacyBatchStatus;
 
 // Pool request lifecycle statuses
 export type PoolStatus = 'draft' | 'submitted' | 'matching' | 'partial' | 'fulfilled' | 'closed' | 'cancelled';
@@ -72,6 +78,7 @@ export interface StatusStyle {
 // BATCH STATUS STYLES
 // ============================================
 
+// New simplified batch status styles (FSM v2)
 const BATCH_STATUS_STYLES: Record<BatchStatus, Omit<StatusStyle, 'className'>> = {
   draft: {
     color: 'hsl(var(--pool-draft))',
@@ -81,46 +88,39 @@ const BATCH_STATUS_STYLES: Record<BatchStatus, Omit<StatusStyle, 'className'>> =
     label: 'Draft',
     labelRu: 'Черновик',
   },
-  forecast: {
+  available: {
     color: 'hsl(200 65% 50%)',
     bgColor: 'hsl(200 65% 95%)',
     borderColor: 'hsl(200 65% 50% / 0.25)',
     icon: Eye,
-    label: 'Forecast',
-    labelRu: 'Прогноз',
+    label: 'Available',
+    labelRu: 'Доступно',
   },
-  soft_committed: {
-    color: 'hsl(38 80% 50%)',
-    bgColor: 'hsl(38 80% 95%)',
-    borderColor: 'hsl(38 80% 50% / 0.25)',
-    icon: AlertCircle,
-    label: 'Soft Committed',
-    labelRu: 'Предварительно',
-  },
-  confirmed: {
+  committed: {
     color: 'hsl(280 50% 50%)',
     bgColor: 'hsl(280 50% 95%)',
     borderColor: 'hsl(280 50% 50% / 0.25)',
     icon: CheckCircle,
-    label: 'Confirmed',
+    label: 'Committed',
     labelRu: 'Подтверждено',
   },
-  matched: {
+  completed: {
     color: 'hsl(150 50% 40%)',
     bgColor: 'hsl(150 50% 95%)',
     borderColor: 'hsl(150 50% 40% / 0.25)',
     icon: Link2,
-    label: 'Matched',
-    labelRu: 'Сопоставлено',
+    label: 'Completed',
+    labelRu: 'Завершено',
   },
-  closed: {
-    color: 'hsl(215 15% 50%)',
-    bgColor: 'hsl(215 15% 95%)',
-    borderColor: 'hsl(215 15% 50% / 0.15)',
-    icon: XCircle,
-    label: 'Closed',
-    labelRu: 'Закрыто',
-  },
+};
+
+// Legacy batch status styles for backward compatibility during migration
+const LEGACY_BATCH_STATUS_STYLES: Record<LegacyBatchStatus, Omit<StatusStyle, 'className'>> = {
+  forecast: BATCH_STATUS_STYLES.available,
+  soft_committed: BATCH_STATUS_STYLES.available,
+  confirmed: BATCH_STATUS_STYLES.committed,
+  matched: BATCH_STATUS_STYLES.completed,
+  closed: BATCH_STATUS_STYLES.completed,
 };
 
 // ============================================
@@ -334,10 +334,21 @@ export function useStatusBadgeStyle(type: StatusType, status: AnyStatus): Status
   let className: string;
 
   switch (type) {
-    case 'batch':
-      baseStyle = BATCH_STATUS_STYLES[status as BatchStatus] || BATCH_STATUS_STYLES.draft;
+    case 'batch': {
+      // Check for new status first, then fall back to legacy
+      const batchStatus = status as BatchStatus;
+      const legacyStatus = status as LegacyBatchStatus;
+
+      if (BATCH_STATUS_STYLES[batchStatus]) {
+        baseStyle = BATCH_STATUS_STYLES[batchStatus];
+      } else if (LEGACY_BATCH_STATUS_STYLES[legacyStatus]) {
+        baseStyle = LEGACY_BATCH_STATUS_STYLES[legacyStatus];
+      } else {
+        baseStyle = BATCH_STATUS_STYLES.draft;
+      }
       className = `status-${status}`;
       break;
+    }
     case 'pool':
       baseStyle = POOL_STATUS_STYLES[status as PoolStatus] || POOL_STATUS_STYLES.draft;
       className = `pool-${status}`;

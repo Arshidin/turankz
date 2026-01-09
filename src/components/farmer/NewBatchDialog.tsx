@@ -34,7 +34,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { useCreateBatch } from '@/hooks/useBatches';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useCanCreateBatches } from '@/hooks/useCurrentFarmer';
+import { useCanCreateBatches, useIsObserver } from '@/hooks/useCurrentFarmer';
 import { Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
 import { LIVESTOCK_BREEDS, LIVESTOCK_GENDERS, AGE_RANGE, WEIGHT_RANGE } from '@/lib/livestock-criteria';
 import { INITIAL_BATCH_STATUS, getBatchCreationInfo, BATCH_STATUS_LABELS } from '@/lib/batch-lifecycle';
@@ -126,9 +126,11 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
   const createBatch = useCreateBatch();
   const { user } = useAuthContext();
   const canCreateBatches = useCanCreateBatches();
+  const { isObserver } = useIsObserver();
   const weekOptions = getTargetWeekOptions(t);
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 2; // Simplified: 2 steps instead of 3
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
   // Get current language for lifecycle info (legacy function)
   const getCurrentLang = (): 'en' | 'ru' => {
@@ -211,15 +213,15 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
   const validateStep = async (step: number): Promise<boolean> => {
     const values = form.getValues();
     let schema: z.ZodSchema;
-    
+
     if (step === 1) {
+      // Step 1 now includes basic info + optional advanced options
       schema = step1Schema;
-    } else if (step === 2) {
-      schema = step2Schema;
     } else {
+      // Step 2: livestock characteristics (all optional)
       schema = step3Schema;
     }
-    
+
     const result = await schema.safeParseAsync(values);
     if (!result.success) {
       // Set errors for current step fields
@@ -290,17 +292,15 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
     });
   };
 
-  // Step titles and descriptions with i18n
+  // Step titles and descriptions with i18n (simplified to 2 steps)
   const stepTitles = {
-    1: t('newBatchDialog.steps.basicInfo'),
-    2: t('newBatchDialog.steps.additionalInfo'),
-    3: t('newBatchDialog.steps.livestockCharacteristics'),
+    1: t('newBatchDialog.steps.basicInfo', 'Basic Information'),
+    2: t('newBatchDialog.steps.livestockCharacteristics', 'Livestock Characteristics (Optional)'),
   };
 
   const stepDescriptions = {
-    1: t('newBatchDialog.stepDescriptions.basicInfo'),
-    2: t('newBatchDialog.stepDescriptions.additionalInfo'),
-    3: t('newBatchDialog.stepDescriptions.livestockCharacteristics'),
+    1: t('newBatchDialog.stepDescriptions.basicInfo', 'Required batch information'),
+    2: t('newBatchDialog.stepDescriptions.livestockCharacteristics', 'Optional details about your livestock. You can skip this step.'),
   };
 
   return (
@@ -324,7 +324,18 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
           <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
         </div>
 
-        {/* Observer Restriction Alert */}
+        {/* Observer Info Alert - they can create drafts but not publish */}
+        {isObserver && canCreateBatches && (
+          <Alert className="border-amber-500/30 bg-amber-500/5 flex-shrink-0">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-sm">
+              <span className="font-medium">{t('newBatchDialog.observerMode', 'Observer Mode')}</span>{' '}
+              {t('newBatchDialog.observerModeMessage', 'You can create draft batches. Activate your account to publish them to the market.')}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Full Restriction Alert - cannot create at all */}
         {!canCreateBatches && (
           <Alert variant="destructive" className="flex-shrink-0">
             <AlertTriangle className="h-4 w-4" />
@@ -513,100 +524,105 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
                       )}
                     />
                   </div>
-                </div>
-              )}
 
-              {/* Step 2: Additional Information */}
-              {currentStep === 2 && (
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="avg_weight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          {t('newBatchDialog.fields.avgWeight')}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs">
-                                  {t('newBatchDialog.fields.avgWeightTooltip')}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder={t('newBatchDialog.fields.avgWeightPlaceholder')} 
-                            {...field}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : '')}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs">
-                          {t('newBatchDialog.fields.avgWeightOptional')}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="delivery_period"
-                    render={({ field }) => (
-                      <DeliveryPeriodSelect
-                        value={field.value}
-                        onChange={field.onChange}
-                        description={t('newBatchDialog.fields.deliveryPeriodDescription')}
+                  {/* Advanced Options (collapsed by default) */}
+                  <Separator className="my-4" />
+                  <details className="group" open={showAdvancedOptions} onToggle={(e) => setShowAdvancedOptions((e.target as HTMLDetailsElement).open)}>
+                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 select-none">
+                      <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+                      {t('newBatchDialog.advancedOptions', 'Advanced Options (Optional)')}
+                    </summary>
+                    <div className="mt-3 space-y-4 pl-6">
+                      <FormField
+                        control={form.control}
+                        name="avg_weight"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1">
+                              {t('newBatchDialog.fields.avgWeight')}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      {t('newBatchDialog.fields.avgWeightTooltip')}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder={t('newBatchDialog.fields.avgWeightPlaceholder')}
+                                {...field}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : '')}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              {t('newBatchDialog.fields.avgWeightOptional')}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    )}
-                  />
 
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          {t('newBatchDialog.fields.notes')}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs">
-                                  {t('newBatchDialog.fields.notesTooltip')}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder={t('newBatchDialog.fields.notesPlaceholder')}
-                            className="resize-none"
-                            rows={3}
-                            {...field}
+                      <FormField
+                        control={form.control}
+                        name="delivery_period"
+                        render={({ field }) => (
+                          <DeliveryPeriodSelect
+                            value={field.value}
+                            onChange={field.onChange}
+                            description={t('newBatchDialog.fields.deliveryPeriodDescription')}
                           />
-                        </FormControl>
-                        <FormDescription className="text-xs">
-                          {t('newBatchDialog.fields.notesOptional')}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1">
+                              {t('newBatchDialog.fields.notes')}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      {t('newBatchDialog.fields.notesTooltip')}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder={t('newBatchDialog.fields.notesPlaceholder')}
+                                className="resize-none"
+                                rows={3}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              {t('newBatchDialog.fields.notesOptional')}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </details>
                 </div>
               )}
 
-              {/* Step 3: Livestock Characteristics */}
-              {currentStep === 3 && (
+              {/* Step 2: Livestock Characteristics (Optional) - moved from Step 3 */}
+              {currentStep === 2 && (
                 <div className="space-y-4">
                   <Alert className="border-blue-500/30 bg-blue-500/5">
                     <Info className="h-4 w-4 text-blue-600" />
@@ -822,35 +838,46 @@ export function NewBatchDialog({ open, onOpenChange, prefilledData }: NewBatchDi
             <div className="flex-shrink-0 flex justify-between gap-3 pt-4 border-t mt-4">
               <div className="flex gap-2">
                 {currentStep > 1 && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={handleBack}
                   >
                     <ChevronLeft className="w-4 h-4 mr-2" />
                     {t('newBatchDialog.buttons.back')}
                   </Button>
                 )}
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => handleOpenChange(false)}
                 >
                   {t('newBatchDialog.buttons.cancel')}
                 </Button>
               </div>
               <div className="flex gap-2">
-                {currentStep < totalSteps ? (
-                  <Button 
-                    type="button" 
-                    onClick={handleNext}
-                  >
-                    {t('newBatchDialog.buttons.next')}
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
+                {currentStep === 1 ? (
+                  <>
+                    {/* Option to skip characteristics step */}
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={createBatch.isPending || !canCreateBatches}
+                    >
+                      {createBatch.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {t('newBatchDialog.buttons.createBasic', 'Create (Basic)')}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleNext}
+                    >
+                      {t('newBatchDialog.buttons.addCharacteristics', 'Add Characteristics')}
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </>
                 ) : (
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={createBatch.isPending || !canCreateBatches}
                   >
                     {createBatch.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

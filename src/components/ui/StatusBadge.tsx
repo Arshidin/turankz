@@ -1,23 +1,28 @@
 import { cn } from '@/lib/utils';
-import { type BatchLifecycleStatus } from '@/lib/batch-lifecycle';
-import { useStatusBadgeStyle, getStatusLabel, type BatchStatus } from '@/hooks/useStatusBadgeStyle';
+import { type BatchLifecycleStatus, mapLegacyStatus } from '@/lib/batch-lifecycle';
+import { useStatusBadgeStyle, getStatusLabel, type BatchStatus, type AnyBatchStatus } from '@/hooks/useStatusBadgeStyle';
 
 /* ===========================================
    BATCH LIFECYCLE STATUS BADGE
    Primary status indicator across platform
    Now uses centralized useStatusBadgeStyle hook
+
+   Supports both new FSM v2 (4 statuses) and legacy v1 (6 statuses)
    =========================================== */
 
 // Accept both database format (underscore) and display format (hyphen)
-// Also includes legacy 'delivered' for backwards compatibility
-export type ReadinessStatus = BatchLifecycleStatus | 'soft-committed' | 'delivered';
+// Includes legacy statuses for backwards compatibility
+export type ReadinessStatus =
+  | BatchLifecycleStatus
+  | 'forecast' | 'soft_committed' | 'confirmed' | 'matched' | 'closed'  // Legacy v1
+  | 'soft-committed' | 'delivered';  // Alternative formats
 
-const normalizeStatus = (status: ReadinessStatus): BatchStatus => {
+const normalizeStatus = (status: ReadinessStatus): AnyBatchStatus => {
   // Normalize to underscore format for class lookup
   const normalized = status.replace('-', '_') as string;
-  // Map legacy 'delivered' to 'closed'
-  if (normalized === 'delivered') return 'closed';
-  return normalized as BatchStatus;
+  // Map legacy 'delivered' to 'completed'
+  if (normalized === 'delivered') return 'completed';
+  return normalized as AnyBatchStatus;
 };
 
 // Get current language from localStorage or default to 'ru'

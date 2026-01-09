@@ -111,13 +111,14 @@ export interface NavPermission {
 
 export const FARMER_NAV_PERMISSIONS: NavPermission[] = [
   { path: '/', requiredStatus: ['observer', 'active'], readOnly: false },
-  { path: '/farmer/batches', requiredStatus: ['active'] },
-  { path: '/farmer/batch', requiredStatus: ['active'] }, // Batch detail pages
+  // Observers can access batches to create drafts (but cannot publish)
+  { path: '/farmer/batches', requiredStatus: ['observer', 'active'] },
+  { path: '/farmer/batch', requiredStatus: ['observer', 'active'] }, // Batch detail pages
   { path: '/farmer/calendar', requiredStatus: ['active'] },
   { path: '/farmer/executions', requiredStatus: ['active'] },
   { path: '/price-grid', requiredStatus: ['observer', 'active'], readOnly: true },
   { path: '/market-workflow', requiredStatus: ['observer', 'active'], readOnly: true },
-  { path: '/farmer/profile', requiredStatus: ['active'] },
+  { path: '/farmer/profile', requiredStatus: ['observer', 'active'] },
 ];
 
 export const MPK_NAV_PERMISSIONS: NavPermission[] = [

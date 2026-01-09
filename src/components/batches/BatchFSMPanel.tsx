@@ -71,21 +71,17 @@ interface BatchFSMPanelProps {
   matchingWindow?: MatchingWindow | null;
 }
 
-// Simple status descriptions for farmers
+// Simple status descriptions for farmers (simplified FSM v2)
 const getSimpleStatusDescription = (status: BatchLifecycleStatus, lang: 'ru' | 'en'): string => {
   if (lang === 'ru') {
     switch (status) {
       case 'draft':
         return 'Черновик — партия создана, но ещё не опубликована';
-      case 'forecast':
-        return 'Прогноз — партия опубликована и видна покупателям';
-      case 'soft_committed':
-        return 'Предварительно — вы подтвердили готовность к поставке';
-      case 'confirmed':
-        return 'Подтверждено — партия готова к сопоставлению';
-      case 'matched':
-        return 'Сопоставлено — партия найдена покупателю';
-      case 'closed':
+      case 'available':
+        return 'Доступно — партия опубликована и видна покупателям';
+      case 'committed':
+        return 'Подтверждено — твёрдое обязательство, готово к сопоставлению';
+      case 'completed':
         return 'Завершено — партия доставлена и оплачена';
       default:
         return BATCH_STATUS_DESCRIPTIONS[status];
@@ -94,16 +90,12 @@ const getSimpleStatusDescription = (status: BatchLifecycleStatus, lang: 'ru' | '
     switch (status) {
       case 'draft':
         return 'Draft — batch created but not yet published';
-      case 'forecast':
-        return 'Forecast — batch is published and visible to buyers';
-      case 'soft_committed':
-        return 'Soft Committed — you confirmed readiness to deliver';
-      case 'confirmed':
-        return 'Confirmed — batch is ready for matching';
-      case 'matched':
-        return 'Matched — batch found a buyer';
-      case 'closed':
-        return 'Closed — batch delivered and paid';
+      case 'available':
+        return 'Available — batch is published and visible to buyers';
+      case 'committed':
+        return 'Committed — firm commitment, ready for matching';
+      case 'completed':
+        return 'Completed — batch delivered and paid';
       default:
         return BATCH_STATUS_DESCRIPTIONS[status];
     }
@@ -347,7 +339,7 @@ export function BatchFSMPanel({
                 const isCurrent = status === currentStatus;
                 const isFuture = index > currentIndex;
                 const isLocked = isBatchReadOnly(status);
-                const isAdminOnly = status === 'matched' || status === 'closed';
+                const isAdminOnly = status === 'completed';
                 const lang = localStorage.getItem('i18nextLng')?.startsWith('ru') ? 'ru' : 'en';
                 
                 // Determine tooltip content
@@ -454,7 +446,7 @@ export function BatchFSMPanel({
                   <Button
                     key={toStatus}
                     className="w-full justify-between"
-                    variant={toStatus === 'confirmed' ? 'default' : 'outline'}
+                    variant={toStatus === 'committed' ? 'default' : 'outline'}
                     onClick={() => handleTransitionClick(toStatus)}
                     disabled={isTransitioning}
                   >

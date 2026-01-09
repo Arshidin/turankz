@@ -99,12 +99,13 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
     ],
   },
-  // MARKET OPERATIONS: Binding actions - batches are the gateway to matching (active only)
+  // MARKET OPERATIONS: Binding actions - batches are the gateway to matching
+  // Observers can access batches to create drafts (but cannot publish until activated)
   {
     key: 'market-operations',
     labelKey: 'nav.groups.marketOperations',
     items: [
-      { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['active'] },
+      { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['observer', 'active'] },
       { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
     ],
   },
@@ -116,12 +117,12 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
     ],
   },
-  // Account section (active only)
+  // Account section (available for all statuses including observer)
   {
     key: 'account',
     labelKey: 'nav.groups.account',
     items: [
-      { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['active'] },
+      { labelKey: 'nav.profile', path: '/farmer/profile', icon: User, requiredStatus: ['observer', 'active'] },
     ],
   },
 ];

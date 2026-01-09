@@ -7,91 +7,94 @@
  */
 
 import { cn } from '@/lib/utils';
-import { 
-  FileText, 
-  Clock, 
-  CheckCircle2, 
-  Link2, 
+import {
+  FileText,
+  Eye,
+  CheckCircle2,
+  Link2,
   Package,
   ArrowRight,
   CircleDot
 } from 'lucide-react';
-import { type BatchLifecycleStatus } from '@/lib/batch-lifecycle';
+import { type BatchLifecycleStatus, mapLegacyStatus, BATCH_STATUSES } from '@/lib/batch-lifecycle';
 import { Badge } from './badge';
 
 interface BatchLifecycleTimelineProps {
-  currentStatus: BatchLifecycleStatus;
+  currentStatus: BatchLifecycleStatus | string;  // Accept legacy statuses too
   showDescriptions?: boolean;
   orientation?: 'horizontal' | 'vertical';
   className?: string;
 }
 
+// Simplified FSM v2 lifecycle steps (4 statuses)
 const lifecycleSteps: Array<{
   key: BatchLifecycleStatus;
   label: string;
+  labelRu: string;
   shortLabel: string;
   description: string;
+  descriptionRu: string;
   icon: typeof FileText;
 }> = [
   {
-    key: 'forecast',
-    label: 'Forecast',
-    shortLabel: 'Forecast',
-    description: 'Initial volume declaration. Edits allowed.',
-    icon: FileText,
+    key: 'available',
+    label: 'Available',
+    labelRu: 'Доступно',
+    shortLabel: 'Available',
+    description: 'Published and visible for matching. Edits allowed.',
+    descriptionRu: 'Опубликовано. Редактирование доступно.',
+    icon: Eye,
   },
   {
-    key: 'soft_committed',
-    label: 'Soft Commit',
-    shortLabel: 'Soft',
-    description: 'Signaled readiness. Volume may still adjust.',
-    icon: Clock,
-  },
-  {
-    key: 'confirmed',
-    label: 'Confirmed',
-    shortLabel: 'Confirmed',
-    description: 'Locked for matching. Ready for pool allocation.',
+    key: 'committed',
+    label: 'Committed',
+    labelRu: 'Подтверждено',
+    shortLabel: 'Committed',
+    description: 'Firm commitment. Locked for pool allocation.',
+    descriptionRu: 'Твёрдое обязательство. Заблокировано.',
     icon: CheckCircle2,
   },
   {
-    key: 'matched',
-    label: 'Matched',
-    shortLabel: 'Matched',
-    description: 'Allocated to buyer. Awaiting delivery.',
-    icon: Link2,
-  },
-  {
-    key: 'closed',
-    label: 'Closed',
-    shortLabel: 'Closed',
-    description: 'Delivery complete. Settlement finalized.',
+    key: 'completed',
+    label: 'Completed',
+    labelRu: 'Завершено',
+    shortLabel: 'Completed',
+    description: 'Transaction complete. Settlement finalized.',
+    descriptionRu: 'Сделка завершена. Расчёт выполнен.',
     icon: Package,
   },
 ];
 
 const getStepStatus = (
-  stepKey: BatchLifecycleStatus, 
+  stepKey: BatchLifecycleStatus,
   currentStatus: BatchLifecycleStatus
 ): 'completed' | 'current' | 'upcoming' => {
-  const stepOrder: BatchLifecycleStatus[] = ['draft', 'forecast', 'soft_committed', 'confirmed', 'matched', 'closed'];
-  const stepIndex = stepOrder.indexOf(stepKey);
-  const currentIndex = stepOrder.indexOf(currentStatus);
+  const stepIndex = BATCH_STATUSES.indexOf(stepKey);
+  const currentIndex = BATCH_STATUSES.indexOf(currentStatus);
 
   if (stepIndex < currentIndex) return 'completed';
   if (stepIndex === currentIndex) return 'current';
   return 'upcoming';
 };
 
-export function BatchLifecycleTimeline({ 
-  currentStatus, 
+// Normalize legacy status to new FSM
+const normalizeStatus = (status: string): BatchLifecycleStatus => {
+  if (BATCH_STATUSES.includes(status as BatchLifecycleStatus)) {
+    return status as BatchLifecycleStatus;
+  }
+  return mapLegacyStatus(status);
+};
+
+export function BatchLifecycleTimeline({
+  currentStatus,
   showDescriptions = false,
   orientation = 'horizontal',
-  className 
+  className
 }: BatchLifecycleTimelineProps) {
   const isHorizontal = orientation === 'horizontal';
-  
-  // Filter out draft from display
+  const normalizedStatus = normalizeStatus(currentStatus);
+
+  // Filter out draft from display (only show available, committed, completed)
   const displaySteps = lifecycleSteps.filter(s => s.key !== 'draft');
 
   return (
@@ -113,7 +116,7 @@ export function BatchLifecycleTimeline({
         isHorizontal ? 'items-start justify-between gap-2' : 'flex-col gap-4'
       )}>
         {displaySteps.map((step, index) => {
-          const stepStatus = getStepStatus(step.key, currentStatus);
+          const stepStatus = getStepStatus(step.key, normalizedStatus);
           const Icon = step.icon;
           const isLast = index === displaySteps.length - 1;
 
@@ -212,30 +215,31 @@ export function BatchLifecycleTimeline({
    =========================================== */
 
 interface CompactLifecycleIndicatorProps {
-  currentStatus: BatchLifecycleStatus;
+  currentStatus: BatchLifecycleStatus | string;  // Accept legacy statuses
   className?: string;
 }
 
 export function CompactLifecycleIndicator({ currentStatus, className }: CompactLifecycleIndicatorProps) {
+  const normalizedStatus = normalizeStatus(currentStatus);
   const displaySteps = lifecycleSteps.filter(s => s.key !== 'draft');
-  
+
   return (
     <div className={cn('flex items-center gap-1', className)}>
       {displaySteps.map((step, index) => {
-        const stepStatus = getStepStatus(step.key, currentStatus);
-        
+        const stepStatus = getStepStatus(step.key, normalizedStatus);
+
         return (
           <div key={step.key} className="flex items-center">
             <div className={cn(
               'w-2 h-2 rounded-full',
-              stepStatus === 'completed' && 'bg-status-confirmed',
+              stepStatus === 'completed' && 'bg-status-committed',
               stepStatus === 'current' && 'bg-primary ring-2 ring-primary/30',
               stepStatus === 'upcoming' && 'bg-muted border border-border'
             )} />
             {index < displaySteps.length - 1 && (
               <div className={cn(
                 'w-3 h-0.5 mx-0.5',
-                stepStatus === 'completed' ? 'bg-status-confirmed' : 'bg-border'
+                stepStatus === 'completed' ? 'bg-status-committed' : 'bg-border'
               )} />
             )}
           </div>

@@ -1,21 +1,45 @@
 /**
  * BATCH LIFECYCLE MANAGEMENT
- * 
+ *
  * Defines the strict, irreversible lifecycle for livestock batches.
  * Status transitions are controlled based on user role permissions.
+ *
+ * SIMPLIFIED FSM (v2):
+ * draft → available → committed → completed
+ *
+ * Migration from v1:
+ * - draft → draft (unchanged)
+ * - forecast, soft_committed → available (merged)
+ * - confirmed → committed (renamed)
+ * - matched, closed → completed (merged)
  */
 
-// Fixed set of batch statuses in lifecycle order
+// Fixed set of batch statuses in lifecycle order (simplified from 6 to 4)
 export const BATCH_STATUSES = [
   'draft',
-  'forecast',
-  'soft_committed',
-  'confirmed',
-  'matched',
-  'closed',
+  'available',
+  'committed',
+  'completed',
 ] as const;
 
 export type BatchLifecycleStatus = typeof BATCH_STATUSES[number];
+
+// Legacy status mapping for migration and backward compatibility
+export const LEGACY_STATUS_MAP: Record<string, BatchLifecycleStatus> = {
+  'draft': 'draft',
+  'forecast': 'available',
+  'soft_committed': 'available',
+  'confirmed': 'committed',
+  'matched': 'completed',
+  'closed': 'completed',
+};
+
+/**
+ * Map legacy status to new status (for migration)
+ */
+export function mapLegacyStatus(legacyStatus: string): BatchLifecycleStatus {
+  return LEGACY_STATUS_MAP[legacyStatus] || 'draft';
+}
 
 /**
  * STRICT BATCH CREATION RULES
@@ -60,40 +84,32 @@ export function getBatchCreationInfo(lang: 'en' | 'ru' = 'en'): {
 // Labels for display
 export const BATCH_STATUS_LABELS: Record<BatchLifecycleStatus, string> = {
   draft: 'Draft',
-  forecast: 'Forecast',
-  soft_committed: 'Soft Committed',
-  confirmed: 'Confirmed',
-  matched: 'Matched',
-  closed: 'Closed',
+  available: 'Available',
+  committed: 'Committed',
+  completed: 'Completed',
 };
 
 // Russian translations for status labels
 export const BATCH_STATUS_LABELS_RU: Record<BatchLifecycleStatus, string> = {
   draft: 'Черновик',
-  forecast: 'Прогноз',
-  soft_committed: 'Предварительно',
-  confirmed: 'Подтверждено',
-  matched: 'Сопоставлено',
-  closed: 'Закрыто',
+  available: 'Доступно',
+  committed: 'Подтверждено',
+  completed: 'Завершено',
 };
 
 // Descriptions for each status
 export const BATCH_STATUS_DESCRIPTIONS: Record<BatchLifecycleStatus, string> = {
   draft: 'Initial batch entry, not yet visible to pool',
-  forecast: 'Signaled availability, visible in market overview',
-  soft_committed: 'Preliminary commitment to sell',
-  confirmed: 'Firm commitment, ready for pool matching',
-  matched: 'Matched to a purchase pool request',
-  closed: 'Transaction completed or batch removed',
+  available: 'Published and visible for pool matching',
+  committed: 'Firm commitment, locked for matching',
+  completed: 'Transaction completed or batch closed',
 };
 
 export const BATCH_STATUS_DESCRIPTIONS_RU: Record<BatchLifecycleStatus, string> = {
   draft: 'Начальная запись, ещё не видна в пуле',
-  forecast: 'Заявленная доступность, видна в обзоре рынка',
-  soft_committed: 'Предварительное обязательство на продажу',
-  confirmed: 'Твёрдое обязательство, готово к сопоставлению',
-  matched: 'Сопоставлено с заявкой на покупку',
-  closed: 'Сделка завершена или партия закрыта',
+  available: 'Опубликовано и доступно для сопоставления',
+  committed: 'Твёрдое обязательство, заблокировано',
+  completed: 'Сделка завершена или партия закрыта',
 };
 
 // Role types that can perform transitions
@@ -108,22 +124,15 @@ interface TransitionRule {
 
 const TRANSITION_RULES: Record<BatchLifecycleStatus, TransitionRule[]> = {
   draft: [
-    { to: 'forecast', roles: ['farmer', 'admin'] },
+    { to: 'available', roles: ['farmer', 'admin'] }, // Publish to market
   ],
-  forecast: [
-    { to: 'soft_committed', roles: ['farmer', 'admin'] },
+  available: [
+    { to: 'committed', roles: ['farmer', 'admin'] }, // Firm commitment
   ],
-  soft_committed: [
-    { to: 'confirmed', roles: ['farmer', 'admin'] },
+  committed: [
+    { to: 'completed', roles: ['admin'] }, // Mark as completed (matched or closed)
   ],
-  confirmed: [
-    { to: 'matched', roles: ['admin'] },
-    { to: 'closed', roles: ['admin'] }, // Admin can close directly from confirmed
-  ],
-  matched: [
-    { to: 'closed', roles: ['admin'] },
-  ],
-  closed: [], // Terminal state - no transitions allowed
+  completed: [], // Terminal state - no transitions allowed
 };
 
 /**
@@ -228,24 +237,22 @@ export interface BatchEditRules {
 export function getEditRulesForStatus(status: BatchLifecycleStatus): BatchEditRules {
   switch (status) {
     case 'draft':
-    case 'forecast':
       return {
         rule: 'editable',
         fields: [...BATCH_EDITABLE_FIELDS],
       };
-    case 'soft_committed':
+    case 'available':
       return {
         rule: 'editable_with_confirmation',
         fields: [...BATCH_EDITABLE_FIELDS],
-        confirmationMessage: 'Changing batch details after Soft Commitment may affect matching priority.',
+        confirmationMessage: 'Changing published batch details may affect matching priority.',
       };
-    case 'confirmed':
-    case 'matched':
-    case 'closed':
+    case 'committed':
+    case 'completed':
       return {
         rule: 'read_only',
         fields: [],
-        lockedMessage: 'Batch is Confirmed and cannot be edited.',
+        lockedMessage: 'Batch is committed and cannot be edited.',
       };
     default:
       return {
@@ -281,40 +288,40 @@ export function getLockedFieldTooltip(status: BatchLifecycleStatus): string {
 
 /**
  * Check if status can be edited (batch data changes)
- * Draft, forecast, and soft_committed batches can have their data edited
+ * Draft and available batches can have their data edited
  */
 export function canEditBatchData(status: BatchLifecycleStatus): boolean {
-  return status === 'draft' || status === 'forecast' || status === 'soft_committed';
+  return status === 'draft' || status === 'available';
 }
 
 /**
  * Check if batch is fully read-only
  */
 export function isBatchReadOnly(status: BatchLifecycleStatus): boolean {
-  return status === 'confirmed' || status === 'matched' || status === 'closed';
+  return status === 'committed' || status === 'completed';
 }
 
 /**
- * Check if batch is in a "committed" state (soft_committed or higher)
+ * Check if batch is in a "committed" state
  */
 export function isCommitted(status: BatchLifecycleStatus): boolean {
   const index = getStatusIndex(status);
-  return index >= getStatusIndex('soft_committed');
+  return index >= getStatusIndex('committed');
 }
 
 /**
  * Check if batch is visible in pool matching
- * Only soft_committed and confirmed batches are considered for matching
+ * Available and committed batches are considered for matching
  */
 export function isVisibleForMatching(status: BatchLifecycleStatus): boolean {
-  return status === 'soft_committed' || status === 'confirmed';
+  return status === 'available' || status === 'committed';
 }
 
 /**
- * Check if batch lifecycle is complete (matched or closed)
+ * Check if batch lifecycle is complete
  */
 export function isLifecycleComplete(status: BatchLifecycleStatus): boolean {
-  return status === 'matched' || status === 'closed';
+  return status === 'completed';
 }
 
 /**
@@ -322,16 +329,12 @@ export function isLifecycleComplete(status: BatchLifecycleStatus): boolean {
  */
 export function getTransitionActionLabel(toStatus: BatchLifecycleStatus): string {
   switch (toStatus) {
-    case 'forecast':
+    case 'available':
       return 'Publish to Market';
-    case 'soft_committed':
-      return 'Commit Preliminarily';
-    case 'confirmed':
-      return 'Confirm Availability';
-    case 'matched':
-      return 'Mark as Matched';
-    case 'closed':
-      return 'Close Batch';
+    case 'committed':
+      return 'Confirm Commitment';
+    case 'completed':
+      return 'Mark as Completed';
     default:
       return 'Update Status';
   }
@@ -339,16 +342,12 @@ export function getTransitionActionLabel(toStatus: BatchLifecycleStatus): string
 
 export function getTransitionActionLabelRu(toStatus: BatchLifecycleStatus): string {
   switch (toStatus) {
-    case 'forecast':
+    case 'available':
       return 'Опубликовать';
-    case 'soft_committed':
-      return 'Предварительно подтвердить';
-    case 'confirmed':
-      return 'Подтвердить доступность';
-    case 'matched':
-      return 'Отметить как сопоставлено';
-    case 'closed':
-      return 'Закрыть партию';
+    case 'committed':
+      return 'Подтвердить';
+    case 'completed':
+      return 'Завершить';
     default:
       return 'Обновить статус';
   }
@@ -373,77 +372,47 @@ export function getTransitionConfirmation(
   toStatus: BatchLifecycleStatus,
   lang: 'en' | 'ru' = 'en'
 ): TransitionConfirmation {
-  // Soft Committed → Confirmed
-  if (fromStatus === 'soft_committed' && toStatus === 'confirmed') {
+  // Available → Committed (firm commitment)
+  if (fromStatus === 'available' && toStatus === 'committed') {
     return lang === 'ru' ? {
-      title: 'Подтвердить доступность партии',
-      message: 'Вы принимаете твёрдое обязательство. Данные партии будут заблокированы и недоступны для изменения после этого действия.',
-      warning: 'Это действие необратимо. Убедитесь, что все данные партии корректны перед подтверждением.',
+      title: 'Подтвердить обязательство',
+      message: 'Вы принимаете твёрдое обязательство. Данные партии будут заблокированы и недоступны для изменения.',
+      warning: 'Это действие необратимо. Убедитесь, что все данные партии корректны.',
       requiresConfirmation: true,
     } : {
-      title: 'Confirm Batch Availability',
-      message: 'You are making a firm commitment. Batch data will be locked and cannot be modified after this action.',
-      warning: 'This action is irreversible. Ensure all batch details are correct before confirming.',
+      title: 'Confirm Commitment',
+      message: 'You are making a firm commitment. Batch data will be locked and cannot be modified.',
+      warning: 'This action is irreversible. Ensure all batch details are correct.',
       requiresConfirmation: true,
     };
   }
 
-  // Confirmed → Matched (Admin only)
-  if (fromStatus === 'confirmed' && toStatus === 'matched') {
-    return lang === 'ru' ? {
-      title: 'Отметить партию как сопоставленную',
-      message: 'Партия будет отмечена как сопоставленная с заявкой на покупку.',
-      warning: 'Продолжайте только если партия успешно сопоставлена в системе пула.',
-      requiresConfirmation: true,
-    } : {
-      title: 'Mark Batch as Matched',
-      message: 'This will mark the batch as matched to a purchase pool request.',
-      warning: 'Only proceed if the batch has been successfully matched in the pool system.',
-      requiresConfirmation: true,
-    };
-  }
-
-  // Confirmed → Closed (Admin only)
-  if (fromStatus === 'confirmed' && toStatus === 'closed') {
-    return lang === 'ru' ? {
-      title: 'Закрыть партию',
-      message: 'Партия будет закрыта без сопоставления.',
-      warning: 'Это действие необратимо.',
-      requiresConfirmation: true,
-    } : {
-      title: 'Close Batch',
-      message: 'This will close the batch without matching.',
-      warning: 'This action is irreversible.',
-      requiresConfirmation: true,
-    };
-  }
-
-  // Matched → Closed
-  if (fromStatus === 'matched' && toStatus === 'closed') {
+  // Committed → Completed (Admin only)
+  if (fromStatus === 'committed' && toStatus === 'completed') {
     return lang === 'ru' ? {
       title: 'Завершить партию',
-      message: 'Партия будет закрыта после успешного сопоставления.',
+      message: 'Партия будет отмечена как завершённая (сопоставлена или закрыта).',
       warning: 'Это действие необратимо.',
       requiresConfirmation: true,
     } : {
       title: 'Complete Batch',
-      message: 'This will close the batch after successful matching.',
+      message: 'This will mark the batch as completed (matched or closed).',
       warning: 'This action is irreversible.',
       requiresConfirmation: true,
     };
   }
 
-  // Forecast → Soft Committed (optional confirmation)
-  if (fromStatus === 'forecast' && toStatus === 'soft_committed') {
+  // Draft → Available (publish, no confirmation needed)
+  if (fromStatus === 'draft' && toStatus === 'available') {
     return lang === 'ru' ? {
-      title: 'Предварительное подтверждение',
-      message: 'Предварительное подтверждение сигнализирует о намерении продать, но не гарантирует включение в пул.',
-      warning: 'Вы сможете вносить изменения, но они будут логироваться.',
+      title: 'Опубликовать партию',
+      message: 'Партия станет видна в системе и доступна для сопоставления.',
+      warning: 'Вы сможете редактировать данные после публикации.',
       requiresConfirmation: false,
     } : {
-      title: 'Soft Commitment',
-      message: 'Soft Commitment signals intent to sell but does not guarantee pool inclusion.',
-      warning: 'You can still make changes, but they will be logged.',
+      title: 'Publish Batch',
+      message: 'The batch will become visible in the system and available for matching.',
+      warning: 'You can still edit data after publishing.',
       requiresConfirmation: false,
     };
   }

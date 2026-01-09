@@ -42,19 +42,48 @@ export function useIsObserver(): { isObserver: boolean; isLoading: boolean } {
   };
 }
 
+/**
+ * Check if user can create draft batches.
+ * Observers CAN create drafts but CANNOT publish them.
+ * This enables new farmers to start working immediately.
+ */
 export function useCanCreateBatches(): boolean {
   const { data: farmer, isLoading } = useCurrentFarmer();
   const { role, registrationStatus } = useAuthContext();
-  
+
   // Only farmers can create batches
   if (role !== 'farmer') return false;
-  
+
   // While loading, assume restricted
   if (isLoading) return false;
-  
+
+  // Must have registration status (active or pending)
+  if (!registrationStatus) return false;
+
+  // Observers CAN create draft batches (but cannot publish)
+  // declared_supplier and standard_supplier can create and publish
+  return farmer?.grading === 'observer' ||
+         farmer?.grading === 'declared_supplier' ||
+         farmer?.grading === 'standard_supplier';
+}
+
+/**
+ * Check if user can publish batches (transition from draft to forecast).
+ * Only declared_supplier and standard_supplier can publish.
+ */
+export function useCanPublishBatches(): boolean {
+  const { data: farmer, isLoading } = useCurrentFarmer();
+  const { role, registrationStatus } = useAuthContext();
+
+  // Only farmers can publish batches
+  if (role !== 'farmer') return false;
+
+  // While loading, assume restricted
+  if (isLoading) return false;
+
   // Must be active registration status
   if (registrationStatus !== 'active') return false;
-  
-  // Must be at least declared_supplier
+
+  // Must be at least declared_supplier to publish
   return farmer?.grading === 'declared_supplier' || farmer?.grading === 'standard_supplier';
 }

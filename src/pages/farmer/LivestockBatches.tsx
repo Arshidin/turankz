@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useBatches, useBatchStats, useUpdateBatch, type BatchStatus } from '@/hooks/useBatches';
 import { useStandardPremiums, getPremiumByLevel } from '@/hooks/usePremiums';
-import { useIsObserver, useCanCreateBatches } from '@/hooks/useCurrentFarmer';
+import { useIsObserver, useCanCreateBatches, useCanPublishBatches } from '@/hooks/useCurrentFarmer';
 import { useGlobalBatchLockStatus } from '@/hooks/useBatchTimeLock';
 import { getTimeLockedTooltip } from '@/lib/batch-time-lock';
 import { type BatchLifecycleStatus } from '@/lib/batch-lifecycle';
@@ -97,6 +97,7 @@ export default function LivestockBatches() {
   const { data: standardPremiums } = useStandardPremiums();
   const { isObserver } = useIsObserver();
   const canCreateBatches = useCanCreateBatches();
+  const canPublishBatches = useCanPublishBatches();
   const { checkBatchLock } = useGlobalBatchLockStatus();
   const { data: matchingWindows } = useMatchingWindows();
   
@@ -183,10 +184,10 @@ export default function LivestockBatches() {
       {/* Observer Mode Banner */}
       {isObserver && (
         <Alert className="mb-4 border-amber-500/30 bg-amber-500/5">
-          <Lock className="h-4 w-4 text-amber-600" />
+          <Info className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-sm">
-            <span className="font-medium text-amber-700">Observer Mode</span>
-            <span className="text-muted-foreground"> — You have read-only access. Batch creation and confirmation will be available after Admin activation.</span>
+            <span className="font-medium text-amber-700">{t('batches.observerMode', 'Observer Mode')}</span>
+            <span className="text-muted-foreground"> — {t('batches.observerModeDescription', 'You can create draft batches. Publishing and status changes will be available after Admin activation.')}</span>
           </AlertDescription>
         </Alert>
       )}
@@ -455,26 +456,27 @@ export default function LivestockBatches() {
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <span className="inline-block">
-                                                <Button 
-                                                  variant="default" 
+                                                <Button
+                                                  variant="default"
                                                   size="sm"
                                                   className="h-8 gap-1"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (canCreateBatches) {
+                                                    if (canPublishBatches) {
                                                       setEscalateBatch({ id: batch.id, currentStatus: 'draft' });
                                                     }
                                                   }}
-                                                  disabled={!canCreateBatches}
+                                                  disabled={!canPublishBatches}
                                                 >
+                                                  {!canPublishBatches && <Lock className="w-3 h-3" />}
                                                   <Send className="w-3 h-3" />
                                                   {t('batches.publish') || 'Опубликовать'}
                                                 </Button>
                                               </span>
                                             </TooltipTrigger>
-                                            {!canCreateBatches && (
+                                            {!canPublishBatches && (
                                               <TooltipContent>
-                                                <p>Available after Admin activation</p>
+                                                <p>{t('batches.publishRequiresActivation', 'Activate your account to publish batches')}</p>
                                               </TooltipContent>
                                             )}
                                           </Tooltip>
@@ -655,20 +657,20 @@ export default function LivestockBatches() {
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <span className="inline-block">
-                                                <Button 
-                                                  variant="ghost" 
+                                                <Button
+                                                  variant="ghost"
                                                   size="icon"
-                                                  className={`h-8 w-8 ${(!canCreateBatches || isTimeLocked) ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
-                                                  onClick={() => canCreateBatches && !isTimeLocked && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
-                                                  disabled={!canCreateBatches || isTimeLocked}
+                                                  className={`h-8 w-8 ${(!canPublishBatches || isTimeLocked) ? 'opacity-50 cursor-not-allowed' : 'text-primary hover:text-primary'}`}
+                                                  onClick={() => canPublishBatches && !isTimeLocked && setEscalateBatch({ id: batch.id, currentStatus: batch.status })}
+                                                  disabled={!canPublishBatches || isTimeLocked}
                                                 >
-                                                  {(!canCreateBatches || isTimeLocked) ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                                                  {(!canPublishBatches || isTimeLocked) ? <Lock className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
                                                 </Button>
                                               </span>
                                             </TooltipTrigger>
-                                            {!canCreateBatches ? (
+                                            {!canPublishBatches ? (
                                               <TooltipContent>
-                                                <p>Available after Admin activation</p>
+                                                <p>{t('batches.publishRequiresActivation', 'Activate your account to change status')}</p>
                                               </TooltipContent>
                                             ) : isTimeLocked ? (
                                               <TooltipContent>
@@ -676,7 +678,7 @@ export default function LivestockBatches() {
                                               </TooltipContent>
                                             ) : (
                                               <TooltipContent>
-                                                <p>Escalate to {nextStatus}</p>
+                                                <p>{t('batches.escalateTo', { status: nextStatus })}</p>
                                               </TooltipContent>
                                             )}
                                           </Tooltip>
@@ -750,8 +752,8 @@ export default function LivestockBatches() {
               </div>
               <p className="font-medium text-foreground mb-1">{t('batches.noBatches')}</p>
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                {isObserver 
-                  ? 'Batch creation will be available after Admin activation.'
+                {isObserver
+                  ? t('batches.observerCanCreateDrafts', 'You can create draft batches. Activate your account to publish them.')
                   : t('batches.noBatchesDescription')
                 }
               </p>

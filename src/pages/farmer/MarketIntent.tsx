@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, TrendingUp, AlertTriangle, Trash2, Clock, Info, Target } from 'lucide-react';
+import { Plus, TrendingUp, AlertTriangle, Trash2, Clock, Info, Target, ArrowRight, Boxes } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { 
@@ -29,6 +30,7 @@ import {
 
 export default function MarketIntent() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: intents, isLoading } = useMyMarketIntents();
   const createIntent = useCreateMarketIntent();
   const deleteIntent = useDeleteMarketIntent();
@@ -79,6 +81,17 @@ export default function MarketIntent() {
     setNotes('');
   };
 
+  // Convert intent to batch - navigate to batches page with prefilled data
+  const handleConvertToBatch = (intent: MarketAvailabilityIntent) => {
+    // Store prefill data in sessionStorage for the batch dialog
+    sessionStorage.setItem('batchPrefill', JSON.stringify({
+      breed: intent.breed,
+      heads: intent.estimated_heads,
+      notes: intent.notes || `Converted from Market Intent (${HORIZON_OPTIONS[intent.horizon].label})`,
+    }));
+    navigate('/farmer/batches?openNew=true');
+  };
+
   // Group by horizon
   const groupedIntents = intents?.reduce((acc, intent) => {
     if (!acc[intent.horizon]) acc[intent.horizon] = [];
@@ -100,16 +113,47 @@ export default function MarketIntent() {
           </Button>
         </div>
 
-        {/* System Guardrail: Data & Outlook section disclaimer */}
-        <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/50">
-          <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-blue-800 dark:text-blue-200">
-              {t('marketIntent.disclaimer.title', 'Data & Outlook — Non-Binding Intent')}
-            </p>
-            <p className="text-blue-700 dark:text-blue-300 mt-0.5">
-              {t('marketIntent.disclaimer.text', 'Market intents are voluntary signals only. They do not create batches or participate in matching. To commit livestock to the pool, create a batch in Market Operations → Livestock Batches.')}
-            </p>
+        {/* Comparison: Market Intent vs Batches */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* This page */}
+          <div className="flex items-start gap-3 p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
+            <TrendingUp className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-primary">
+                {t('marketIntent.thisPage', 'Market Intent (This Page)')}
+              </p>
+              <ul className="text-muted-foreground mt-1 space-y-0.5 text-xs">
+                <li>• {t('marketIntent.feature1', 'Long-term planning (3-12 months)')}</li>
+                <li>• {t('marketIntent.feature2', 'Non-binding signals')}</li>
+                <li>• {t('marketIntent.feature3', 'Helps regional capacity planning')}</li>
+                <li>• {t('marketIntent.feature4', 'Does NOT participate in matching')}</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Batches */}
+          <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-muted/30">
+            <Boxes className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-foreground">
+                {t('marketIntent.batches', 'Livestock Batches')}
+              </p>
+              <ul className="text-muted-foreground mt-1 space-y-0.5 text-xs">
+                <li>• {t('marketIntent.batchFeature1', 'Near-term sales (1-12 weeks)')}</li>
+                <li>• {t('marketIntent.batchFeature2', 'Binding commitments')}</li>
+                <li>• {t('marketIntent.batchFeature3', 'Participates in pool matching')}</li>
+                <li>• {t('marketIntent.batchFeature4', 'Eligible for premiums')}</li>
+              </ul>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => navigate('/farmer/batches')}
+              >
+                {t('marketIntent.goToBatches', 'Go to Batches')}
+                <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -174,13 +218,22 @@ export default function MarketIntent() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
                             <div className="text-right">
                               <div className="font-semibold">{intent.estimated_heads.toLocaleString()}</div>
                               <ConfidenceBadge level={intent.confidence_level} />
                             </div>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleConvertToBatch(intent)}
+                              className="text-xs"
+                            >
+                              <Boxes className="w-3 h-3 mr-1" />
+                              {t('marketIntent.convertToBatch', 'Create Batch')}
+                            </Button>
+                            <Button
+                              variant="ghost"
                               size="icon"
                               onClick={() => handleDelete(intent.id)}
                               className="text-muted-foreground hover:text-destructive"
