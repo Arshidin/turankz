@@ -72,52 +72,55 @@ interface NavGroup {
   defaultOpen?: boolean;
 }
 
-// FARMER navigation - grouped by intent with clear separation between
-// "Data & Outlook" (informational, non-binding) and "Market Operations" (binding actions)
-// 
-// OBSERVER ACCESS: Only shows Overview, Price Grid, and National Herd Structure
-// All other sections hidden until profile activation
+// FARMER navigation - simplified structure (Sprint 2)
+//
+// 5 clear groups:
+// 1. Dashboard - main overview
+// 2. Operations - batches, calendar, executions (core actions)
+// 3. Planning - market intent (optional long-term planning)
+// 4. Reference - price grid, documentation
+// 5. Account - profile
+//
+// Removed: National Herd (admin-only), Market Workflow (unnecessary complexity)
+// OBSERVER ACCESS: Can see all, but batches limited to drafts until activation
 const farmerNavGroups: NavGroup[] = [
+  // DASHBOARD: Main entry point
   {
-    key: 'overview',
-    labelKey: 'nav.groups.overview',
+    key: 'dashboard',
+    labelKey: 'nav.groups.dashboard',
     items: [
       { labelKey: 'nav.overview', path: '/overview', icon: Home, requiredStatus: ['observer', 'active'] },
-      { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
-      { labelKey: 'nav.marketWorkflow', path: '/market-workflow', icon: GraduationCap, requiredStatus: ['observer', 'active'], readOnly: true },
-      // National Herd Structure - read-only for observers (uses public route)
-      { labelKey: 'nav.nationalHerd', path: '/herd-overview', icon: Beef, requiredStatus: ['observer', 'active'], readOnly: true },
-      { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
-  // DATA & OUTLOOK: Informational only - never auto-generates batches (active only)
-  // NOTE: Herd Structure removed from farmer UI - admin-only feature
+  // OPERATIONS: Core business actions - batches, calendar, executions
+  // Observers can access batches to create drafts (but cannot publish until activated)
   {
-    key: 'data-outlook',
-    labelKey: 'nav.groups.dataOutlook',
+    key: 'operations',
+    labelKey: 'nav.groups.operations',
+    items: [
+      { labelKey: 'nav.myBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['observer', 'active'] },
+      { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
+      { labelKey: 'nav.executions', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
+    ],
+  },
+  // PLANNING: Long-term market planning (optional)
+  {
+    key: 'planning',
+    labelKey: 'nav.groups.planning',
     items: [
       { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
     ],
   },
-  // MARKET OPERATIONS: Binding actions - batches are the gateway to matching
-  // Observers can access batches to create drafts (but cannot publish until activated)
+  // REFERENCE: Information resources
   {
-    key: 'market-operations',
-    labelKey: 'nav.groups.marketOperations',
+    key: 'reference',
+    labelKey: 'nav.groups.reference',
     items: [
-      { labelKey: 'nav.livestockBatches', path: '/farmer/batches', icon: Boxes, requiredStatus: ['observer', 'active'] },
-      { labelKey: 'nav.salesCalendar', path: '/farmer/calendar', icon: Calendar, requiredStatus: ['active'] },
+      { labelKey: 'nav.priceGrid', path: '/price-grid', icon: Grid3X3, requiredStatus: ['observer', 'active'], readOnly: true },
+      { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
-  // Execution section (active only, requires executions)
-  {
-    key: 'execution',
-    labelKey: 'nav.groups.execution',
-    items: [
-      { labelKey: 'nav.contractsExecution', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
-    ],
-  },
-  // Account section (available for all statuses including observer)
+  // ACCOUNT: User settings
   {
     key: 'account',
     labelKey: 'nav.groups.account',

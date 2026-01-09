@@ -435,3 +435,81 @@ export const PREMIUM_TYPE_DESCRIPTIONS: Record<string, { en: string; ru: string 
     ru: 'Премия за стабильное выполнение поставок',
   },
 };
+
+// ============================================================================
+// MVP PREMIUM SIMPLIFICATION (Sprint 2)
+// ============================================================================
+// For MVP, we focus on just 2 premium types:
+// 1. Standard Premium - base quality compliance
+// 2. Reliability Premium - based on supplier history
+//
+// Predictability and Volume Consistency are deferred to future phases.
+
+/**
+ * Premium types enabled for MVP
+ * Other types exist in the system but are not displayed/calculated for farmers
+ */
+export const MVP_ENABLED_PREMIUM_TYPES = ['standard', 'reliability'] as const;
+export type MvpPremiumType = typeof MVP_ENABLED_PREMIUM_TYPES[number];
+
+/**
+ * Check if a premium type is enabled for MVP
+ */
+export function isPremiumTypeEnabledForMvp(type: string): boolean {
+  return MVP_ENABLED_PREMIUM_TYPES.includes(type as MvpPremiumType);
+}
+
+/**
+ * Get MVP-focused premium type labels
+ */
+export const MVP_PREMIUM_TYPE_LABELS: Record<MvpPremiumType, { en: string; ru: string }> = {
+  standard: {
+    en: 'Standard Premium',
+    ru: 'Стандартная премия'
+  },
+  reliability: {
+    en: 'Reliability Premium',
+    ru: 'Премия за надёжность'
+  },
+};
+
+export const MVP_PREMIUM_TYPE_DESCRIPTIONS: Record<MvpPremiumType, { en: string; ru: string }> = {
+  standard: {
+    en: 'Premium awarded for batches meeting TURAN quality standards (breed homogeneity, weight/age consistency)',
+    ru: 'Премия за партии, соответствующие стандартам качества TURAN (однородность породы, стабильность веса/возраста)',
+  },
+  reliability: {
+    en: 'Premium based on your track record: successful deliveries, on-time performance, and consistent quality',
+    ru: 'Премия на основе вашей истории: успешные поставки, своевременность и стабильное качество',
+  },
+};
+
+/**
+ * Simplified MVP premium summary for farmers
+ */
+export interface MvpPremiumSummary {
+  standardPremium: number;
+  reliabilityPremium: number;
+  totalPremium: number;
+  standardLevel: 'high_standard' | 'standard' | 'non_standard';
+  reliabilityGrade: 'standard_supplier' | 'declared_supplier' | 'observer';
+}
+
+/**
+ * Calculate MVP-focused premium summary
+ */
+export function calculateMvpPremiumSummary(
+  standardLevel: 'high_standard' | 'standard' | 'non_standard',
+  reliabilityGrade: 'standard_supplier' | 'declared_supplier' | 'observer'
+): MvpPremiumSummary {
+  const standardPremium = DEFAULT_PREMIUM_VALUES.standard[standardLevel];
+  const reliabilityPremium = DEFAULT_PREMIUM_VALUES.reliability[reliabilityGrade];
+
+  return {
+    standardPremium,
+    reliabilityPremium,
+    totalPremium: standardPremium + reliabilityPremium,
+    standardLevel,
+    reliabilityGrade,
+  };
+}

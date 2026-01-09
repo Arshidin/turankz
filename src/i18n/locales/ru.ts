@@ -81,7 +81,14 @@ export const ru = {
       governance: 'Управление',
       schedulingCoordination: 'Планирование и координация',
       matchingExecution: 'Исполнение сопоставления',
+      // Sprint 2: Simplified navigation
+      dashboard: 'Главная',
+      operations: 'Операции',
+      planning: 'Планирование',
+      reference: 'Справочник',
     },
+    myBatches: 'Мои партии',
+    executions: 'Исполнение',
     participantCoordination: 'Координация участников',
     mpkCoordination: 'Координация МПК',
     tooltips: {
@@ -96,7 +103,28 @@ export const ru = {
     requiresAttention: 'требует внимания',
     requireAttention: 'требуют внимания',
   },
-  
+
+  // Sprint 2: Farmer Journey Progress
+  farmerJourney: {
+    title: 'Ваш путь',
+    subtitle: 'Отслеживайте прогресс на платформе',
+    stepsLabel: 'шагов',
+    current: 'Сейчас',
+    nextStep: 'Следующий шаг',
+    steps: {
+      registered: 'Регистрация',
+      registeredDesc: 'Создайте аккаунт на платформе',
+      firstBatch: 'Первая партия',
+      firstBatchDesc: 'Создайте свою первую партию скота',
+      published: 'Публикация',
+      publishedDesc: 'Опубликуйте партию на рынке',
+      committed: 'Подтверждение',
+      committedDesc: 'Подтвердите обязательство по партии',
+      completed: 'Завершение',
+      completedDesc: 'Завершите первую сделку',
+    },
+  },
+
   firstActionPrompt: {
     farmer: {
       title: 'Начните работу с платформой',

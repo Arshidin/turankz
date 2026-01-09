@@ -83,7 +83,14 @@ export const en = {
       governance: 'Governance',
       schedulingCoordination: 'Scheduling & Coordination',
       matchingExecution: 'Matching Execution',
+      // Sprint 2: Simplified navigation
+      dashboard: 'Dashboard',
+      operations: 'Operations',
+      planning: 'Planning',
+      reference: 'Reference',
     },
+    myBatches: 'My Batches',
+    executions: 'Executions',
     participantCoordination: 'Participant Coordination',
     mpkCoordination: 'MPK Coordination',
     tooltips: {
@@ -98,7 +105,28 @@ export const en = {
     requiresAttention: 'requires attention',
     requireAttention: 'require attention',
   },
-  
+
+  // Sprint 2: Farmer Journey Progress
+  farmerJourney: {
+    title: 'Your Journey',
+    subtitle: 'Track your progress on the platform',
+    stepsLabel: 'steps',
+    current: 'Current',
+    nextStep: 'Next step',
+    steps: {
+      registered: 'Registration',
+      registeredDesc: 'Create your account on the platform',
+      firstBatch: 'First Batch',
+      firstBatchDesc: 'Create your first livestock batch',
+      published: 'Published',
+      publishedDesc: 'Publish your batch to the market',
+      committed: 'Committed',
+      committedDesc: 'Make a firm commitment',
+      completed: 'Completed',
+      completedDesc: 'Complete your first transaction',
+    },
+  },
+
   firstActionPrompt: {
     farmer: {
       title: 'Get Started with the Platform',
