@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { getFarmerBreadcrumbs } from '@/lib/breadcrumbs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -34,9 +35,10 @@ export default function FarmerExecutions() {
   if (!isLoading && !hasExecutions && role !== 'admin') {
     return (
       <MainLayout>
-        <PageHeader 
-          title={t('nav.contractsExecution')} 
+        <PageHeader
+          title={t('nav.contractsExecution')}
           description="View your matched contracts and delivery status"
+          breadcrumbs={getFarmerBreadcrumbs('deliveries', t('executions.title'))}
         />
         <EmptyState
           icon={GitMerge}
@@ -50,9 +52,10 @@ export default function FarmerExecutions() {
   if (isLoading) {
     return (
       <MainLayout>
-        <PageHeader 
-          title={t('nav.contractsExecution')} 
+        <PageHeader
+          title={t('nav.contractsExecution')}
           description="View your matched contracts and delivery status"
+          breadcrumbs={getFarmerBreadcrumbs('deliveries', t('executions.title'))}
         />
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
@@ -69,9 +72,10 @@ export default function FarmerExecutions() {
 
   return (
     <MainLayout>
-      <PageHeader 
-        title={t('nav.contractsExecution')} 
+      <PageHeader
+        title={t('nav.contractsExecution')}
         description="View your matched contracts and delivery status"
+        breadcrumbs={getFarmerBreadcrumbs('deliveries', t('executions.title'))}
       />
 
       {farmerExecutions.length === 0 ? (

@@ -3,31 +3,32 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-// Mock the AuthContext
-const mockAuthContext = {
-  user: { id: 'test-user-id' },
-  role: 'farmer' as const,
-  registrationStatus: 'active',
-  session: null,
-  isLoading: false,
-  signUp: vi.fn(),
-  signIn: vi.fn(),
-  signOut: vi.fn(),
-  assignRole: vi.fn(),
-  refetchRole: vi.fn(),
-};
+// Use vi.hoisted to create mocks that can be referenced in vi.mock factories
+const { mockAuthContext, mockFrom } = vi.hoisted(() => ({
+  mockAuthContext: {
+    user: { id: 'test-user-id' } as { id: string } | null,
+    role: 'farmer' as 'farmer' | 'admin' | 'mpk',
+    registrationStatus: 'active' as string,
+    session: null,
+    isLoading: false,
+    signUp: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    assignRole: vi.fn(),
+    refetchRole: vi.fn(),
+  },
+  mockFrom: vi.fn(),
+}));
 
+// Mock modules using hoisted variables
 vi.mock('@/contexts/AuthContext', () => ({
   useAuthContext: () => mockAuthContext,
 }));
 
-// Mock Supabase client
-const mockSupabaseClient = {
-  from: vi.fn(),
-};
-
 vi.mock('@/integrations/supabase/client', () => ({
-  supabase: mockSupabaseClient,
+  supabase: {
+    from: mockFrom,
+  },
 }));
 
 // Import after mocks
@@ -54,7 +55,7 @@ describe('useCurrentFarmer', () => {
   });
 
   it('should return null when user is not logged in', async () => {
-    mockAuthContext.user = null as any;
+    mockAuthContext.user = null;
 
     const { result } = renderHook(() => useCurrentFarmer(), {
       wrapper: createWrapper(),
@@ -66,7 +67,7 @@ describe('useCurrentFarmer', () => {
   });
 
   it('should return null when user role is not farmer', async () => {
-    mockAuthContext.role = 'admin' as any;
+    mockAuthContext.role = 'admin';
 
     const { result } = renderHook(() => useCurrentFarmer(), {
       wrapper: createWrapper(),
@@ -86,7 +87,7 @@ describe('useCurrentFarmer', () => {
       region: 'Almaty',
     };
 
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({ data: mockFarmer, error: null }),
@@ -103,16 +104,16 @@ describe('useCurrentFarmer', () => {
     });
 
     expect(result.current.data).toEqual(mockFarmer);
-    expect(mockSupabaseClient.from).toHaveBeenCalledWith('farmers');
+    expect(mockFrom).toHaveBeenCalledWith('farmers');
   });
 
   it('should handle fetch errors', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: null, 
-            error: new Error('Fetch failed') 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: new Error('Fetch failed')
           }),
         }),
       }),
@@ -136,7 +137,7 @@ describe('useFarmerGrading', () => {
   });
 
   it('should return null when no farmer data', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -154,12 +155,12 @@ describe('useFarmerGrading', () => {
   });
 
   it('should return correct grading for observer', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'observer' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'observer' },
+            error: null
           }),
         }),
       }),
@@ -175,12 +176,12 @@ describe('useFarmerGrading', () => {
   });
 
   it('should return correct grading for declared_supplier', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'declared_supplier' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'declared_supplier' },
+            error: null
           }),
         }),
       }),
@@ -196,12 +197,12 @@ describe('useFarmerGrading', () => {
   });
 
   it('should return correct grading for standard_supplier', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'standard_supplier' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'standard_supplier' },
+            error: null
           }),
         }),
       }),
@@ -225,7 +226,7 @@ describe('useIsObserver', () => {
   });
 
   it('should return false for non-farmer roles', () => {
-    mockAuthContext.role = 'admin' as any;
+    mockAuthContext.role = 'admin';
 
     const { result } = renderHook(() => useIsObserver(), {
       wrapper: createWrapper(),
@@ -236,12 +237,12 @@ describe('useIsObserver', () => {
   });
 
   it('should return true for observer grading', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'observer' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'observer' },
+            error: null
           }),
         }),
       }),
@@ -258,12 +259,12 @@ describe('useIsObserver', () => {
   });
 
   it('should return false for declared_supplier grading', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'declared_supplier' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'declared_supplier' },
+            error: null
           }),
         }),
       }),
@@ -289,7 +290,7 @@ describe('useCanCreateBatches', () => {
   });
 
   it('should return false for non-farmer roles', () => {
-    mockAuthContext.role = 'mpk' as any;
+    mockAuthContext.role = 'mpk';
 
     const { result } = renderHook(() => useCanCreateBatches(), {
       wrapper: createWrapper(),
@@ -301,12 +302,12 @@ describe('useCanCreateBatches', () => {
   it('should return false when registration is not active', async () => {
     mockAuthContext.registrationStatus = 'pending';
 
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'standard_supplier' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'standard_supplier' },
+            error: null
           }),
         }),
       }),
@@ -320,12 +321,12 @@ describe('useCanCreateBatches', () => {
   });
 
   it('should return false for observer grading', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'observer' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'observer' },
+            error: null
           }),
         }),
       }),
@@ -341,12 +342,12 @@ describe('useCanCreateBatches', () => {
   });
 
   it('should return true for declared_supplier grading', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'declared_supplier' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'declared_supplier' },
+            error: null
           }),
         }),
       }),
@@ -362,12 +363,12 @@ describe('useCanCreateBatches', () => {
   });
 
   it('should return true for standard_supplier grading', async () => {
-    mockSupabaseClient.from.mockReturnValue({
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ 
-            data: { grading: 'standard_supplier' }, 
-            error: null 
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { grading: 'standard_supplier' },
+            error: null
           }),
         }),
       }),

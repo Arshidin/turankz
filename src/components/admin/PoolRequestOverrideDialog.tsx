@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -31,14 +32,15 @@ export function PoolRequestOverrideDialog({
   request,
   mode,
 }: PoolRequestOverrideDialogProps) {
+  const { t } = useTranslation();
   const { adminModifyRequest, adminChangeStatus } = usePoolRequestAdminOverride();
-  
+
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
-  
+
   // Status change mode
   const [newStatus, setNewStatus] = useState<PoolRequestLifecycleStatus>(request.status);
-  
+
   // Edit mode fields
   const [requiredVolume, setRequiredVolume] = useState(request.required_volume);
   const [regions, setRegions] = useState(request.regions.join(', '));
@@ -51,11 +53,11 @@ export function PoolRequestOverrideDialog({
 
   const handleConfirm = async () => {
     if (!reason.trim()) {
-      setError('A reason is required for all admin overrides.');
+      setError(t('poolRequestOverrideDialog.validation.reasonRequired'));
       return;
     }
     if (reason.trim().length < 10) {
-      setError('Please provide a more detailed reason (at least 10 characters).');
+      setError(t('poolRequestOverrideDialog.validation.reasonMinLength'));
       return;
     }
     setError('');
@@ -103,10 +105,10 @@ export function PoolRequestOverrideDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" />
-            Admin Override: {mode === 'status' ? 'Change Status' : 'Modify Request'}
+            {t(mode === 'status' ? 'poolRequestOverrideDialog.title.status' : 'poolRequestOverrideDialog.title.edit')}
           </DialogTitle>
           <DialogDescription>
-            Modifying Pool Request {request.request_number}
+            {t('poolRequestOverrideDialog.description', { requestNumber: request.request_number })}
           </DialogDescription>
         </DialogHeader>
 
@@ -114,14 +116,16 @@ export function PoolRequestOverrideDialog({
           <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
             <ShieldAlert className="h-4 w-4 text-amber-500" />
             <AlertDescription className="text-sm">
-              This is an <strong>Admin Override</strong>. All changes are logged for audit purposes
-              and will be visible to other admins.
+              <Trans
+                i18nKey="poolRequestOverrideDialog.alerts.overrideWarning"
+                components={{ strong: <strong /> }}
+              />
             </AlertDescription>
           </Alert>
 
           {mode === 'status' ? (
             <div className="space-y-2">
-              <Label>New Status</Label>
+              <Label>{t('poolRequestOverrideDialog.fields.newStatus')}</Label>
               <Select value={newStatus} onValueChange={(value) => setNewStatus(value as PoolRequestLifecycleStatus)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -135,14 +139,18 @@ export function PoolRequestOverrideDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Current status: <strong>{request.status}</strong>
+                <Trans
+                  i18nKey="poolRequestOverrideDialog.fields.currentStatus"
+                  values={{ status: request.status }}
+                  components={{ strong: <strong /> }}
+                />
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Required Volume (heads)</Label>
+                  <Label>{t('poolRequestOverrideDialog.fields.requiredVolume')}</Label>
                   <Input
                     type="number"
                     value={requiredVolume}
@@ -151,7 +159,7 @@ export function PoolRequestOverrideDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Regions (comma-separated)</Label>
+                  <Label>{t('poolRequestOverrideDialog.fields.regions')}</Label>
                   <Input
                     value={regions}
                     onChange={(e) => setRegions(e.target.value)}
@@ -159,37 +167,37 @@ export function PoolRequestOverrideDialog({
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Weight Range (kg)</Label>
+                  <Label>{t('poolRequestOverrideDialog.fields.weightRange')}</Label>
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      placeholder="Min"
+                      placeholder={t('poolRequestOverrideDialog.fields.minLabel')}
                       value={weightMin}
                       onChange={(e) => setWeightMin(e.target.value)}
                     />
                     <Input
                       type="number"
-                      placeholder="Max"
+                      placeholder={t('poolRequestOverrideDialog.fields.maxLabel')}
                       value={weightMax}
                       onChange={(e) => setWeightMax(e.target.value)}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Age Range (months)</Label>
+                  <Label>{t('poolRequestOverrideDialog.fields.ageRange')}</Label>
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      placeholder="Min"
+                      placeholder={t('poolRequestOverrideDialog.fields.minLabel')}
                       value={ageMin}
                       onChange={(e) => setAgeMin(e.target.value)}
                     />
                     <Input
                       type="number"
-                      placeholder="Max"
+                      placeholder={t('poolRequestOverrideDialog.fields.maxLabel')}
                       value={ageMax}
                       onChange={(e) => setAgeMax(e.target.value)}
                     />
@@ -201,11 +209,11 @@ export function PoolRequestOverrideDialog({
 
           <div className="space-y-2">
             <Label htmlFor="override-reason" className="text-sm font-medium">
-              Reason for Override <span className="text-destructive">*</span>
+              {t('poolRequestOverrideDialog.fields.reason')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="override-reason"
-              placeholder="Explain why this override is necessary..."
+              placeholder={t('poolRequestOverrideDialog.fields.reasonPlaceholder')}
               value={reason}
               onChange={(e) => {
                 setReason(e.target.value);
@@ -215,14 +223,14 @@ export function PoolRequestOverrideDialog({
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <p className="text-xs text-muted-foreground">
-              This reason will be recorded in the audit log.
+              {t('poolRequestOverrideDialog.fields.reasonHelp')}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            Cancel
+            {t('poolRequestOverrideDialog.buttons.cancel')}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -230,7 +238,7 @@ export function PoolRequestOverrideDialog({
             className="gap-2"
           >
             <Edit className="h-4 w-4" />
-            {isLoading ? 'Processing...' : 'Apply Override'}
+            {isLoading ? t('poolRequestOverrideDialog.buttons.processing') : t('poolRequestOverrideDialog.buttons.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

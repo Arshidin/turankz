@@ -135,19 +135,36 @@
 
     /* ===========================================
        POOL REQUEST STATUS
+       7 lifecycle statuses: draft → submitted → matching → partial → fulfilled → closed → cancelled
        =========================================== */
-    
-    --pool-pending: 38 80% 50%;
-    --pool-pending-bg: 38 80% 95%;
-    
-    --pool-partial: 200 60% 50%;
-    --pool-partial-bg: 200 60% 95%;
-    
+
+    /* Draft - Not yet submitted (muted gray) */
+    --pool-draft: 215 15% 55%;
+    --pool-draft-bg: 215 15% 97%;
+
+    /* Submitted - Awaiting admin review (blue) */
+    --pool-submitted: 200 65% 50%;
+    --pool-submitted-bg: 200 65% 95%;
+
+    /* Matching - Admin actively matching (violet) */
+    --pool-matching: 280 50% 50%;
+    --pool-matching-bg: 280 50% 95%;
+
+    /* Partial - Some matches made (amber) */
+    --pool-partial: 38 80% 50%;
+    --pool-partial-bg: 38 80% 95%;
+
+    /* Fulfilled - Fully matched (emerald) */
     --pool-fulfilled: 150 50% 40%;
     --pool-fulfilled-bg: 150 50% 95%;
-    
-    --pool-cancelled: 215 15% 55%;
-    --pool-cancelled-bg: 215 15% 95%;
+
+    /* Closed - Completed (gray) */
+    --pool-closed: 215 15% 50%;
+    --pool-closed-bg: 215 15% 95%;
+
+    /* Cancelled - Cancelled (destructive) */
+    --pool-cancelled: 0 60% 50%;
+    --pool-cancelled-bg: 0 60% 95%;
 
     /* ===========================================
        EXECUTION LIFECYCLE STATUS
@@ -272,17 +289,26 @@
     --signal-positive-bg: 150 45% 15%;
 
     /* Dark mode pool status */
-    --pool-pending: 38 70% 55%;
-    --pool-pending-bg: 38 70% 15%;
-    
-    --pool-partial: 200 55% 55%;
-    --pool-partial-bg: 200 55% 15%;
-    
+    --pool-draft: 215 15% 60%;
+    --pool-draft-bg: 215 15% 18%;
+
+    --pool-submitted: 200 60% 55%;
+    --pool-submitted-bg: 200 60% 15%;
+
+    --pool-matching: 280 45% 55%;
+    --pool-matching-bg: 280 45% 15%;
+
+    --pool-partial: 38 70% 55%;
+    --pool-partial-bg: 38 70% 15%;
+
     --pool-fulfilled: 150 45% 50%;
     --pool-fulfilled-bg: 150 45% 15%;
-    
-    --pool-cancelled: 215 15% 60%;
-    --pool-cancelled-bg: 215 15% 18%;
+
+    --pool-closed: 215 15% 60%;
+    --pool-closed-bg: 215 15% 18%;
+
+    --pool-cancelled: 0 55% 55%;
+    --pool-cancelled-bg: 0 55% 15%;
 
     /* Dark mode execution status */
     --exec-matched: 200 60% 55%;
@@ -460,16 +486,29 @@
 
   /* ===========================================
      POOL REQUEST STATUS BADGES
+     7 lifecycle statuses: draft → submitted → matching → partial → fulfilled → closed → cancelled
      =========================================== */
-  
+
   .pool-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
   }
 
-  .pool-pending {
-    background-color: hsl(var(--pool-pending-bg));
-    color: hsl(var(--pool-pending));
-    border: 1px solid hsl(var(--pool-pending) / 0.25);
+  .pool-draft {
+    background-color: hsl(var(--pool-draft-bg));
+    color: hsl(var(--pool-draft));
+    border: 1px dashed hsl(var(--pool-draft) / 0.4);
+  }
+
+  .pool-submitted {
+    background-color: hsl(var(--pool-submitted-bg));
+    color: hsl(var(--pool-submitted));
+    border: 1px solid hsl(var(--pool-submitted) / 0.25);
+  }
+
+  .pool-matching {
+    background-color: hsl(var(--pool-matching-bg));
+    color: hsl(var(--pool-matching));
+    border: 1px solid hsl(var(--pool-matching) / 0.25);
   }
 
   .pool-partial {
@@ -484,10 +523,16 @@
     border: 1px solid hsl(var(--pool-fulfilled) / 0.25);
   }
 
+  .pool-closed {
+    background-color: hsl(var(--pool-closed-bg));
+    color: hsl(var(--pool-closed));
+    border: 1px solid hsl(var(--pool-closed) / 0.15);
+  }
+
   .pool-cancelled {
     background-color: hsl(var(--pool-cancelled-bg));
     color: hsl(var(--pool-cancelled));
-    border: 1px solid hsl(var(--pool-cancelled) / 0.15);
+    border: 1px solid hsl(var(--pool-cancelled) / 0.3);
   }
 
   /* ===========================================

@@ -17,7 +17,7 @@ import { Slider } from '@/components/ui/slider';
 import { useCreateMatching } from '@/hooks/useMatchings';
 import { useCurrentMatchingWindow } from '@/hooks/useMatchingWindows';
 import { canCreateMatching } from '@/lib/matching-lifecycle';
-import { validateMatchingCriteria, getDeliveryPeriodLabel, type DeliveryPeriod } from '@/lib/matching-validation';
+import { validateMatchingCriteria, getDeliveryPeriodLabel, calculateMatchConfidence, type DeliveryPeriod } from '@/lib/matching-validation';
 import type { ConfirmedBatch } from '@/hooks/useConfirmedBatches';
 import type { MatchingPoolRequest } from '@/hooks/useMatchingRequests';
 import { useRole } from '@/contexts/RoleContext';
@@ -88,6 +88,34 @@ export function CreateMatchingDialog({
       },
       {
         allowAdminOverride: isAdmin, // Admin can override criteria mismatches
+      }
+    );
+  }, [selectedBatch, selectedRequest, isAdmin]);
+
+  // Calculate match confidence score
+  const matchConfidence = useMemo(() => {
+    if (!selectedBatch || !selectedRequest) {
+      return null;
+    }
+
+    return calculateMatchConfidence(
+      {
+        region: selectedBatch.region,
+        grade: selectedBatch.grade,
+        weight_min: selectedBatch.weight_min,
+        weight_max: selectedBatch.weight_max,
+        age_min: selectedBatch.age_min,
+        age_max: selectedBatch.age_max,
+        delivery_period: (selectedBatch as any).delivery_period as DeliveryPeriod | null,
+      },
+      {
+        regions: selectedRequest.regions,
+        required_grade: selectedRequest.required_grade,
+        weight_range_min: selectedRequest.weight_range_min,
+        weight_range_max: selectedRequest.weight_range_max,
+        age_range_min: selectedRequest.age_range_min,
+        age_range_max: selectedRequest.age_range_max,
+        target_delivery_period: selectedRequest.target_delivery_period as DeliveryPeriod | null,
       }
     );
   }, [selectedBatch, selectedRequest]);
@@ -228,6 +256,52 @@ export function CreateMatchingDialog({
               </div>
             )}
           </div>
+
+          {/* Match Confidence Indicator */}
+          {matchConfidence && selectedBatch && selectedRequest && (
+            <div className={`p-4 rounded-lg border-2 ${
+              matchConfidence.color === 'emerald' ? 'border-emerald-500/30 bg-emerald-500/5' :
+              matchConfidence.color === 'blue' ? 'border-blue-500/30 bg-blue-500/5' :
+              matchConfidence.color === 'amber' ? 'border-amber-500/30 bg-amber-500/5' :
+              'border-red-500/30 bg-red-500/5'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className={`h-4 w-4 ${
+                    matchConfidence.color === 'emerald' ? 'text-emerald-600' :
+                    matchConfidence.color === 'blue' ? 'text-blue-600' :
+                    matchConfidence.color === 'amber' ? 'text-amber-600' :
+                    'text-red-600'
+                  }`} />
+                  <span className="text-sm font-medium">Match Confidence</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-2xl font-bold ${
+                    matchConfidence.color === 'emerald' ? 'text-emerald-600' :
+                    matchConfidence.color === 'blue' ? 'text-blue-600' :
+                    matchConfidence.color === 'amber' ? 'text-amber-600' :
+                    'text-red-600'
+                  }`}>
+                    {matchConfidence.score}%
+                  </span>
+                  <Badge className={`${
+                    matchConfidence.color === 'emerald' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30' :
+                    matchConfidence.color === 'blue' ? 'bg-blue-500/15 text-blue-700 border-blue-500/30' :
+                    matchConfidence.color === 'amber' ? 'bg-amber-500/15 text-amber-700 border-amber-500/30' :
+                    'bg-red-500/15 text-red-700 border-red-500/30'
+                  }`}>
+                    {matchConfidence.label}
+                  </Badge>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {matchConfidence.level === 'perfect' && 'All criteria match perfectly. Ideal matching.'}
+                {matchConfidence.level === 'good' && 'Strong match with minor variations. Recommended.'}
+                {matchConfidence.level === 'acceptable' && 'Acceptable match with some mismatches. Review carefully.'}
+                {matchConfidence.level === 'poor' && 'Poor match with significant mismatches. Admin override required.'}
+              </p>
+            </div>
+          )}
 
           {/* Volume Selection */}
           {selectedBatch && selectedRequest && maxVolume > 0 && (

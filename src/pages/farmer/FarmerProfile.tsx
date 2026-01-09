@@ -16,13 +16,14 @@ import { AlertCircle } from 'lucide-react';
 import { useCurrentFarmer } from '@/hooks/useCurrentFarmer';
 import { useUpdateFarmerProfile } from '@/hooks/useFarmers';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
-import { 
+import {
   ProfileIdentitySection,
   ProfileOperationalSection,
   ProfileStatusSection,
 } from '@/components/profile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getFarmerBreadcrumbs } from '@/lib/breadcrumbs';
 
 export default function FarmerProfile() {
   const { t } = useTranslation();
@@ -77,7 +78,11 @@ export default function FarmerProfile() {
   if (isLoading) {
     return (
       <MainLayout>
-        <PageHeader title={t('profile.title')} description={t('common.loading')} />
+        <PageHeader
+          title={t('profile.title')}
+          description={t('common.loading')}
+          breadcrumbs={getFarmerBreadcrumbs('profile', t('profile.title'))}
+        />
         <div className="space-y-6">
           <Skeleton className="h-48" />
           <Skeleton className="h-64" />
@@ -90,7 +95,11 @@ export default function FarmerProfile() {
   if (error || !farmer) {
     return (
       <MainLayout>
-        <PageHeader title={t('profile.title')} description={t('profile.description')} />
+        <PageHeader
+          title={t('profile.title')}
+          description={t('profile.description')}
+          breadcrumbs={getFarmerBreadcrumbs('profile', t('profile.title'))}
+        />
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -106,9 +115,10 @@ export default function FarmerProfile() {
 
   return (
     <MainLayout>
-      <PageHeader 
-        title={t('profile.title')} 
-        description={t('profile.governedDescription')} 
+      <PageHeader
+        title={t('profile.title')}
+        description={t('profile.governedDescription')}
+        breadcrumbs={getFarmerBreadcrumbs('profile', t('profile.title'))}
       />
 
       <div className="space-y-6">

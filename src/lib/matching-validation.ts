@@ -12,8 +12,15 @@
 
 import type { ConfirmedBatch } from '@/hooks/useConfirmedBatches';
 import type { MatchingPoolRequest } from '@/hooks/useMatchingRequests';
+// Sprint 6 Task 9.6.2: Use centralized delivery-periods module
+import {
+  type DeliveryPeriod,
+  formatDeliveryPeriod as formatDeliveryPeriodUtil,
+  validateDeliveryPeriodOverlap as validateDeliveryPeriodOverlapUtil,
+} from './delivery-periods';
 
-export type DeliveryPeriod = 'short_term' | 'mid_term' | 'long_term';
+// Re-export DeliveryPeriod for backward compatibility
+export type { DeliveryPeriod };
 
 export interface MatchingValidationResult {
   valid: boolean;
@@ -24,8 +31,26 @@ export interface MatchingValidationResult {
 /**
  * Validate if batch and request delivery periods are compatible
  * Matching can only occur if delivery periods overlap
+ *
+ * Sprint 6 Task 9.6.2: Updated to use centralized delivery-periods module
+ * This function now wraps the centralized validateDeliveryPeriodOverlap for backward compatibility
  */
 export function validateDeliveryPeriodOverlap(
+  batchDeliveryPeriod: DeliveryPeriod | null,
+  requestDeliveryPeriod: DeliveryPeriod | null
+): { compatible: boolean; reason: string } {
+  // Use centralized validation from delivery-periods module
+  const result = validateDeliveryPeriodOverlapUtil(batchDeliveryPeriod, requestDeliveryPeriod);
+  return {
+    compatible: result.compatible,
+    reason: result.reason, // Use English reason (RU available via result.reasonRu if needed)
+  };
+}
+
+// LEGACY CODE BELOW - can be removed after Sprint 6 verification
+// Original implementation kept temporarily for reference
+/*
+export function validateDeliveryPeriodOverlap_OLD(
   batchDeliveryPeriod: DeliveryPeriod | null,
   requestDeliveryPeriod: DeliveryPeriod | null
 ): { compatible: boolean; reason: string } {
@@ -50,6 +75,7 @@ export function validateDeliveryPeriodOverlap(
     reason: `Delivery period mismatch: Batch is "${formatDeliveryPeriod(batchDeliveryPeriod)}" but Request requires "${formatDeliveryPeriod(requestDeliveryPeriod)}"`,
   };
 }
+*/
 
 /**
  * Validate if batch region matches request regions
@@ -93,7 +119,46 @@ export function validateGradeCompatibility(
 }
 
 /**
- * Validate weight range overlap
+ * Generic range overlap validation
+ * Consolidates weight and age validation logic
+ */
+function validateRangeOverlap(
+  batchMin: number | null,
+  batchMax: number | null,
+  requestMin: number | null,
+  requestMax: number | null,
+  fieldName: string,
+  unit: string
+): { compatible: boolean; reason: string } {
+  // If neither specifies the field, compatible
+  if (
+    batchMin === null && batchMax === null &&
+    requestMin === null && requestMax === null
+  ) {
+    return { compatible: true, reason: `No ${fieldName} restrictions` };
+  }
+
+  // Use 0 and Infinity as defaults for null values
+  const bMin = batchMin ?? 0;
+  const bMax = batchMax ?? Infinity;
+  const rMin = requestMin ?? 0;
+  const rMax = requestMax ?? Infinity;
+
+  // Check for overlap: ranges overlap if bMin <= rMax AND bMax >= rMin
+  const overlaps = bMin <= rMax && bMax >= rMin;
+
+  if (overlaps) {
+    return { compatible: true, reason: `${fieldName} ranges overlap` };
+  }
+
+  return {
+    compatible: false,
+    reason: `${fieldName} range mismatch: Batch (${batchMin || '?'}-${batchMax || '?'} ${unit}) does not overlap with Request (${requestMin || '?'}-${requestMax || '?'} ${unit})`,
+  };
+}
+
+/**
+ * Validate weight range overlap between batch and request
  */
 export function validateWeightOverlap(
   batchWeightMin: number | null,
@@ -101,35 +166,18 @@ export function validateWeightOverlap(
   requestWeightMin: number | null,
   requestWeightMax: number | null
 ): { compatible: boolean; reason: string } {
-  // If neither specifies weight, compatible
-  if (
-    batchWeightMin === null && batchWeightMax === null &&
-    requestWeightMin === null && requestWeightMax === null
-  ) {
-    return { compatible: true, reason: 'No weight restrictions' };
-  }
-
-  // If only one specifies, check partial overlap
-  const bMin = batchWeightMin ?? 0;
-  const bMax = batchWeightMax ?? Infinity;
-  const rMin = requestWeightMin ?? 0;
-  const rMax = requestWeightMax ?? Infinity;
-
-  // Check for overlap
-  const overlaps = bMin <= rMax && bMax >= rMin;
-
-  if (overlaps) {
-    return { compatible: true, reason: 'Weight ranges overlap' };
-  }
-
-  return {
-    compatible: false,
-    reason: `Weight range mismatch: Batch (${batchWeightMin || '?'}-${batchWeightMax || '?'} kg) does not overlap with Request (${requestWeightMin || '?'}-${requestWeightMax || '?'} kg)`,
-  };
+  return validateRangeOverlap(
+    batchWeightMin,
+    batchWeightMax,
+    requestWeightMin,
+    requestWeightMax,
+    'Weight',
+    'kg'
+  );
 }
 
 /**
- * Validate age range overlap
+ * Validate age range overlap between batch and request
  */
 export function validateAgeOverlap(
   batchAgeMin: number | null,
@@ -137,31 +185,14 @@ export function validateAgeOverlap(
   requestAgeMin: number | null,
   requestAgeMax: number | null
 ): { compatible: boolean; reason: string } {
-  // If neither specifies age, compatible
-  if (
-    batchAgeMin === null && batchAgeMax === null &&
-    requestAgeMin === null && requestAgeMax === null
-  ) {
-    return { compatible: true, reason: 'No age restrictions' };
-  }
-
-  // If only one specifies, check partial overlap
-  const bMin = batchAgeMin ?? 0;
-  const bMax = batchAgeMax ?? Infinity;
-  const rMin = requestAgeMin ?? 0;
-  const rMax = requestAgeMax ?? Infinity;
-
-  // Check for overlap
-  const overlaps = bMin <= rMax && bMax >= rMin;
-
-  if (overlaps) {
-    return { compatible: true, reason: 'Age ranges overlap' };
-  }
-
-  return {
-    compatible: false,
-    reason: `Age range mismatch: Batch (${batchAgeMin || '?'}-${batchAgeMax || '?'} months) does not overlap with Request (${requestAgeMin || '?'}-${requestAgeMax || '?'} months)`,
-  };
+  return validateRangeOverlap(
+    batchAgeMin,
+    batchAgeMax,
+    requestAgeMin,
+    requestAgeMax,
+    'Age',
+    'months'
+  );
 }
 
 /**
@@ -293,8 +324,17 @@ export function validateBatchForWindow(
 
 /**
  * Format delivery period for display
+ *
+ * Sprint 6 Task 9.6.2: Updated to use centralized delivery-periods module
+ * This function now wraps the centralized formatDeliveryPeriod for backward compatibility
  */
-export function formatDeliveryPeriod(period: DeliveryPeriod): string {
+export function formatDeliveryPeriod(period: DeliveryPeriod | null): string {
+  return formatDeliveryPeriodUtil(period, 'en');
+}
+
+// LEGACY CODE BELOW - can be removed after Sprint 6 verification
+/*
+export function formatDeliveryPeriod_OLD(period: DeliveryPeriod): string {
   switch (period) {
     case 'short_term':
       return 'Short Term (0-4 weeks)';
@@ -306,6 +346,7 @@ export function formatDeliveryPeriod(period: DeliveryPeriod): string {
       return period;
   }
 }
+*/
 
 /**
  * Get short delivery period label
@@ -322,4 +363,106 @@ export function getDeliveryPeriodLabel(period: DeliveryPeriod | null): string {
     default:
       return period;
   }
+}
+
+/**
+ * Match confidence calculation
+ * Calculates a 0-100 score based on how well batch and request match
+ */
+export interface MatchConfidence {
+  score: number; // 0-100
+  level: 'perfect' | 'good' | 'acceptable' | 'poor';
+  color: 'emerald' | 'blue' | 'amber' | 'red';
+  label: string;
+}
+
+export function calculateMatchConfidence(
+  batch: {
+    region: string;
+    grade: string;
+    weight_min: number | null;
+    weight_max: number | null;
+    age_min: number | null;
+    age_max: number | null;
+    delivery_period?: DeliveryPeriod | null;
+  },
+  request: {
+    regions: string[];
+    required_grade: string;
+    weight_range_min: number | null;
+    weight_range_max: number | null;
+    age_range_min: number | null;
+    age_range_max: number | null;
+    target_delivery_period?: DeliveryPeriod | null;
+  }
+): MatchConfidence {
+  let score = 0;
+
+  // Delivery Period (30 points)
+  const deliveryCheck = validateDeliveryPeriodOverlap(
+    batch.delivery_period || null,
+    request.target_delivery_period || null
+  );
+  if (deliveryCheck.compatible) {
+    score += 30;
+  }
+
+  // Region (25 points)
+  const regionCheck = validateRegionOverlap(batch.region, request.regions);
+  if (regionCheck.compatible) {
+    score += 25;
+  }
+
+  // Grade (25 points)
+  const gradeCheck = validateGradeCompatibility(batch.grade, request.required_grade);
+  if (gradeCheck.compatible) {
+    score += 25;
+  }
+
+  // Weight range (10 points)
+  const weightCheck = validateWeightOverlap(
+    batch.weight_min,
+    batch.weight_max,
+    request.weight_range_min,
+    request.weight_range_max
+  );
+  if (weightCheck.compatible) {
+    score += 10;
+  }
+
+  // Age range (10 points)
+  const ageCheck = validateAgeOverlap(
+    batch.age_min,
+    batch.age_max,
+    request.age_range_min,
+    request.age_range_max
+  );
+  if (ageCheck.compatible) {
+    score += 10;
+  }
+
+  // Determine level and color
+  let level: MatchConfidence['level'];
+  let color: MatchConfidence['color'];
+  let label: string;
+
+  if (score === 100) {
+    level = 'perfect';
+    color = 'emerald';
+    label = 'Perfect Match';
+  } else if (score >= 80) {
+    level = 'good';
+    color = 'blue';
+    label = 'Good Match';
+  } else if (score >= 50) {
+    level = 'acceptable';
+    color = 'amber';
+    label = 'Acceptable Match';
+  } else {
+    level = 'poor';
+    color = 'red';
+    label = 'Poor Match';
+  }
+
+  return { score, level, color, label };
 }

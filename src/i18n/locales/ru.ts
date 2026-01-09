@@ -923,7 +923,238 @@ export const ru = {
     },
     weekFormat: 'Неделя {{week}}, {{year}}',
   },
-  
+
+  newRequestDialog: {
+    title: 'Создать заявку на закупку',
+    description: 'Подайте новую заявку на закупку в пул. Сопоставление начнется автоматически.',
+
+    validation: {
+      volumeRequired: 'Минимум 1 голова',
+      volumeMax: 'Максимум 10,000 голов',
+      gradeRequired: 'Выберите сорт',
+      regionsRequired: 'Выберите хотя бы один регион',
+      targetWeekRequired: 'Выберите целевую неделю',
+      targetWeekRange: 'Целевая неделя должна быть в пределах следующих 12 недель',
+      notesMax: 'Максимум 500 символов',
+      criteriaRequired: 'Укажите хотя бы один критерий приемки (породы, пол, возраст или вес)',
+    },
+
+    fields: {
+      requiredVolume: 'Требуемый объём (голов)',
+      requiredVolumePlaceholder: 'например, 100',
+      requiredVolumeDescription: 'Укажите количество голов скота, которое вам нужно закупить. Например: 100 голов для недельной загрузки мясокомбината.',
+      requiredGrade: 'Требуемый сорт',
+      requiredGradePlaceholder: 'Выберите сорт',
+      requiredGradeDescription: 'Качественная категория скота. Сорт A - премиум качество, B - стандарт, C - базовое. Выберите "Любой сорт" для максимальной гибкости.',
+      gradeAny: 'Любой сорт',
+      gradeLabel: 'Сорт {{grade}}',
+      targetWeek: 'Целевая неделя',
+      targetWeekPlaceholder: 'Выберите целевую неделю',
+      targetWeekDescription: 'Когда вам нужна поставка этого объёма? Должна быть в пределах следующих 12 недель.',
+      targetDeliveryPeriod: 'Целевой период поставки',
+      targetDeliveryPeriodDescription: 'Ваш целевой горизонт планирования мощностей',
+      acceptableRegions: 'Приемлемые регионы',
+      acceptableRegionsDescription: 'Выберите регионы, из которых вы можете принять поставку',
+      regionsSelected: '{{count}} регион(ов) выбрано',
+      notes: 'Примечания',
+      notesPlaceholder: 'Любые особые требования или предпочтения...',
+    },
+
+    acceptanceCriteria: {
+      title: 'Критерии приемки',
+      description: 'Определите характеристики скота, которые вы можете принять.',
+      required: 'Необходим хотя бы один критерий.',
+      tooltip: 'Укажите хотя бы один критерий для фильтрации подходящих партий',
+      acceptedBreeds: 'Приемлемые породы',
+      acceptedBreedsDescription: 'Выберите породы, которые вы можете принять. Например: только Beef Cattle для производства говядины премиум-класса.',
+      acceptedGenders: 'Приемлемый пол',
+      ageRange: 'Диапазон возраста (месяцы)',
+      ageRangeDescription: 'Укажите приемлемый возраст скота. Например: 24-36 месяцев для оптимального выхода мяса. Оставьте пустым для любого возраста.',
+      weightRange: 'Диапазон веса (кг)',
+      weightRangeDescription: 'Укажите приемлемый вес скота. Например: 400-500 кг для стандартной переработки. Оставьте пустым для любого веса.',
+      helperText: 'Только партии, соответствующие критериям приемки, могут быть включены в сопоставление пулов.',
+      warningText: '⚠️ Вы должны указать хотя бы один критерий (породы, пол, возраст или вес) для создания заявки.',
+      breedsSelected: '{{count}} порода(ы) выбрано',
+      gendersSelected: '{{count}} вариант(ов) выбрано',
+      minPlaceholder: 'Мин',
+      maxPlaceholder: 'Макс',
+    },
+
+    buttons: {
+      cancel: 'Отмена',
+      create: 'Создать черновик заявки',
+      accountRestricted: 'Аккаунт ограничен',
+    },
+
+    alerts: {
+      accountRestricted: 'Ваш аккаунт в настоящее время ограничен от создания новых заявок. Свяжитесь с администратором для получения помощи.',
+      activeRequests: 'Активные заявки: {{current}} / {{max}}',
+      submissionDeadline: 'Срок подачи: {{date}}',
+      windowClosed: 'Окно сопоставления закрыто',
+    },
+  },
+
+  editRequestDialog: {
+    title: 'Редактировать заявку',
+    description: {
+      editable: 'Изменить параметры заявки. Некоторые поля могут быть заблокированы в зависимости от статуса.',
+      locked: 'Заявка заблокирована',
+    },
+
+    validation: {
+      volumeRequired: 'Минимум 1 голова',
+      volumeMax: 'Максимум 10,000 голов',
+      regionsRequired: 'Выберите хотя бы один регион',
+      targetWeekRequired: 'Целевая неделя обязательна',
+    },
+
+    fields: {
+      requiredVolume: 'Требуемый объём (голов)',
+      requiredVolumePlaceholder: 'например, 100',
+      deliveryPeriod: 'Период поставки',
+      targetWeekPlaceholder: 'Выберите целевую неделю',
+      targetRegions: 'Целевые регионы',
+      regionsSelected: '{{count}} регион(ов) выбрано',
+      acceptanceCriteria: 'Критерии приемки',
+      ageRange: 'Диапазон возраста (месяцы)',
+      weightRange: 'Диапазон веса (кг)',
+      minPlaceholder: 'Мин',
+      maxPlaceholder: 'Макс',
+    },
+
+    alerts: {
+      locked: 'Заявка заблокирована',
+    },
+
+    buttons: {
+      cancel: 'Отмена',
+      save: 'Сохранить изменения',
+    },
+  },
+
+  adminOverrideDialog: {
+    title: {
+      unlock: 'Разблокировать партию',
+      relock: 'Повторно заблокировать партию',
+      extend: 'Продлить окно',
+      adjust: 'Настроить окно',
+    },
+
+    validation: {
+      reasonRequired: 'Необходима причина для всех административных вмешательств.',
+      reasonMinLength: 'Пожалуйста, укажите более детальную причину (минимум 10 символов).',
+    },
+
+    alerts: {
+      overrideWarning: 'Это <strong>Административное вмешательство</strong> для <strong>{{targetName}}</strong>. Все вмешательства регистрируются для целей аудита.',
+    },
+
+    fields: {
+      reason: 'Причина вмешательства',
+      reasonPlaceholder: 'Объясните, почему это вмешательство необходимо...',
+      reasonHelp: 'Эта причина будет записана в журнал аудита и видима другим администраторам.',
+    },
+
+    buttons: {
+      cancel: 'Отмена',
+      unlockBatch: 'Разблокировать партию',
+      relockBatch: 'Повторно заблокировать партию',
+      extendWindow: 'Продлить окно',
+      adjustWindow: 'Настроить окно',
+      confirmOverride: 'Подтвердить вмешательство',
+      processing: 'Обработка...',
+    },
+  },
+
+  poolRequestOverrideDialog: {
+    title: {
+      status: 'Изменить статус',
+      edit: 'Изменить заявку',
+    },
+    description: 'Изменение заявки на закупку {{requestNumber}}',
+
+    validation: {
+      reasonRequired: 'Необходима причина для всех административных вмешательств.',
+      reasonMinLength: 'Пожалуйста, укажите более детальную причину (минимум 10 символов).',
+    },
+
+    alerts: {
+      overrideWarning: 'Это <strong>Административное вмешательство</strong>. Все изменения регистрируются для целей аудита и будут видимы другим администраторам.',
+    },
+
+    fields: {
+      newStatus: 'Новый статус',
+      currentStatus: 'Текущий статус: <strong>{{status}}</strong>',
+      requiredVolume: 'Требуемый объём (голов)',
+      targetWeek: 'Целевая неделя',
+      regions: 'Регионы (через запятую)',
+      ageRange: 'Диапазон возраста',
+      weightRange: 'Диапазон веса',
+      minLabel: 'Мин',
+      maxLabel: 'Макс',
+      reason: 'Причина вмешательства',
+      reasonPlaceholder: 'Объясните, почему это вмешательство необходимо...',
+      reasonHelp: 'Эта причина будет записана в журнал аудита.',
+    },
+
+    buttons: {
+      cancel: 'Отмена',
+      confirm: 'Подтвердить вмешательство',
+      processing: 'Обработка...',
+    },
+  },
+
+  createMatchingDialog: {
+    title: 'Создать сопоставление',
+    description: 'Сопоставить партию с заявкой на закупку',
+
+    validation: {
+      selectBatch: 'Выберите партию',
+      selectRequest: 'Выберите заявку на закупку',
+      volumeRequired: 'Сопоставленный объём должен быть больше 0',
+      volumeExceedsBatch: 'Объём превышает доступный в партии ({{maxVolume}})',
+      volumeExceedsRequest: 'Объём превышает оставшийся в заявке ({{maxVolume}})',
+      cannotCreate: 'Невозможно создать сопоставление',
+    },
+
+    alerts: {
+      windowRestriction: 'Окно сопоставления не активно',
+      windowRestrictionDetail: 'Создание сопоставлений возможно только во время активных окон сопоставления. Администраторы могут переопределить это ограничение.',
+    },
+
+    fields: {
+      batch: 'Партия',
+      batchNumber: 'Партия #{{number}}',
+      batchInfo: '{{heads}} голов, {{grade}}, {{region}}',
+      request: 'Заявка на закупку',
+      requestNumber: 'Заявка #{{number}}',
+      requestInfo: 'Требуется {{volume}} голов, {{grade}}',
+      matchedVolume: 'Сопоставленный объём',
+      matchedVolumeHelp: 'Сколько голов сопоставить из этой партии с этой заявкой',
+      maxVolume: 'Макс: {{max}} голов (ограничено {{constraint}})',
+      constraint: {
+        batch: 'партией',
+        request: 'заявкой',
+      },
+      notes: 'Примечания',
+      notesPlaceholder: 'Любые особые соображения для этого сопоставления...',
+    },
+
+    validation_section: {
+      title: 'Проверка совместимости',
+      perfect: 'Идеальное совпадение',
+      good: 'Хорошее совпадение',
+      warnings: 'Предупреждения',
+      errors: 'Ошибки',
+    },
+
+    buttons: {
+      cancel: 'Отмена',
+      create: 'Создать сопоставление',
+      creating: 'Создание...',
+    },
+  },
+
   landing: {
     nav: {
       about: 'О платформе',

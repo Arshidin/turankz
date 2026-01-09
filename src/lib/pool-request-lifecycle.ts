@@ -39,29 +39,36 @@ export const POOL_REQUEST_STATUSES: PoolRequestLifecycleStatus[] = [
 // Role types that can perform transitions
 export type PoolRequestRole = 'mpk' | 'admin';
 
-// Allowed transitions per status
-const ALLOWED_TRANSITIONS: Record<PoolRequestLifecycleStatus, PoolRequestLifecycleStatus[]> = {
-  draft: ['submitted', 'cancelled'],
-  submitted: ['matching', 'cancelled'],
-  matching: ['partial', 'fulfilled', 'cancelled'],
-  partial: ['fulfilled', 'cancelled'],
-  fulfilled: ['closed'],
+// Unified transition rules: combines allowed transitions with role permissions
+// This eliminates duplication between ALLOWED_TRANSITIONS and TRANSITION_PERMISSIONS
+interface TransitionRule {
+  to: PoolRequestLifecycleStatus;
+  roles: PoolRequestRole[];
+}
+
+const TRANSITION_RULES: Record<PoolRequestLifecycleStatus, TransitionRule[]> = {
+  draft: [
+    { to: 'submitted', roles: ['mpk'] },
+    { to: 'cancelled', roles: ['mpk', 'admin'] },
+  ],
+  submitted: [
+    { to: 'matching', roles: ['admin'] },
+    { to: 'cancelled', roles: ['mpk', 'admin'] },
+  ],
+  matching: [
+    { to: 'partial', roles: ['admin'] },
+    { to: 'fulfilled', roles: ['admin'] },
+    { to: 'cancelled', roles: ['admin'] },
+  ],
+  partial: [
+    { to: 'fulfilled', roles: ['admin'] },
+    { to: 'cancelled', roles: ['admin'] },
+  ],
+  fulfilled: [
+    { to: 'closed', roles: ['admin'] },
+  ],
   closed: [],
   cancelled: [],
-};
-
-// Role permissions for transitions
-const TRANSITION_PERMISSIONS: Record<string, PoolRequestRole[]> = {
-  'draft->submitted': ['mpk'],
-  'draft->cancelled': ['mpk', 'admin'],
-  'submitted->matching': ['admin'],
-  'submitted->cancelled': ['mpk', 'admin'],
-  'matching->partial': ['admin'],
-  'matching->fulfilled': ['admin'],
-  'matching->cancelled': ['admin'],
-  'partial->fulfilled': ['admin'],
-  'partial->cancelled': ['admin'],
-  'fulfilled->closed': ['admin'],
 };
 
 // Status labels for display
@@ -98,13 +105,14 @@ export const POOL_REQUEST_STATUS_LABELS_RU: Record<PoolRequestLifecycleStatus, s
 };
 
 /**
- * Check if a transition is allowed by the FSM
+ * Check if a transition is allowed by the FSM (regardless of role)
  */
 export function isTransitionAllowed(
   fromStatus: PoolRequestLifecycleStatus,
   toStatus: PoolRequestLifecycleStatus
 ): boolean {
-  return ALLOWED_TRANSITIONS[fromStatus]?.includes(toStatus) ?? false;
+  const rules = TRANSITION_RULES[fromStatus] || [];
+  return rules.some(rule => rule.to === toStatus);
 }
 
 /**
@@ -115,9 +123,9 @@ export function canRoleTransition(
   toStatus: PoolRequestLifecycleStatus,
   role: PoolRequestRole
 ): boolean {
-  const key = `${fromStatus}->${toStatus}`;
-  const allowedRoles = TRANSITION_PERMISSIONS[key];
-  return allowedRoles?.includes(role) ?? false;
+  const rules = TRANSITION_RULES[fromStatus] || [];
+  const matchingRule = rules.find(rule => rule.to === toStatus);
+  return matchingRule?.roles.includes(role) ?? false;
 }
 
 /**
@@ -135,9 +143,9 @@ export function validatePoolRequestTransition(
   // Check if transition is allowed by FSM
   if (!isTransitionAllowed(fromStatus, toStatus)) {
     // Check if it's a reversion attempt
-    const fromIndex = Object.keys(ALLOWED_TRANSITIONS).indexOf(fromStatus);
-    const toIndex = Object.keys(ALLOWED_TRANSITIONS).indexOf(toStatus);
-    
+    const fromIndex = POOL_REQUEST_STATUSES.indexOf(fromStatus);
+    const toIndex = POOL_REQUEST_STATUSES.indexOf(toStatus);
+
     if (toIndex < fromIndex) {
       return {
         valid: false,
@@ -145,7 +153,7 @@ export function validatePoolRequestTransition(
         errorRu: 'Невозможно вернуться к предыдущему статусу. Жизненный цикл заявки необратим.',
       };
     }
-    
+
     return {
       valid: false,
       error: `Cannot transition from ${POOL_REQUEST_STATUS_LABELS[fromStatus]} to ${POOL_REQUEST_STATUS_LABELS[toStatus]}. Step cannot be skipped.`,
@@ -173,10 +181,10 @@ export function getAvailableTransitions(
   currentStatus: PoolRequestLifecycleStatus,
   role: PoolRequestRole
 ): PoolRequestLifecycleStatus[] {
-  const possibleTransitions = ALLOWED_TRANSITIONS[currentStatus] || [];
-  return possibleTransitions.filter(toStatus => 
-    canRoleTransition(currentStatus, toStatus, role)
-  );
+  const rules = TRANSITION_RULES[currentStatus] || [];
+  return rules
+    .filter(rule => rule.roles.includes(role))
+    .map(rule => rule.to);
 }
 
 /**
@@ -558,12 +566,45 @@ export interface MatchingProgress {
   isComplete: boolean;
 }
 
-export type MatchingProgressStatus = 
+export type MatchingProgressStatus =
   | 'not-started'
   | 'at-risk'
   | 'partial'
   | 'near-complete'
   | 'fulfilled';
+
+/**
+ * Sprint 6 Task 9.8.1: Matching progress status labels (English)
+ */
+export const MATCHING_PROGRESS_LABELS: Record<MatchingProgressStatus, string> = {
+  fulfilled: 'Fulfilled',
+  'near-complete': 'Near Complete',
+  partial: 'Partial',
+  'at-risk': 'At Risk',
+  'not-started': 'Not Started',
+};
+
+/**
+ * Sprint 6 Task 9.8.1: Matching progress status labels (Russian)
+ */
+export const MATCHING_PROGRESS_LABELS_RU: Record<MatchingProgressStatus, string> = {
+  fulfilled: 'Выполнено',
+  'near-complete': 'Почти завершено',
+  partial: 'Частично',
+  'at-risk': 'Под угрозой',
+  'not-started': 'Не начато',
+};
+
+/**
+ * Sprint 6 Task 9.8.1: Matching progress descriptions (Russian)
+ */
+export const MATCHING_PROGRESS_DESCRIPTIONS_RU: Record<MatchingProgressStatus, string> = {
+  fulfilled: 'Заявка полностью заполнена. Ожидайте подтверждения доставки.',
+  'near-complete': 'Почти готово! Осталось сопоставить небольшой объём.',
+  partial: 'Сопоставление продолжается. Администратор ищет подходящие партии.',
+  'at-risk': 'Низкий процент заполнения. Рассмотрите возможность расширения критериев.',
+  'not-started': 'Сопоставление ещё не началось. Ожидайте начала окна matching.',
+};
 
 /**
  * Calculate matching progress metrics for a pool request
@@ -654,19 +695,35 @@ export function getProgressStatusStyle(status: MatchingProgressStatus): {
 
 /**
  * Get status label for matching progress
+ * Sprint 6 Task 9.8.1: Updated to use centralized label constants
  */
 export function getMatchingProgressLabel(
   status: MatchingProgressStatus,
   lang: 'en' | 'ru' = 'en'
 ): string {
-  const labels: Record<MatchingProgressStatus, { en: string; ru: string }> = {
-    fulfilled: { en: 'Fulfilled', ru: 'Выполнено' },
-    'near-complete': { en: 'Near Complete', ru: 'Почти завершено' },
-    partial: { en: 'Partial', ru: 'Частично' },
-    'at-risk': { en: 'At Risk', ru: 'Под угрозой' },
-    'not-started': { en: 'Not Started', ru: 'Не начато' },
+  return lang === 'ru' ? MATCHING_PROGRESS_LABELS_RU[status] : MATCHING_PROGRESS_LABELS[status];
+}
+
+/**
+ * Get status description for matching progress (Russian)
+ * Sprint 6 Task 9.8.1: New function for contextual messages
+ */
+export function getMatchingProgressDescription(
+  status: MatchingProgressStatus,
+  lang: 'en' | 'ru' = 'ru'
+): string {
+  if (lang === 'ru') {
+    return MATCHING_PROGRESS_DESCRIPTIONS_RU[status];
+  }
+  // English descriptions (fallback)
+  const descriptionsEn: Record<MatchingProgressStatus, string> = {
+    fulfilled: 'Request fully matched. Awaiting delivery confirmation.',
+    'near-complete': 'Almost complete! Small volume remaining.',
+    partial: 'Matching in progress. Admin is finding suitable batches.',
+    'at-risk': 'Low fill rate. Consider expanding acceptance criteria.',
+    'not-started': 'Matching not yet started. Wait for matching window.',
   };
-  return lang === 'ru' ? labels[status].ru : labels[status].en;
+  return descriptionsEn[status];
 }
 
 /**

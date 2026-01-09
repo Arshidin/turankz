@@ -1,9 +1,12 @@
 /**
  * MATCHING WINDOW LIFECYCLE MANAGEMENT
- * 
+ *
  * Controls time-based batch discipline through matching windows.
  * Only one window can be Active at a time.
  */
+
+// Sprint 6 Task 9.6.2: Import from centralized delivery-periods module
+import { type DeliveryPeriod } from './delivery-periods';
 
 export const MATCHING_WINDOW_STATUSES = [
   'upcoming',
@@ -14,7 +17,8 @@ export const MATCHING_WINDOW_STATUSES = [
 
 export type MatchingWindowStatus = typeof MATCHING_WINDOW_STATUSES[number];
 
-export type DeliveryPeriod = 'short_term' | 'mid_term' | 'long_term';
+// Re-export DeliveryPeriod for backward compatibility
+export type { DeliveryPeriod };
 
 export interface MatchingWindow {
   id: string;

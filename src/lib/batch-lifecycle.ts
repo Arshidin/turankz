@@ -96,26 +96,35 @@ export const BATCH_STATUS_DESCRIPTIONS_RU: Record<BatchLifecycleStatus, string> 
   closed: 'Сделка завершена или партия закрыта',
 };
 
-// Allowed transitions by role
-export interface TransitionRule {
-  from: BatchLifecycleStatus;
+// Role types that can perform transitions
+export type BatchRole = 'farmer' | 'admin' | 'mpk';
+
+// Unified transition rules: combines allowed transitions with role permissions
+// This eliminates duplication and follows the same pattern as pool-request-lifecycle.ts
+interface TransitionRule {
   to: BatchLifecycleStatus;
-  allowedRoles: ('farmer' | 'admin')[];
+  roles: ('farmer' | 'admin')[];
 }
 
-export const ALLOWED_TRANSITIONS: TransitionRule[] = [
-  // Farmer transitions (forward only)
-  { from: 'draft', to: 'forecast', allowedRoles: ['farmer', 'admin'] },
-  { from: 'forecast', to: 'soft_committed', allowedRoles: ['farmer', 'admin'] },
-  { from: 'soft_committed', to: 'confirmed', allowedRoles: ['farmer', 'admin'] },
-  
-  // Admin-only transitions
-  { from: 'confirmed', to: 'matched', allowedRoles: ['admin'] },
-  { from: 'matched', to: 'closed', allowedRoles: ['admin'] },
-  
-  // Admin can also close directly from confirmed (for edge cases)
-  { from: 'confirmed', to: 'closed', allowedRoles: ['admin'] },
-];
+const TRANSITION_RULES: Record<BatchLifecycleStatus, TransitionRule[]> = {
+  draft: [
+    { to: 'forecast', roles: ['farmer', 'admin'] },
+  ],
+  forecast: [
+    { to: 'soft_committed', roles: ['farmer', 'admin'] },
+  ],
+  soft_committed: [
+    { to: 'confirmed', roles: ['farmer', 'admin'] },
+  ],
+  confirmed: [
+    { to: 'matched', roles: ['admin'] },
+    { to: 'closed', roles: ['admin'] }, // Admin can close directly from confirmed
+  ],
+  matched: [
+    { to: 'closed', roles: ['admin'] },
+  ],
+  closed: [], // Terminal state - no transitions allowed
+};
 
 /**
  * Get the index of a status in the lifecycle
@@ -125,23 +134,30 @@ export function getStatusIndex(status: BatchLifecycleStatus): number {
 }
 
 /**
- * Check if a transition is allowed for a given role
+ * Check if a transition is allowed by the FSM (regardless of role)
  */
 export function isTransitionAllowed(
   fromStatus: BatchLifecycleStatus,
+  toStatus: BatchLifecycleStatus
+): boolean {
+  const rules = TRANSITION_RULES[fromStatus] || [];
+  return rules.some(rule => rule.to === toStatus);
+}
+
+/**
+ * Check if a role can perform a specific transition
+ */
+export function canRoleTransition(
+  fromStatus: BatchLifecycleStatus,
   toStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
+  role: BatchRole
 ): boolean {
   // MPK cannot change batch status
   if (role === 'mpk') return false;
-  
-  const transition = ALLOWED_TRANSITIONS.find(
-    t => t.from === fromStatus && t.to === toStatus
-  );
-  
-  if (!transition) return false;
-  
-  return transition.allowedRoles.includes(role as 'farmer' | 'admin');
+
+  const rules = TRANSITION_RULES[fromStatus] || [];
+  const matchingRule = rules.find(rule => rule.to === toStatus);
+  return matchingRule?.roles.includes(role as 'farmer' | 'admin') ?? false;
 }
 
 /**
@@ -162,13 +178,14 @@ export function getNextAllowedStatus(
  */
 export function getAllowedTransitions(
   currentStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
+  role: BatchRole
 ): BatchLifecycleStatus[] {
   if (role === 'mpk') return [];
-  
-  return ALLOWED_TRANSITIONS
-    .filter(t => t.from === currentStatus && t.allowedRoles.includes(role as 'farmer' | 'admin'))
-    .map(t => t.to);
+
+  const rules = TRANSITION_RULES[currentStatus] || [];
+  return rules
+    .filter(rule => rule.roles.includes(role as 'farmer' | 'admin'))
+    .map(rule => rule.to);
 }
 
 /**
@@ -468,65 +485,63 @@ export function getConfirmationDialogLabels(lang: 'en' | 'ru' = 'en'): {
 export function getDisabledTransitionTooltip(
   currentStatus: BatchLifecycleStatus,
   targetStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
+  role: BatchRole
 ): string {
   if (role === 'mpk') {
     return 'MPK users cannot change batch status.';
   }
-  
+
   const currentIndex = getStatusIndex(currentStatus);
   const targetIndex = getStatusIndex(targetStatus);
-  
+
   // Trying to go backwards
   if (targetIndex < currentIndex) {
     return 'Cannot revert to a previous status. Batch lifecycle is irreversible.';
   }
-  
+
   // Check if transition exists but is admin-only
-  const transition = ALLOWED_TRANSITIONS.find(
-    t => t.from === currentStatus && t.to === targetStatus
-  );
-  
-  if (transition && !transition.allowedRoles.includes(role as 'farmer' | 'admin')) {
+  const rules = TRANSITION_RULES[currentStatus] || [];
+  const matchingRule = rules.find(rule => rule.to === targetStatus);
+
+  if (matchingRule && !matchingRule.roles.includes(role as 'farmer' | 'admin')) {
     return 'This action requires Admin privileges.';
   }
-  
+
   // Transition not defined in FSM
-  if (!transition) {
+  if (!matchingRule) {
     return 'This transition is not allowed from the current status.';
   }
-  
+
   return 'This action is not allowed at the current batch status.';
 }
 
 export function getDisabledTransitionTooltipRu(
   currentStatus: BatchLifecycleStatus,
   targetStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
+  role: BatchRole
 ): string {
   if (role === 'mpk') {
     return 'Пользователи МПК не могут изменять статус партии.';
   }
-  
+
   const currentIndex = getStatusIndex(currentStatus);
   const targetIndex = getStatusIndex(targetStatus);
-  
+
   if (targetIndex < currentIndex) {
     return 'Невозможно вернуться к предыдущему статусу. Жизненный цикл партии необратим.';
   }
-  
-  const transition = ALLOWED_TRANSITIONS.find(
-    t => t.from === currentStatus && t.to === targetStatus
-  );
-  
-  if (transition && !transition.allowedRoles.includes(role as 'farmer' | 'admin')) {
+
+  const rules = TRANSITION_RULES[currentStatus] || [];
+  const matchingRule = rules.find(rule => rule.to === targetStatus);
+
+  if (matchingRule && !matchingRule.roles.includes(role as 'farmer' | 'admin')) {
     return 'Это действие требует прав Администратора.';
   }
-  
-  if (!transition) {
+
+  if (!matchingRule) {
     return 'Этот переход недоступен из текущего статуса.';
   }
-  
+
   return 'Это действие недоступно при текущем статусе партии.';
 }
 
@@ -536,94 +551,36 @@ export function getDisabledTransitionTooltipRu(
 export function validateTransition(
   fromStatus: BatchLifecycleStatus,
   toStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
+  role: BatchRole
 ): { valid: boolean; error?: string } {
   if (fromStatus === toStatus) {
     return { valid: false, error: 'Status is already set to this value.' };
   }
-  
-  if (!isTransitionAllowed(fromStatus, toStatus, role)) {
-    return { 
-      valid: false, 
-      error: getDisabledTransitionTooltip(fromStatus, toStatus, role) 
+
+  if (!canRoleTransition(fromStatus, toStatus, role)) {
+    return {
+      valid: false,
+      error: getDisabledTransitionTooltip(fromStatus, toStatus, role)
     };
   }
-  
+
   return { valid: true };
 }
 
 /**
- * GUARDRAIL: Explicitly check for invalid direct transitions
- * This provides a hard block for transitions that should never happen
- */
-export function isInvalidDirectTransition(
-  fromStatus: BatchLifecycleStatus,
-  toStatus: BatchLifecycleStatus
-): { invalid: boolean; reason?: string } {
-  // Block: Draft → Confirmed (must go through Forecast and Soft Committed)
-  if (fromStatus === 'draft' && toStatus === 'confirmed') {
-    return { 
-      invalid: true, 
-      reason: 'Cannot confirm directly from Draft. Must progress through Forecast and Soft Committed first.' 
-    };
-  }
-  
-  // Block: Forecast → Confirmed (must go through Soft Committed)
-  if (fromStatus === 'forecast' && toStatus === 'confirmed') {
-    return { 
-      invalid: true, 
-      reason: 'Cannot confirm directly from Forecast. Must Soft Commit first.' 
-    };
-  }
-  
-  // Block: Any status → Draft (no reverting)
-  if (toStatus === 'draft' && fromStatus !== 'draft') {
-    return { 
-      invalid: true, 
-      reason: 'Cannot revert to Draft. Batch lifecycle is irreversible.' 
-    };
-  }
-  
-  // Block: Confirmed/Matched/Closed → Any earlier status
-  if (isBatchReadOnly(fromStatus) && getStatusIndex(toStatus) < getStatusIndex(fromStatus)) {
-    return { 
-      invalid: true, 
-      reason: 'Cannot revert from a locked status. Batch data is final.' 
-    };
-  }
-  
-  // Block: Skipping to Matched or Closed without being Confirmed first
-  if ((toStatus === 'matched' || toStatus === 'closed') && fromStatus !== 'confirmed' && fromStatus !== 'matched') {
-    return { 
-      invalid: true, 
-      reason: 'Cannot skip to Matched or Closed. Batch must be Confirmed first.' 
-    };
-  }
-  
-  return { invalid: false };
-}
-
-/**
- * Combined validation: checks both role permissions and FSM rules
+ * @deprecated Use validateTransition() instead. TRANSITION_RULES now enforces all FSM logic.
+ * This function is kept for backward compatibility but simply delegates to validateTransition.
  */
 export function validateTransitionComplete(
   fromStatus: BatchLifecycleStatus,
   toStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
-): { valid: boolean; error?: string; errorType?: 'permission' | 'fsm_rule' | 'invalid' } {
-  // First check FSM rules
-  const fsmCheck = isInvalidDirectTransition(fromStatus, toStatus);
-  if (fsmCheck.invalid) {
-    return { valid: false, error: fsmCheck.reason, errorType: 'fsm_rule' };
-  }
-  
-  // Then check role permissions
-  const permissionCheck = validateTransition(fromStatus, toStatus, role);
-  if (!permissionCheck.valid) {
-    return { valid: false, error: permissionCheck.error, errorType: 'permission' };
-  }
-  
-  return { valid: true };
+  role: BatchRole
+): { valid: boolean; error?: string; errorType?: 'permission' | 'fsm_rule' } {
+  const result = validateTransition(fromStatus, toStatus, role);
+  return {
+    ...result,
+    errorType: result.valid ? undefined : 'permission',
+  };
 }
 
 /**
@@ -632,33 +589,31 @@ export function validateTransitionComplete(
  */
 export function getBlockedTransitions(
   currentStatus: BatchLifecycleStatus,
-  role: 'farmer' | 'admin' | 'mpk'
-): Array<{ 
-  toStatus: BatchLifecycleStatus; 
-  reason: string; 
-  type: 'admin_only' | 'blocked' | 'invalid' | 'revert' 
+  role: BatchRole
+): Array<{
+  toStatus: BatchLifecycleStatus;
+  reason: string;
+  type: 'admin_only' | 'blocked' | 'revert'
 }> {
-  const blocked: Array<{ toStatus: BatchLifecycleStatus; reason: string; type: 'admin_only' | 'blocked' | 'invalid' | 'revert' }> = [];
-  
+  const blocked: Array<{ toStatus: BatchLifecycleStatus; reason: string; type: 'admin_only' | 'blocked' | 'revert' }> = [];
+
   for (const status of BATCH_STATUSES) {
     if (status === currentStatus) continue;
-    
-    const validation = validateTransitionComplete(currentStatus, status, role);
+
+    const validation = validateTransition(currentStatus, status, role);
     if (!validation.valid) {
-      let type: 'admin_only' | 'blocked' | 'invalid' | 'revert' = 'blocked';
-      
+      let type: 'admin_only' | 'blocked' | 'revert' = 'blocked';
+
       // Determine type
       const statusIndex = getStatusIndex(status);
       const currentIndex = getStatusIndex(currentStatus);
-      
+
       if (statusIndex < currentIndex) {
         type = 'revert';
-      } else if (validation.errorType === 'fsm_rule') {
-        type = 'invalid';
       } else if (validation.error?.includes('Admin')) {
         type = 'admin_only';
       }
-      
+
       blocked.push({
         toStatus: status,
         reason: validation.error || 'Transition not allowed',
@@ -666,6 +621,6 @@ export function getBlockedTransitions(
       });
     }
   }
-  
+
   return blocked;
 }

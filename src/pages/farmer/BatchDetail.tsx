@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { getFarmerBreadcrumbs } from '@/lib/breadcrumbs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, type ReadinessStatus } from '@/components/ui/StatusBadge';
@@ -467,9 +468,10 @@ export default function BatchDetail() {
       </div>
 
       <div className="flex items-start justify-between mb-6">
-        <PageHeader 
+        <PageHeader
           title={batch.batch_number}
           description={isEditing ? 'Edit batch information' : 'View and manage batch details'}
+          breadcrumbs={getFarmerBreadcrumbs('batch-detail', batch.batch_number)}
         />
         {!isEditing && (
           <TooltipProvider>

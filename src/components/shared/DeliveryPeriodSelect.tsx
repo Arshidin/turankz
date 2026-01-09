@@ -14,7 +14,16 @@ import {
 import { FormControl, FormDescription, FormItem, FormLabel } from '@/components/ui/form';
 import { Info } from 'lucide-react';
 
-export type DeliveryPeriod = 'short_term' | 'mid_term' | 'long_term';
+// Sprint 6 Task 9.6.2: Import from centralized delivery-periods module
+import {
+  type DeliveryPeriod,
+  formatDeliveryPeriod as formatDeliveryPeriodUtil,
+  getDeliveryPeriodLabel as getDeliveryPeriodLabelUtil,
+  getDeliveryPeriodDescription,
+} from '@/lib/delivery-periods';
+
+// Re-export for backward compatibility
+export type { DeliveryPeriod };
 
 export const DELIVERY_PERIOD_OPTIONS: {
   value: DeliveryPeriod;

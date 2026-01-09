@@ -17,6 +17,9 @@ export type MatchingLifecycleStatus = 'active' | 'finalized' | 'cancelled';
 // All statuses as array
 export const MATCHING_STATUSES: MatchingLifecycleStatus[] = ['active', 'finalized', 'cancelled'];
 
+// Role types that can perform transitions
+export type MatchingRole = 'farmer' | 'mpk' | 'admin';
+
 // Status display labels
 export const MATCHING_STATUS_LABELS: Record<MatchingLifecycleStatus, string> = {
   active: 'Active',
@@ -31,29 +34,69 @@ export const MATCHING_STATUS_DESCRIPTIONS: Record<MatchingLifecycleStatus, strin
   cancelled: 'Matching was cancelled',
 };
 
-// Allowed transitions
-const ALLOWED_TRANSITIONS: Record<MatchingLifecycleStatus, MatchingLifecycleStatus[]> = {
-  active: ['finalized', 'cancelled'],
-  finalized: [], // Terminal state
-  cancelled: [], // Terminal state
+// Unified transition rules: combines allowed transitions with role permissions
+// Only admins can modify matching status
+interface TransitionRule {
+  to: MatchingLifecycleStatus;
+  roles: MatchingRole[];
+}
+
+const TRANSITION_RULES: Record<MatchingLifecycleStatus, TransitionRule[]> = {
+  active: [
+    { to: 'finalized', roles: ['admin'] },
+    { to: 'cancelled', roles: ['admin'] },
+  ],
+  finalized: [], // Terminal state - no transitions allowed
+  cancelled: [], // Terminal state - no transitions allowed
 };
 
 /**
- * Validate if a matching status transition is allowed
+ * Check if a transition is allowed by the FSM (regardless of role)
+ */
+export function isTransitionAllowed(
+  fromStatus: MatchingLifecycleStatus,
+  toStatus: MatchingLifecycleStatus
+): boolean {
+  const rules = TRANSITION_RULES[fromStatus] || [];
+  return rules.some(rule => rule.to === toStatus);
+}
+
+/**
+ * Check if a role can perform a specific transition
+ */
+export function canRoleTransition(
+  fromStatus: MatchingLifecycleStatus,
+  toStatus: MatchingLifecycleStatus,
+  role: MatchingRole
+): boolean {
+  // Only admins can modify matching status
+  if (role !== 'admin') return false;
+
+  const rules = TRANSITION_RULES[fromStatus] || [];
+  const matchingRule = rules.find(rule => rule.to === toStatus);
+  return matchingRule?.roles.includes(role) ?? false;
+}
+
+/**
+ * Validate if a matching status transition is allowed for a given role
  */
 export function validateMatchingTransition(
   fromStatus: MatchingLifecycleStatus,
-  toStatus: MatchingLifecycleStatus
+  toStatus: MatchingLifecycleStatus,
+  role: MatchingRole = 'admin'
 ): { valid: boolean; error?: string } {
   if (fromStatus === toStatus) {
     return { valid: false, error: 'Status is already ' + toStatus };
   }
 
-  const allowed = ALLOWED_TRANSITIONS[fromStatus];
-  if (!allowed.includes(toStatus)) {
+  if (!canRoleTransition(fromStatus, toStatus, role)) {
+    if (role !== 'admin') {
+      return { valid: false, error: 'Only admins can modify matching status' };
+    }
+    const allowedStatuses = TRANSITION_RULES[fromStatus].map(r => r.to);
     return {
       valid: false,
-      error: `Cannot transition from ${fromStatus} to ${toStatus}. Allowed: ${allowed.join(', ') || 'none'}`,
+      error: `Cannot transition from ${fromStatus} to ${toStatus}. Allowed: ${allowedStatuses.join(', ') || 'none'}`,
     };
   }
 

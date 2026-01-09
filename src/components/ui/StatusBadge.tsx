@@ -1,41 +1,32 @@
 import { cn } from '@/lib/utils';
-import { 
-  type BatchLifecycleStatus, 
-  BATCH_STATUS_LABELS, 
-  BATCH_STATUS_LABELS_RU 
-} from '@/lib/batch-lifecycle';
+import { type BatchLifecycleStatus } from '@/lib/batch-lifecycle';
+import { useStatusBadgeStyle, getStatusLabel, type BatchStatus } from '@/hooks/useStatusBadgeStyle';
 
 /* ===========================================
    BATCH LIFECYCLE STATUS BADGE
    Primary status indicator across platform
+   Now uses centralized useStatusBadgeStyle hook
    =========================================== */
 
 // Accept both database format (underscore) and display format (hyphen)
 // Also includes legacy 'delivered' for backwards compatibility
 export type ReadinessStatus = BatchLifecycleStatus | 'soft-committed' | 'delivered';
 
-const normalizeStatus = (status: ReadinessStatus): BatchLifecycleStatus => {
+const normalizeStatus = (status: ReadinessStatus): BatchStatus => {
   // Normalize to underscore format for class lookup
   const normalized = status.replace('-', '_') as string;
   // Map legacy 'delivered' to 'closed'
   if (normalized === 'delivered') return 'closed';
-  return normalized as BatchLifecycleStatus;
+  return normalized as BatchStatus;
 };
 
 // Get current language from localStorage or default to 'ru'
-const getCurrentLanguage = (): string => {
+const getCurrentLanguage = (): 'en' | 'ru' => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('i18nextLng') || 'ru';
+    const lang = localStorage.getItem('i18nextLng') || 'ru';
+    return lang.startsWith('ru') ? 'ru' : 'en';
   }
   return 'ru';
-};
-
-const getStatusLabel = (status: BatchLifecycleStatus): string => {
-  const lang = getCurrentLanguage();
-  if (lang === 'ru') {
-    return BATCH_STATUS_LABELS_RU[status] || status;
-  }
-  return BATCH_STATUS_LABELS[status] || status;
 };
 
 interface StatusBadgeProps {
@@ -46,26 +37,20 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, className, size = 'md' }: StatusBadgeProps) {
   const normalizedStatus = normalizeStatus(status);
-  
-  const statusClass = {
-    draft: 'status-draft',
-    forecast: 'status-forecast',
-    soft_committed: 'status-soft',
-    confirmed: 'status-confirmed',
-    matched: 'status-matched',
-    closed: 'status-closed',
-  }[normalizedStatus] || 'status-draft';
+  const style = useStatusBadgeStyle('batch', normalizedStatus);
+  const lang = getCurrentLanguage();
+  const label = getStatusLabel('batch', normalizedStatus, lang);
 
   return (
     <span
       className={cn(
         'status-badge',
-        statusClass,
+        style.className,
         size === 'sm' && 'text-[10px] px-1.5 py-0',
         className
       )}
     >
-      {getStatusLabel(normalizedStatus)}
+      {label}
     </span>
   );
 }
@@ -152,16 +137,11 @@ export function MpkStatusBadge({ status, className, size = 'md' }: MpkStatusBadg
 
 /* ===========================================
    POOL REQUEST STATUS BADGE
+   7 lifecycle statuses: draft → submitted → matching → partial → fulfilled → closed → cancelled
+   Now uses centralized useStatusBadgeStyle hook
    =========================================== */
 
-export type PoolRequestStatus = 'pending' | 'partial' | 'fulfilled' | 'cancelled';
-
-const poolStatusLabels: Record<PoolRequestStatus, string> = {
-  pending: 'Pending',
-  partial: 'Partial',
-  fulfilled: 'Fulfilled',
-  cancelled: 'Cancelled',
-};
+export type PoolRequestStatus = 'draft' | 'submitted' | 'matching' | 'partial' | 'fulfilled' | 'closed' | 'cancelled';
 
 interface PoolStatusBadgeProps {
   status: PoolRequestStatus;
@@ -170,23 +150,20 @@ interface PoolStatusBadgeProps {
 }
 
 export function PoolStatusBadge({ status, className, size = 'md' }: PoolStatusBadgeProps) {
-  const statusClass = {
-    pending: 'pool-pending',
-    partial: 'pool-partial',
-    fulfilled: 'pool-fulfilled',
-    cancelled: 'pool-cancelled',
-  }[status];
+  const style = useStatusBadgeStyle('pool', status);
+  const lang = getCurrentLanguage();
+  const label = getStatusLabel('pool', status, lang);
 
   return (
     <span
       className={cn(
         'pool-badge',
-        statusClass,
+        style.className,
         size === 'sm' && 'text-[10px] px-1.5 py-0',
         className
       )}
     >
-      {poolStatusLabels[status]}
+      {label}
     </span>
   );
 }

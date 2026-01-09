@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { getFarmerBreadcrumbs } from '@/lib/breadcrumbs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -173,9 +174,10 @@ export default function LivestockBatches() {
 
   return (
     <MainLayout>
-      <PageHeader 
-        title={t('batches.title')} 
-        description={t('batches.description')} 
+      <PageHeader
+        title={t('batches.title')}
+        description={t('batches.description')}
+        breadcrumbs={getFarmerBreadcrumbs('batches', t('batches.title'))}
       />
 
       {/* Observer Mode Banner */}

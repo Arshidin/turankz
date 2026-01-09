@@ -1,26 +1,24 @@
 import { useState, useMemo, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { getMpkBreadcrumbs } from '@/lib/breadcrumbs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { PoolStatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Plus, 
-  Clock, 
-  CheckCircle2, 
-  AlertTriangle, 
-  MapPin, 
-  Medal, 
+import {
+  Plus,
+  Clock,
+  CheckCircle2,
+  MapPin,
+  Medal,
   CalendarClock,
   XCircle,
   AlertCircle,
   MoreHorizontal,
   Pencil,
   Lock,
-  Target,
-  TrendingUp,
   Loader2
 } from 'lucide-react';
 import { usePoolRequests, useCancelPoolRequest, useTransitionPoolRequestStatus, type PoolRequest, type PoolRequestStatus } from '@/hooks/usePoolRequests';
@@ -58,61 +56,42 @@ import {
 import {
   canEditPoolRequest,
   getPoolRequestLockedTooltip,
-  calculateMatchingProgress,
-  getMatchingProgressStatus,
-  getProgressStatusStyle,
-  getMatchingProgressLabel,
   type PoolRequestLifecycleStatus,
   type PoolRequestRole,
 } from '@/lib/pool-request-lifecycle';
+import { FillRateIndicator } from '@/components/pool/FillRateIndicator';
 import { type MatchingWindow } from '@/lib/matching-window';
 
 const statusConfig: Record<PoolRequestStatus, {
-  label: string;
   icon: typeof CheckCircle2;
-  className: string;
   description: string;
 }> = {
   draft: {
-    label: 'Draft',
     icon: Clock,
-    className: 'bg-muted text-muted-foreground border-border',
     description: 'Request is being prepared. Not yet submitted.'
   },
-  submitted: { 
-    label: 'Submitted', 
-    icon: Clock, 
-    className: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  submitted: {
+    icon: Clock,
     description: 'Request submitted. Awaiting Admin review.'
   },
-  matching: { 
-    label: 'Matching', 
-    icon: Clock, 
-    className: 'bg-violet-500/10 text-violet-600 border-violet-500/30',
+  matching: {
+    icon: Clock,
     description: 'Admin is actively matching supply to this request.'
   },
-  partial: { 
-    label: 'Partial', 
-    icon: Clock, 
-    className: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  partial: {
+    icon: Clock,
     description: 'Some supply matched. Matching continues for remaining volume.'
   },
-  fulfilled: { 
-    label: 'Fulfilled', 
-    icon: CheckCircle2, 
-    className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  fulfilled: {
+    icon: CheckCircle2,
     description: 'Request fully matched. Awaiting delivery confirmation.'
   },
   closed: {
-    label: 'Closed',
     icon: CheckCircle2,
-    className: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
     description: 'Request completed. No further changes allowed.'
   },
   cancelled: {
-    label: 'Cancelled',
     icon: XCircle,
-    className: 'bg-destructive/10 text-destructive border-destructive/30',
     description: 'Request has been cancelled.'
   },
 };
@@ -212,7 +191,11 @@ export default function PurchasePoolRequests() {
   if (isLoading) {
     return (
       <MainLayout>
-        <PageHeader title="Purchase Pool Requests" description="Loading..." />
+        <PageHeader
+          title="Purchase Pool Requests"
+          description="Loading..."
+          breadcrumbs={getMpkBreadcrumbs('requests', 'Purchase Pool Requests')}
+        />
         <div className="space-y-4">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-64 w-full" />
@@ -224,7 +207,11 @@ export default function PurchasePoolRequests() {
   if (error) {
     return (
       <MainLayout>
-        <PageHeader title="Purchase Pool Requests" description="Manage procurement requests" />
+        <PageHeader
+          title="Purchase Pool Requests"
+          description="Manage procurement requests"
+          breadcrumbs={getMpkBreadcrumbs('requests', 'Purchase Pool Requests')}
+        />
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -238,9 +225,10 @@ export default function PurchasePoolRequests() {
 
   return (
     <MainLayout>
-      <PageHeader 
-        title="Purchase Pool Requests" 
-        description="Monitor procurement progress and manage request parameters" 
+      <PageHeader
+        title="Purchase Pool Requests"
+        description="Monitor procurement progress and manage request parameters"
+        breadcrumbs={getMpkBreadcrumbs('requests', 'Purchase Pool Requests')}
       />
 
       {/* Matching Window Status Banner */}
@@ -338,10 +326,7 @@ export default function PurchasePoolRequests() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold">{request.request_number}</p>
-                          <Badge variant="outline" className={config.className}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {config.label}
-                          </Badge>
+                          <PoolStatusBadge status={request.status} />
                           {atRisk && (
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
                               <AlertTriangle className="w-3 h-3 mr-1" />
@@ -403,42 +388,15 @@ export default function PurchasePoolRequests() {
                       </DropdownMenu>
                     </div>
 
-                    {/* Enhanced Progress Section */}
-                    {(() => {
-                      const progress = calculateMatchingProgress(request.required_volume, request.matched_volume);
-                      const progressStatus = getMatchingProgressStatus(progress);
-                      const statusStyle = getProgressStatusStyle(progressStatus);
-                      
-                      return (
-                        <div className={`rounded-lg p-4 mb-4 border ${statusStyle.badgeClass}`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {progressStatus === 'fulfilled' && <CheckCircle2 className="w-4 h-4" />}
-                              {progressStatus === 'near-complete' && <TrendingUp className="w-4 h-4" />}
-                              {progressStatus === 'partial' && <Clock className="w-4 h-4" />}
-                              {progressStatus === 'at-risk' && <AlertTriangle className="w-4 h-4" />}
-                              {progressStatus === 'not-started' && <Target className="w-4 h-4" />}
-                              <span className="text-sm font-medium">{getMatchingProgressLabel(progressStatus)}</span>
-                            </div>
-                            <span className={`text-lg font-bold ${statusStyle.textClass}`}>
-                              {progress.fillPercentage}%
-                            </span>
-                          </div>
-                          <Progress 
-                            value={progress.fillPercentage} 
-                            className={`h-3 ${statusStyle.progressClass}`}
-                          />
-                          <div className="flex items-center justify-between mt-2 text-sm">
-                            <span>
-                              <span className="font-semibold">{progress.matchedVolume}</span> / {progress.requestedVolume} heads
-                            </span>
-                            <span className="text-xs">
-                              {progress.remainingVolume} remaining
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    {/* Fill Rate Progress */}
+                    <div className="mb-4">
+                      <FillRateIndicator
+                        requiredVolume={request.required_volume}
+                        matchedVolume={request.matched_volume}
+                        variant="full"
+                        showDetails={true}
+                      />
+                    </div>
 
                     {/* Request Parameters */}
                     <div className="grid grid-cols-3 gap-4 py-3 border-t">

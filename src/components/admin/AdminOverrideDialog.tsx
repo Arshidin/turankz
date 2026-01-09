@@ -1,4 +1,12 @@
+/**
+ * AdminOverrideDialog Component
+ *
+ * Sprint 7-8: Enhanced with additional warnings and confirmation step.
+ * Ensures administrators understand the implications of override actions.
+ */
+
 import { useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +18,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ShieldAlert, Unlock, Lock } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ShieldAlert, Unlock, Lock, AlertTriangle, FileText, Clock } from 'lucide-react';
 
 interface AdminOverrideDialogProps {
   open: boolean;
@@ -22,6 +31,8 @@ interface AdminOverrideDialogProps {
   targetName: string;
   onConfirm: (reason: string) => void;
   isLoading?: boolean;
+  /** Sprint 7-8: Additional context about the override */
+  additionalWarning?: string;
 }
 
 export function AdminOverrideDialog({
@@ -33,17 +44,20 @@ export function AdminOverrideDialog({
   targetName,
   onConfirm,
   isLoading = false,
+  additionalWarning,
 }: AdminOverrideDialogProps) {
+  const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+  const [acknowledged, setAcknowledged] = useState(false);
 
   const handleConfirm = () => {
     if (!reason.trim()) {
-      setError('A reason is required for all admin overrides.');
+      setError(t('adminOverrideDialog.validation.reasonRequired'));
       return;
     }
     if (reason.trim().length < 10) {
-      setError('Please provide a more detailed reason (at least 10 characters).');
+      setError(t('adminOverrideDialog.validation.reasonMinLength'));
       return;
     }
     setError('');
@@ -55,9 +69,53 @@ export function AdminOverrideDialog({
     if (!newOpen) {
       setReason('');
       setError('');
+      setAcknowledged(false);
     }
     onOpenChange(newOpen);
   };
+
+  // Sprint 7-8: Get action-specific warnings
+  const getActionWarnings = () => {
+    switch (actionType) {
+      case 'unlock':
+        return {
+          title: 'Разблокировка партии',
+          warnings: [
+            'Это действие будет записано в журнал аудита',
+            'Фермер получит возможность редактировать партию',
+            'Изменения могут повлиять на существующие сопоставления',
+          ],
+        };
+      case 'relock':
+        return {
+          title: 'Блокировка партии',
+          warnings: [
+            'Фермер потеряет возможность редактировать партию',
+            'Это действие необратимо без нового переопределения',
+          ],
+        };
+      case 'extend':
+        return {
+          title: 'Продление окна',
+          warnings: [
+            'Это продлит срок подачи заявок',
+            'Уже поданные заявки не будут затронуты',
+          ],
+        };
+      case 'adjust':
+        return {
+          title: 'Корректировка окна',
+          warnings: [
+            'Это изменит параметры окна сопоставления',
+            'Существующие заявки могут быть затронуты',
+          ],
+        };
+      default:
+        return { title: 'Административное действие', warnings: [] };
+    }
+  };
+
+  const actionWarnings = getActionWarnings();
 
   const getIcon = () => {
     switch (actionType) {
@@ -73,15 +131,15 @@ export function AdminOverrideDialog({
   const getButtonText = () => {
     switch (actionType) {
       case 'unlock':
-        return 'Unlock Batch';
+        return t('adminOverrideDialog.buttons.unlockBatch');
       case 'relock':
-        return 'Re-Lock Batch';
+        return t('adminOverrideDialog.buttons.relockBatch');
       case 'extend':
-        return 'Extend Window';
+        return t('adminOverrideDialog.buttons.extendWindow');
       case 'adjust':
-        return 'Adjust Window';
+        return t('adminOverrideDialog.buttons.adjustWindow');
       default:
-        return 'Confirm Override';
+        return t('adminOverrideDialog.buttons.confirmOverride');
     }
   };
 
@@ -97,22 +155,53 @@ export function AdminOverrideDialog({
         </DialogHeader>
 
         <div className="py-4 space-y-4">
+          {/* Primary warning */}
           <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
             <ShieldAlert className="h-4 w-4 text-amber-500" />
             <AlertDescription className="text-sm">
-              This is an <strong>Admin Override</strong> for{' '}
-              <strong>{targetName}</strong>. All overrides are logged for audit
-              purposes.
+              <Trans
+                i18nKey="adminOverrideDialog.alerts.overrideWarning"
+                values={{ targetName }}
+                components={{ strong: <strong /> }}
+              />
             </AlertDescription>
           </Alert>
 
+          {/* Sprint 7-8: Action-specific warnings */}
+          {actionWarnings.warnings.length > 0 && (
+            <Alert variant="default" className="border-orange-500/50 bg-orange-500/5">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-sm font-medium text-orange-800">
+                Последствия действия
+              </AlertTitle>
+              <AlertDescription className="text-xs mt-2">
+                <ul className="list-disc list-inside space-y-1 text-orange-700">
+                  {actionWarnings.warnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Additional custom warning */}
+          {additionalWarning && (
+            <Alert variant="default" className="border-red-500/50 bg-red-500/5">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-sm text-red-700">
+                {additionalWarning}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Reason input */}
           <div className="space-y-2">
             <Label htmlFor="override-reason" className="text-sm font-medium">
-              Reason for Override <span className="text-destructive">*</span>
+              {t('adminOverrideDialog.fields.reason')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="override-reason"
-              placeholder="Explain why this override is necessary..."
+              placeholder={t('adminOverrideDialog.fields.reasonPlaceholder')}
               value={reason}
               onChange={(e) => {
                 setReason(e.target.value);
@@ -122,9 +211,32 @@ export function AdminOverrideDialog({
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <p className="text-xs text-muted-foreground">
-              This reason will be recorded in the audit log and visible to other
-              admins.
+              {t('adminOverrideDialog.fields.reasonHelp')}
             </p>
+          </div>
+
+          {/* Sprint 7-8: Acknowledgment checkbox */}
+          <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border">
+            <Checkbox
+              id="acknowledge"
+              checked={acknowledged}
+              onCheckedChange={(checked) => setAcknowledged(checked === true)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="acknowledge" className="text-sm cursor-pointer">
+                Я понимаю последствия этого действия
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Это действие будет записано в журнал аудита с указанием причины и исполнителя
+              </p>
+            </div>
+          </div>
+
+          {/* Audit info */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <FileText className="h-3 w-3" />
+            <span>Действие будет записано в</span>
+            <span className="font-medium text-foreground">Журнал административных действий</span>
           </div>
         </div>
 
@@ -134,16 +246,16 @@ export function AdminOverrideDialog({
             onClick={() => handleOpenChange(false)}
             disabled={isLoading}
           >
-            Cancel
+            {t('adminOverrideDialog.buttons.cancel')}
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isLoading || !reason.trim()}
+            disabled={isLoading || !reason.trim() || !acknowledged}
             className="gap-2"
             variant={actionType === 'relock' ? 'destructive' : 'default'}
           >
             {getIcon()}
-            {isLoading ? 'Processing...' : getButtonText()}
+            {isLoading ? t('adminOverrideDialog.buttons.processing') : getButtonText()}
           </Button>
         </DialogFooter>
       </DialogContent>
