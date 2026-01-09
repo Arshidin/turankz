@@ -23,24 +23,23 @@ import {
   getDisabledTransitionTooltip,
   getTransitionActionLabel,
   getBatchCreationInfo,
+  mapLegacyStatus,
   type BatchLifecycleStatus,
   type BatchRole,
 } from '../batch-lifecycle';
 
 // ============================================================================
-// BATCH STATUS DEFINITIONS
+// BATCH STATUS DEFINITIONS (FSM v2 - Simplified)
 // ============================================================================
 describe('Batch Status Definitions', () => {
-  it('should have exactly 6 statuses in correct order', () => {
+  it('should have exactly 4 statuses in correct order', () => {
     expect(BATCH_STATUSES).toEqual([
       'draft',
-      'forecast',
-      'soft_committed',
-      'confirmed',
-      'matched',
-      'closed',
+      'available',
+      'committed',
+      'completed',
     ]);
-    expect(BATCH_STATUSES.length).toBe(6);
+    expect(BATCH_STATUSES.length).toBe(4);
   });
 
   it('should have draft as initial status', () => {
@@ -49,24 +48,57 @@ describe('Batch Status Definitions', () => {
 });
 
 // ============================================================================
+// LEGACY STATUS MAPPING
+// ============================================================================
+describe('mapLegacyStatus', () => {
+  it('should map draft to draft', () => {
+    expect(mapLegacyStatus('draft')).toBe('draft');
+  });
+
+  it('should map forecast to available', () => {
+    expect(mapLegacyStatus('forecast')).toBe('available');
+  });
+
+  it('should map soft_committed to available', () => {
+    expect(mapLegacyStatus('soft_committed')).toBe('available');
+  });
+
+  it('should map confirmed to committed', () => {
+    expect(mapLegacyStatus('confirmed')).toBe('committed');
+  });
+
+  it('should map matched to completed', () => {
+    expect(mapLegacyStatus('matched')).toBe('completed');
+  });
+
+  it('should map closed to completed', () => {
+    expect(mapLegacyStatus('closed')).toBe('completed');
+  });
+
+  it('should return draft for unknown status', () => {
+    expect(mapLegacyStatus('unknown')).toBe('draft');
+  });
+});
+
+// ============================================================================
 // ENFORCE INITIAL STATUS
 // ============================================================================
 describe('enforceInitialStatus', () => {
   it('should always return draft status regardless of input', () => {
-    const result = enforceInitialStatus({ name: 'Test Batch', status: 'confirmed' });
+    const result = enforceInitialStatus({ name: 'Test Batch', status: 'committed' });
     expect(result.status).toBe('draft');
     expect(result.name).toBe('Test Batch');
   });
 
   it('should strip any external status input', () => {
-    const inputWithForecast = enforceInitialStatus({ status: 'forecast', heads: 100 });
-    expect(inputWithForecast.status).toBe('draft');
+    const inputWithAvailable = enforceInitialStatus({ status: 'available', heads: 100 });
+    expect(inputWithAvailable.status).toBe('draft');
 
-    const inputWithMatched = enforceInitialStatus({ status: 'matched', heads: 50 });
-    expect(inputWithMatched.status).toBe('draft');
+    const inputWithCommitted = enforceInitialStatus({ status: 'committed', heads: 50 });
+    expect(inputWithCommitted.status).toBe('draft');
 
-    const inputWithClosed = enforceInitialStatus({ status: 'closed', heads: 25 });
-    expect(inputWithClosed.status).toBe('draft');
+    const inputWithCompleted = enforceInitialStatus({ status: 'completed', heads: 25 });
+    expect(inputWithCompleted.status).toBe('draft');
   });
 
   it('should handle input without status', () => {
@@ -79,7 +111,7 @@ describe('enforceInitialStatus', () => {
 
   it('should preserve all other fields', () => {
     const input = {
-      status: 'confirmed',
+      status: 'committed',
       heads: 100,
       avg_weight: 450,
       region: 'Almaty',
@@ -104,11 +136,9 @@ describe('enforceInitialStatus', () => {
 describe('getStatusIndex', () => {
   it('should return correct index for each status', () => {
     expect(getStatusIndex('draft')).toBe(0);
-    expect(getStatusIndex('forecast')).toBe(1);
-    expect(getStatusIndex('soft_committed')).toBe(2);
-    expect(getStatusIndex('confirmed')).toBe(3);
-    expect(getStatusIndex('matched')).toBe(4);
-    expect(getStatusIndex('closed')).toBe(5);
+    expect(getStatusIndex('available')).toBe(1);
+    expect(getStatusIndex('committed')).toBe(2);
+    expect(getStatusIndex('completed')).toBe(3);
   });
 
   it('should return -1 for invalid status', () => {
@@ -121,76 +151,52 @@ describe('getStatusIndex', () => {
 // ============================================================================
 describe('isTransitionAllowed', () => {
   describe('forward transitions', () => {
-    it('should allow draft -> forecast', () => {
-      expect(isTransitionAllowed('draft', 'forecast')).toBe(true);
+    it('should allow draft -> available', () => {
+      expect(isTransitionAllowed('draft', 'available')).toBe(true);
     });
 
-    it('should allow forecast -> soft_committed', () => {
-      expect(isTransitionAllowed('forecast', 'soft_committed')).toBe(true);
+    it('should allow available -> committed', () => {
+      expect(isTransitionAllowed('available', 'committed')).toBe(true);
     });
 
-    it('should allow soft_committed -> confirmed', () => {
-      expect(isTransitionAllowed('soft_committed', 'confirmed')).toBe(true);
-    });
-
-    it('should allow confirmed -> matched', () => {
-      expect(isTransitionAllowed('confirmed', 'matched')).toBe(true);
-    });
-
-    it('should allow confirmed -> closed (admin direct close)', () => {
-      expect(isTransitionAllowed('confirmed', 'closed')).toBe(true);
-    });
-
-    it('should allow matched -> closed', () => {
-      expect(isTransitionAllowed('matched', 'closed')).toBe(true);
+    it('should allow committed -> completed', () => {
+      expect(isTransitionAllowed('committed', 'completed')).toBe(true);
     });
   });
 
   describe('backward transitions (NOT allowed)', () => {
-    it('should NOT allow forecast -> draft', () => {
-      expect(isTransitionAllowed('forecast', 'draft')).toBe(false);
+    it('should NOT allow available -> draft', () => {
+      expect(isTransitionAllowed('available', 'draft')).toBe(false);
     });
 
-    it('should NOT allow soft_committed -> forecast', () => {
-      expect(isTransitionAllowed('soft_committed', 'forecast')).toBe(false);
+    it('should NOT allow committed -> available', () => {
+      expect(isTransitionAllowed('committed', 'available')).toBe(false);
     });
 
-    it('should NOT allow confirmed -> soft_committed', () => {
-      expect(isTransitionAllowed('confirmed', 'soft_committed')).toBe(false);
-    });
-
-    it('should NOT allow matched -> confirmed', () => {
-      expect(isTransitionAllowed('matched', 'confirmed')).toBe(false);
-    });
-
-    it('should NOT allow closed -> matched', () => {
-      expect(isTransitionAllowed('closed', 'matched')).toBe(false);
+    it('should NOT allow completed -> committed', () => {
+      expect(isTransitionAllowed('completed', 'committed')).toBe(false);
     });
   });
 
   describe('skipping states (NOT allowed)', () => {
-    it('should NOT allow draft -> soft_committed (skip forecast)', () => {
-      expect(isTransitionAllowed('draft', 'soft_committed')).toBe(false);
+    it('should NOT allow draft -> committed (skip available)', () => {
+      expect(isTransitionAllowed('draft', 'committed')).toBe(false);
     });
 
-    it('should NOT allow draft -> confirmed (skip 2 states)', () => {
-      expect(isTransitionAllowed('draft', 'confirmed')).toBe(false);
+    it('should NOT allow draft -> completed (skip 2 states)', () => {
+      expect(isTransitionAllowed('draft', 'completed')).toBe(false);
     });
 
-    it('should NOT allow forecast -> confirmed (skip soft_committed)', () => {
-      expect(isTransitionAllowed('forecast', 'confirmed')).toBe(false);
-    });
-
-    it('should NOT allow soft_committed -> matched (skip confirmed)', () => {
-      expect(isTransitionAllowed('soft_committed', 'matched')).toBe(false);
+    it('should NOT allow available -> completed (skip committed)', () => {
+      expect(isTransitionAllowed('available', 'completed')).toBe(false);
     });
   });
 
-  describe('terminal state (closed)', () => {
-    it('should NOT allow any transitions from closed', () => {
+  describe('terminal state (completed)', () => {
+    it('should NOT allow any transitions from completed', () => {
       for (const status of BATCH_STATUSES) {
-        if (status !== 'closed') {
-          expect(isTransitionAllowed('closed', status)).toBe(false);
+        if (status !== 'completed') {
+          expect(isTransitionAllowed('completed', status)).toBe(false);
         }
       }
     });
@@ -202,44 +208,29 @@ describe('isTransitionAllowed', () => {
 // ============================================================================
 describe('canRoleTransition', () => {
   describe('farmer role', () => {
-    it('should allow farmer to transition draft -> forecast', () => {
-      expect(canRoleTransition('draft', 'forecast', 'farmer')).toBe(true);
+    it('should allow farmer to transition draft -> available', () => {
+      expect(canRoleTransition('draft', 'available', 'farmer')).toBe(true);
     });
 
-    it('should allow farmer to transition forecast -> soft_committed', () => {
-      expect(canRoleTransition('forecast', 'soft_committed', 'farmer')).toBe(true);
+    it('should allow farmer to transition available -> committed', () => {
+      expect(canRoleTransition('available', 'committed', 'farmer')).toBe(true);
     });
 
-    it('should allow farmer to transition soft_committed -> confirmed', () => {
-      expect(canRoleTransition('soft_committed', 'confirmed', 'farmer')).toBe(true);
-    });
-
-    it('should NOT allow farmer to transition confirmed -> matched', () => {
-      expect(canRoleTransition('confirmed', 'matched', 'farmer')).toBe(false);
-    });
-
-    it('should NOT allow farmer to transition confirmed -> closed', () => {
-      expect(canRoleTransition('confirmed', 'closed', 'farmer')).toBe(false);
-    });
-
-    it('should NOT allow farmer to transition matched -> closed', () => {
-      expect(canRoleTransition('matched', 'closed', 'farmer')).toBe(false);
+    it('should NOT allow farmer to transition committed -> completed', () => {
+      expect(canRoleTransition('committed', 'completed', 'farmer')).toBe(false);
     });
   });
 
   describe('admin role', () => {
     it('should allow admin to perform all allowed transitions', () => {
-      expect(canRoleTransition('draft', 'forecast', 'admin')).toBe(true);
-      expect(canRoleTransition('forecast', 'soft_committed', 'admin')).toBe(true);
-      expect(canRoleTransition('soft_committed', 'confirmed', 'admin')).toBe(true);
-      expect(canRoleTransition('confirmed', 'matched', 'admin')).toBe(true);
-      expect(canRoleTransition('confirmed', 'closed', 'admin')).toBe(true);
-      expect(canRoleTransition('matched', 'closed', 'admin')).toBe(true);
+      expect(canRoleTransition('draft', 'available', 'admin')).toBe(true);
+      expect(canRoleTransition('available', 'committed', 'admin')).toBe(true);
+      expect(canRoleTransition('committed', 'completed', 'admin')).toBe(true);
     });
 
     it('should NOT allow admin to perform invalid FSM transitions', () => {
-      expect(canRoleTransition('draft', 'confirmed', 'admin')).toBe(false);
-      expect(canRoleTransition('forecast', 'draft', 'admin')).toBe(false);
+      expect(canRoleTransition('draft', 'committed', 'admin')).toBe(false);
+      expect(canRoleTransition('available', 'draft', 'admin')).toBe(false);
     });
   });
 
@@ -261,45 +252,38 @@ describe('canRoleTransition', () => {
 // ============================================================================
 describe('getAllowedTransitions', () => {
   describe('farmer transitions', () => {
-    it('should return [forecast] for draft', () => {
-      expect(getAllowedTransitions('draft', 'farmer')).toEqual(['forecast']);
+    it('should return [available] for draft', () => {
+      expect(getAllowedTransitions('draft', 'farmer')).toEqual(['available']);
     });
 
-    it('should return [soft_committed] for forecast', () => {
-      expect(getAllowedTransitions('forecast', 'farmer')).toEqual(['soft_committed']);
+    it('should return [committed] for available', () => {
+      expect(getAllowedTransitions('available', 'farmer')).toEqual(['committed']);
     });
 
-    it('should return [confirmed] for soft_committed', () => {
-      expect(getAllowedTransitions('soft_committed', 'farmer')).toEqual(['confirmed']);
+    it('should return empty array for committed (admin-only transition)', () => {
+      expect(getAllowedTransitions('committed', 'farmer')).toEqual([]);
     });
 
-    it('should return empty array for confirmed (admin-only transitions)', () => {
-      expect(getAllowedTransitions('confirmed', 'farmer')).toEqual([]);
-    });
-
-    it('should return empty array for matched', () => {
-      expect(getAllowedTransitions('matched', 'farmer')).toEqual([]);
-    });
-
-    it('should return empty array for closed', () => {
-      expect(getAllowedTransitions('closed', 'farmer')).toEqual([]);
+    it('should return empty array for completed', () => {
+      expect(getAllowedTransitions('completed', 'farmer')).toEqual([]);
     });
   });
 
   describe('admin transitions', () => {
-    it('should return [forecast] for draft', () => {
-      expect(getAllowedTransitions('draft', 'admin')).toEqual(['forecast']);
+    it('should return [available] for draft', () => {
+      expect(getAllowedTransitions('draft', 'admin')).toEqual(['available']);
     });
 
-    it('should return [matched, closed] for confirmed', () => {
-      const transitions = getAllowedTransitions('confirmed', 'admin');
-      expect(transitions).toContain('matched');
-      expect(transitions).toContain('closed');
-      expect(transitions.length).toBe(2);
+    it('should return [committed] for available', () => {
+      expect(getAllowedTransitions('available', 'admin')).toEqual(['committed']);
     });
 
-    it('should return [closed] for matched', () => {
-      expect(getAllowedTransitions('matched', 'admin')).toEqual(['closed']);
+    it('should return [completed] for committed', () => {
+      expect(getAllowedTransitions('committed', 'admin')).toEqual(['completed']);
+    });
+
+    it('should return empty array for completed', () => {
+      expect(getAllowedTransitions('completed', 'admin')).toEqual([]);
     });
   });
 
@@ -317,15 +301,17 @@ describe('getAllowedTransitions', () => {
 // ============================================================================
 describe('getNextAllowedStatus', () => {
   it('should return first allowed status for farmer', () => {
-    expect(getNextAllowedStatus('draft', 'farmer')).toBe('forecast');
-    expect(getNextAllowedStatus('forecast', 'farmer')).toBe('soft_committed');
-    expect(getNextAllowedStatus('soft_committed', 'farmer')).toBe('confirmed');
-    expect(getNextAllowedStatus('confirmed', 'farmer')).toBeNull();
+    expect(getNextAllowedStatus('draft', 'farmer')).toBe('available');
+    expect(getNextAllowedStatus('available', 'farmer')).toBe('committed');
+    expect(getNextAllowedStatus('committed', 'farmer')).toBeNull();
+    expect(getNextAllowedStatus('completed', 'farmer')).toBeNull();
   });
 
   it('should return first allowed status for admin', () => {
-    expect(getNextAllowedStatus('draft', 'admin')).toBe('forecast');
-    expect(getNextAllowedStatus('confirmed', 'admin')).toBe('matched');
+    expect(getNextAllowedStatus('draft', 'admin')).toBe('available');
+    expect(getNextAllowedStatus('available', 'admin')).toBe('committed');
+    expect(getNextAllowedStatus('committed', 'admin')).toBe('completed');
+    expect(getNextAllowedStatus('completed', 'admin')).toBeNull();
   });
 });
 
@@ -339,32 +325,21 @@ describe('getEditRulesForStatus', () => {
     expect(rules.fields.length).toBeGreaterThan(0);
   });
 
-  it('should return editable for forecast', () => {
-    const rules = getEditRulesForStatus('forecast');
-    expect(rules.rule).toBe('editable');
-    expect(rules.fields.length).toBeGreaterThan(0);
-  });
-
-  it('should return editable_with_confirmation for soft_committed', () => {
-    const rules = getEditRulesForStatus('soft_committed');
+  it('should return editable_with_confirmation for available', () => {
+    const rules = getEditRulesForStatus('available');
     expect(rules.rule).toBe('editable_with_confirmation');
     expect(rules.confirmationMessage).toBeDefined();
   });
 
-  it('should return read_only for confirmed', () => {
-    const rules = getEditRulesForStatus('confirmed');
+  it('should return read_only for committed', () => {
+    const rules = getEditRulesForStatus('committed');
     expect(rules.rule).toBe('read_only');
     expect(rules.fields).toEqual([]);
     expect(rules.lockedMessage).toBeDefined();
   });
 
-  it('should return read_only for matched', () => {
-    const rules = getEditRulesForStatus('matched');
-    expect(rules.rule).toBe('read_only');
-  });
-
-  it('should return read_only for closed', () => {
-    const rules = getEditRulesForStatus('closed');
+  it('should return read_only for completed', () => {
+    const rules = getEditRulesForStatus('completed');
     expect(rules.rule).toBe('read_only');
   });
 });
@@ -377,25 +352,17 @@ describe('isFieldEditable', () => {
     expect(isFieldEditable('draft', 'heads')).toBe(true);
   });
 
-  it('should return true for target_week in forecast', () => {
-    expect(isFieldEditable('forecast', 'target_week')).toBe(true);
+  it('should return true for target_week in available', () => {
+    expect(isFieldEditable('available', 'target_week')).toBe(true);
   });
 
-  it('should return true for breed in soft_committed', () => {
-    expect(isFieldEditable('soft_committed', 'breed')).toBe(true);
+  it('should return false for any field in committed', () => {
+    expect(isFieldEditable('committed', 'heads')).toBe(false);
+    expect(isFieldEditable('committed', 'target_week')).toBe(false);
   });
 
-  it('should return false for any field in confirmed', () => {
-    expect(isFieldEditable('confirmed', 'heads')).toBe(false);
-    expect(isFieldEditable('confirmed', 'target_week')).toBe(false);
-  });
-
-  it('should return false for any field in matched', () => {
-    expect(isFieldEditable('matched', 'heads')).toBe(false);
-  });
-
-  it('should return false for any field in closed', () => {
-    expect(isFieldEditable('closed', 'heads')).toBe(false);
+  it('should return false for any field in completed', () => {
+    expect(isFieldEditable('completed', 'heads')).toBe(false);
   });
 });
 
@@ -407,16 +374,16 @@ describe('requiresEditConfirmation', () => {
     expect(requiresEditConfirmation('draft')).toBe(false);
   });
 
-  it('should return false for forecast', () => {
-    expect(requiresEditConfirmation('forecast')).toBe(false);
+  it('should return true for available', () => {
+    expect(requiresEditConfirmation('available')).toBe(true);
   });
 
-  it('should return true for soft_committed', () => {
-    expect(requiresEditConfirmation('soft_committed')).toBe(true);
+  it('should return false for committed (read-only)', () => {
+    expect(requiresEditConfirmation('committed')).toBe(false);
   });
 
-  it('should return false for confirmed (read-only)', () => {
-    expect(requiresEditConfirmation('confirmed')).toBe(false);
+  it('should return false for completed (read-only)', () => {
+    expect(requiresEditConfirmation('completed')).toBe(false);
   });
 });
 
@@ -424,16 +391,14 @@ describe('requiresEditConfirmation', () => {
 // BATCH DATA EDITABILITY
 // ============================================================================
 describe('canEditBatchData', () => {
-  it('should return true for draft, forecast, soft_committed', () => {
+  it('should return true for draft and available', () => {
     expect(canEditBatchData('draft')).toBe(true);
-    expect(canEditBatchData('forecast')).toBe(true);
-    expect(canEditBatchData('soft_committed')).toBe(true);
+    expect(canEditBatchData('available')).toBe(true);
   });
 
-  it('should return false for confirmed, matched, closed', () => {
-    expect(canEditBatchData('confirmed')).toBe(false);
-    expect(canEditBatchData('matched')).toBe(false);
-    expect(canEditBatchData('closed')).toBe(false);
+  it('should return false for committed and completed', () => {
+    expect(canEditBatchData('committed')).toBe(false);
+    expect(canEditBatchData('completed')).toBe(false);
   });
 });
 
@@ -441,16 +406,14 @@ describe('canEditBatchData', () => {
 // READ-ONLY CHECK
 // ============================================================================
 describe('isBatchReadOnly', () => {
-  it('should return false for draft, forecast, soft_committed', () => {
+  it('should return false for draft and available', () => {
     expect(isBatchReadOnly('draft')).toBe(false);
-    expect(isBatchReadOnly('forecast')).toBe(false);
-    expect(isBatchReadOnly('soft_committed')).toBe(false);
+    expect(isBatchReadOnly('available')).toBe(false);
   });
 
-  it('should return true for confirmed, matched, closed', () => {
-    expect(isBatchReadOnly('confirmed')).toBe(true);
-    expect(isBatchReadOnly('matched')).toBe(true);
-    expect(isBatchReadOnly('closed')).toBe(true);
+  it('should return true for committed and completed', () => {
+    expect(isBatchReadOnly('committed')).toBe(true);
+    expect(isBatchReadOnly('completed')).toBe(true);
   });
 });
 
@@ -458,16 +421,14 @@ describe('isBatchReadOnly', () => {
 // COMMITMENT CHECK
 // ============================================================================
 describe('isCommitted', () => {
-  it('should return false for draft and forecast', () => {
+  it('should return false for draft and available', () => {
     expect(isCommitted('draft')).toBe(false);
-    expect(isCommitted('forecast')).toBe(false);
+    expect(isCommitted('available')).toBe(false);
   });
 
-  it('should return true for soft_committed and higher', () => {
-    expect(isCommitted('soft_committed')).toBe(true);
-    expect(isCommitted('confirmed')).toBe(true);
-    expect(isCommitted('matched')).toBe(true);
-    expect(isCommitted('closed')).toBe(true);
+  it('should return true for committed and completed', () => {
+    expect(isCommitted('committed')).toBe(true);
+    expect(isCommitted('completed')).toBe(true);
   });
 });
 
@@ -475,19 +436,17 @@ describe('isCommitted', () => {
 // MATCHING VISIBILITY
 // ============================================================================
 describe('isVisibleForMatching', () => {
-  it('should return false for draft and forecast', () => {
+  it('should return false for draft', () => {
     expect(isVisibleForMatching('draft')).toBe(false);
-    expect(isVisibleForMatching('forecast')).toBe(false);
   });
 
-  it('should return true for soft_committed and confirmed', () => {
-    expect(isVisibleForMatching('soft_committed')).toBe(true);
-    expect(isVisibleForMatching('confirmed')).toBe(true);
+  it('should return true for available and committed', () => {
+    expect(isVisibleForMatching('available')).toBe(true);
+    expect(isVisibleForMatching('committed')).toBe(true);
   });
 
-  it('should return false for matched and closed', () => {
-    expect(isVisibleForMatching('matched')).toBe(false);
-    expect(isVisibleForMatching('closed')).toBe(false);
+  it('should return false for completed', () => {
+    expect(isVisibleForMatching('completed')).toBe(false);
   });
 });
 
@@ -495,16 +454,14 @@ describe('isVisibleForMatching', () => {
 // LIFECYCLE COMPLETION
 // ============================================================================
 describe('isLifecycleComplete', () => {
-  it('should return false for draft through confirmed', () => {
+  it('should return false for draft, available, and committed', () => {
     expect(isLifecycleComplete('draft')).toBe(false);
-    expect(isLifecycleComplete('forecast')).toBe(false);
-    expect(isLifecycleComplete('soft_committed')).toBe(false);
-    expect(isLifecycleComplete('confirmed')).toBe(false);
+    expect(isLifecycleComplete('available')).toBe(false);
+    expect(isLifecycleComplete('committed')).toBe(false);
   });
 
-  it('should return true for matched and closed', () => {
-    expect(isLifecycleComplete('matched')).toBe(true);
-    expect(isLifecycleComplete('closed')).toBe(true);
+  it('should return true for completed', () => {
+    expect(isLifecycleComplete('completed')).toBe(true);
   });
 });
 
@@ -513,14 +470,14 @@ describe('isLifecycleComplete', () => {
 // ============================================================================
 describe('validateTransition', () => {
   it('should return valid for allowed farmer transitions', () => {
-    expect(validateTransition('draft', 'forecast', 'farmer')).toEqual({ valid: true });
-    expect(validateTransition('forecast', 'soft_committed', 'farmer')).toEqual({ valid: true });
-    expect(validateTransition('soft_committed', 'confirmed', 'farmer')).toEqual({ valid: true });
+    expect(validateTransition('draft', 'available', 'farmer')).toEqual({ valid: true });
+    expect(validateTransition('available', 'committed', 'farmer')).toEqual({ valid: true });
   });
 
   it('should return valid for allowed admin transitions', () => {
-    expect(validateTransition('confirmed', 'matched', 'admin')).toEqual({ valid: true });
-    expect(validateTransition('matched', 'closed', 'admin')).toEqual({ valid: true });
+    expect(validateTransition('draft', 'available', 'admin')).toEqual({ valid: true });
+    expect(validateTransition('available', 'committed', 'admin')).toEqual({ valid: true });
+    expect(validateTransition('committed', 'completed', 'admin')).toEqual({ valid: true });
   });
 
   it('should return invalid with error for same status', () => {
@@ -530,25 +487,25 @@ describe('validateTransition', () => {
   });
 
   it('should return invalid with error for farmer trying admin-only transition', () => {
-    const result = validateTransition('confirmed', 'matched', 'farmer');
+    const result = validateTransition('committed', 'completed', 'farmer');
     expect(result.valid).toBe(false);
     expect(result.error).toContain('Admin');
   });
 
   it('should return invalid with error for MPK trying any transition', () => {
-    const result = validateTransition('draft', 'forecast', 'mpk');
+    const result = validateTransition('draft', 'available', 'mpk');
     expect(result.valid).toBe(false);
     expect(result.error).toContain('MPK');
   });
 
   it('should return invalid with error for backward transition', () => {
-    const result = validateTransition('forecast', 'draft', 'farmer');
+    const result = validateTransition('available', 'draft', 'farmer');
     expect(result.valid).toBe(false);
     expect(result.error).toBeDefined();
   });
 
   it('should return invalid with error for skipping states', () => {
-    const result = validateTransition('draft', 'confirmed', 'admin');
+    const result = validateTransition('draft', 'committed', 'admin');
     expect(result.valid).toBe(false);
     expect(result.error).toBeDefined();
   });
@@ -558,34 +515,24 @@ describe('validateTransition', () => {
 // TRANSITION CONFIRMATION
 // ============================================================================
 describe('getTransitionConfirmation', () => {
-  it('should require confirmation for soft_committed -> confirmed', () => {
-    const confirmation = getTransitionConfirmation('soft_committed', 'confirmed');
+  it('should require confirmation for available -> committed', () => {
+    const confirmation = getTransitionConfirmation('available', 'committed');
     expect(confirmation.requiresConfirmation).toBe(true);
     expect(confirmation.warning).toBeTruthy();
   });
 
-  it('should require confirmation for confirmed -> matched', () => {
-    const confirmation = getTransitionConfirmation('confirmed', 'matched');
+  it('should require confirmation for committed -> completed', () => {
+    const confirmation = getTransitionConfirmation('committed', 'completed');
     expect(confirmation.requiresConfirmation).toBe(true);
   });
 
-  it('should require confirmation for matched -> closed', () => {
-    const confirmation = getTransitionConfirmation('matched', 'closed');
-    expect(confirmation.requiresConfirmation).toBe(true);
-  });
-
-  it('should NOT require confirmation for draft -> forecast', () => {
-    const confirmation = getTransitionConfirmation('draft', 'forecast');
-    expect(confirmation.requiresConfirmation).toBe(false);
-  });
-
-  it('should NOT require confirmation for forecast -> soft_committed', () => {
-    const confirmation = getTransitionConfirmation('forecast', 'soft_committed');
+  it('should NOT require confirmation for draft -> available', () => {
+    const confirmation = getTransitionConfirmation('draft', 'available');
     expect(confirmation.requiresConfirmation).toBe(false);
   });
 
   it('should return Russian translations when lang is ru', () => {
-    const confirmationRu = getTransitionConfirmation('soft_committed', 'confirmed', 'ru');
+    const confirmationRu = getTransitionConfirmation('available', 'committed', 'ru');
     expect(confirmationRu.title).toContain('Подтвердить');
   });
 });
@@ -595,15 +542,12 @@ describe('getTransitionConfirmation', () => {
 // ============================================================================
 describe('requiresTransitionConfirmation', () => {
   it('should return true for critical transitions', () => {
-    expect(requiresTransitionConfirmation('soft_committed', 'confirmed')).toBe(true);
-    expect(requiresTransitionConfirmation('confirmed', 'matched')).toBe(true);
-    expect(requiresTransitionConfirmation('confirmed', 'closed')).toBe(true);
-    expect(requiresTransitionConfirmation('matched', 'closed')).toBe(true);
+    expect(requiresTransitionConfirmation('available', 'committed')).toBe(true);
+    expect(requiresTransitionConfirmation('committed', 'completed')).toBe(true);
   });
 
   it('should return false for non-critical transitions', () => {
-    expect(requiresTransitionConfirmation('draft', 'forecast')).toBe(false);
-    expect(requiresTransitionConfirmation('forecast', 'soft_committed')).toBe(false);
+    expect(requiresTransitionConfirmation('draft', 'available')).toBe(false);
   });
 });
 
@@ -611,21 +555,17 @@ describe('requiresTransitionConfirmation', () => {
 // BLOCKED TRANSITIONS
 // ============================================================================
 describe('getBlockedTransitions', () => {
-  it('should return blocked transitions for farmer from confirmed', () => {
-    const blocked = getBlockedTransitions('confirmed', 'farmer');
+  it('should return blocked transitions for farmer from committed', () => {
+    const blocked = getBlockedTransitions('committed', 'farmer');
 
-    // Should include matched and closed as admin_only
-    const matchedBlock = blocked.find(b => b.toStatus === 'matched');
-    expect(matchedBlock).toBeDefined();
-    expect(matchedBlock?.type).toBe('admin_only');
-
-    const closedBlock = blocked.find(b => b.toStatus === 'closed');
-    expect(closedBlock).toBeDefined();
-    expect(closedBlock?.type).toBe('admin_only');
+    // Should include completed as admin_only
+    const completedBlock = blocked.find(b => b.toStatus === 'completed');
+    expect(completedBlock).toBeDefined();
+    expect(completedBlock?.type).toBe('admin_only');
   });
 
   it('should mark backward transitions as revert type', () => {
-    const blocked = getBlockedTransitions('forecast', 'farmer');
+    const blocked = getBlockedTransitions('available', 'farmer');
     const draftBlock = blocked.find(b => b.toStatus === 'draft');
     expect(draftBlock).toBeDefined();
     expect(draftBlock?.type).toBe('revert');
@@ -633,7 +573,7 @@ describe('getBlockedTransitions', () => {
 
   it('should return all transitions blocked for MPK', () => {
     const blocked = getBlockedTransitions('draft', 'mpk');
-    expect(blocked.length).toBe(5); // All except draft itself
+    expect(blocked.length).toBe(3); // available, committed, completed
   });
 });
 
@@ -642,17 +582,17 @@ describe('getBlockedTransitions', () => {
 // ============================================================================
 describe('getDisabledTransitionTooltip', () => {
   it('should return MPK message for MPK role', () => {
-    const tooltip = getDisabledTransitionTooltip('draft', 'forecast', 'mpk');
+    const tooltip = getDisabledTransitionTooltip('draft', 'available', 'mpk');
     expect(tooltip).toContain('MPK');
   });
 
   it('should return revert message for backward transition', () => {
-    const tooltip = getDisabledTransitionTooltip('forecast', 'draft', 'farmer');
+    const tooltip = getDisabledTransitionTooltip('available', 'draft', 'farmer');
     expect(tooltip).toContain('revert');
   });
 
   it('should return admin message for admin-only transition', () => {
-    const tooltip = getDisabledTransitionTooltip('confirmed', 'matched', 'farmer');
+    const tooltip = getDisabledTransitionTooltip('committed', 'completed', 'farmer');
     expect(tooltip).toContain('Admin');
   });
 });
@@ -662,11 +602,9 @@ describe('getDisabledTransitionTooltip', () => {
 // ============================================================================
 describe('getTransitionActionLabel', () => {
   it('should return correct labels for each transition', () => {
-    expect(getTransitionActionLabel('forecast')).toBe('Publish to Market');
-    expect(getTransitionActionLabel('soft_committed')).toBe('Commit Preliminarily');
-    expect(getTransitionActionLabel('confirmed')).toBe('Confirm Availability');
-    expect(getTransitionActionLabel('matched')).toBe('Mark as Matched');
-    expect(getTransitionActionLabel('closed')).toBe('Close Batch');
+    expect(getTransitionActionLabel('available')).toBe('Publish to Market');
+    expect(getTransitionActionLabel('committed')).toBe('Confirm Commitment');
+    expect(getTransitionActionLabel('completed')).toBe('Mark as Completed');
   });
 });
 
