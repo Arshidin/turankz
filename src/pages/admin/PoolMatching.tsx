@@ -16,7 +16,7 @@ import { useConfirmedBatches } from '@/hooks/useConfirmedBatches';
 import { useBulkUpdateStandardStatus, useAutoCalculateStandardStatus, type StandardStatus } from '@/hooks/useAdminBatches';
 import { checkBatchMatch, formatCriteriaDisplay } from '@/lib/livestock-criteria';
 import { validateDeliveryPeriodOverlap, calculateMatchConfidence } from '@/lib/matching-validation';
-import { getStatusFromProgress } from '@/lib/pool-request-lifecycle';
+import { getStatusFromProgress, calculateMatchingProgress } from '@/lib/pool-request-lifecycle';
 import { PoolRequestOverrideDialog } from '@/components/admin/PoolRequestOverrideDialog';
 import { PoolRequestAuditHistory } from '@/components/admin/PoolRequestAuditHistory';
 import { MatchingListPanel } from '@/components/admin/MatchingListPanel';
@@ -97,13 +97,10 @@ export default function PoolMatching() {
           {
             region: b.region,
             grade: b.grade,
-            breed: b.breed || undefined,
-            gender: b.gender || undefined,
             age_min: b.age_min || undefined,
             age_max: b.age_max || undefined,
             weight_min: b.weight_min || undefined,
             weight_max: b.weight_max || undefined,
-            avg_weight: b.avg_weight || undefined,
             delivery_period: b.delivery_period || undefined,
           },
           {

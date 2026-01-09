@@ -17,6 +17,7 @@ export interface ConfirmedBatch {
   age_max: number | null;
   weight_min: number | null;
   weight_max: number | null;
+  avg_weight: number | null;
   standard_status: string | null;
   delivery_period: 'short_term' | 'mid_term' | 'long_term' | null;
   created_at: string;
@@ -51,7 +52,7 @@ export function useConfirmedBatches(filters?: ConfirmedBatchFilters) {
       // Fetch confirmed batches
       const { data: batches, error: batchError } = await supabase
         .from('batches')
-        .select('id, batch_number, user_id, heads, grade, region, status, target_week, breed, gender, age_min, age_max, weight_min, weight_max, standard_status, delivery_period, created_at, updated_at')
+        .select('id, batch_number, user_id, heads, grade, region, status, target_week, breed, gender, age_min, age_max, weight_min, weight_max, avg_weight, standard_status, delivery_period, created_at, updated_at')
         .eq('status', 'confirmed')
         .order('batch_number', { ascending: true });
 

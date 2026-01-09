@@ -70,10 +70,11 @@ describe('enforceInitialStatus', () => {
   });
 
   it('should handle input without status', () => {
-    const result = enforceInitialStatus({ heads: 100, region: 'Almaty' });
+    const input = { heads: 100, region: 'Almaty' } as { heads?: number; region?: string; status?: unknown };
+    const result = enforceInitialStatus(input);
     expect(result.status).toBe('draft');
-    expect(result.heads).toBe(100);
-    expect(result.region).toBe('Almaty');
+    expect((result as Record<string, unknown>).heads).toBe(100);
+    expect((result as Record<string, unknown>).region).toBe('Almaty');
   });
 
   it('should preserve all other fields', () => {
