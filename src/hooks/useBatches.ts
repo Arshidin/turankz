@@ -225,26 +225,48 @@ export const useBatchesRequiringAction = () => {
   });
 };
 
-// Get batch stats
+// Get batch stats (supports both FSM v2 and legacy statuses)
 export const useBatchStats = () => {
   const { data: batches } = useBatches();
 
   if (!batches) {
     return {
       total: 0,
-      confirmed: 0,
-      softCommitted: 0,
-      forecast: 0,
+      draft: 0,
+      available: 0,
+      committed: 0,
+      completed: 0,
       requiresAction: 0,
+      // Legacy aliases for backward compatibility
+      forecast: 0,
+      softCommitted: 0,
+      confirmed: 0,
     };
   }
 
+  // Count new FSM v2 statuses (with legacy fallback)
+  const draft = batches.filter(b => b.status === 'draft').length;
+  const available = batches.filter(b =>
+    b.status === 'available' || b.status === 'forecast' || b.status === 'soft_committed'
+  ).length;
+  const committed = batches.filter(b =>
+    b.status === 'committed' || b.status === 'confirmed'
+  ).length;
+  const completed = batches.filter(b =>
+    b.status === 'completed' || b.status === 'matched' || b.status === 'closed'
+  ).length;
+
   return {
     total: batches.length,
-    confirmed: batches.filter(b => b.status === 'confirmed').length,
-    softCommitted: batches.filter(b => b.status === 'soft_committed').length,
-    forecast: batches.filter(b => b.status === 'forecast').length,
+    draft,
+    available,
+    committed,
+    completed,
     requiresAction: batches.filter(b => b.requires_action).length,
+    // Legacy aliases for backward compatibility
+    forecast: available,
+    softCommitted: available,
+    confirmed: committed,
   };
 };
 

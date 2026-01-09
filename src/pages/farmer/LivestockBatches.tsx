@@ -13,12 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Plus, 
-  AlertCircle, 
-  Clock, 
-  CheckCircle2, 
-  FileText, 
+import {
+  Plus,
+  AlertCircle,
+  CheckCircle2,
+  FileText,
   ArrowUpCircle,
   Trash2,
   Edit,
@@ -114,41 +113,50 @@ export default function LivestockBatches() {
   };
 
   const getStatusLabel = (status: BatchStatus): string => {
+    // FSM v2 statuses
     if (status === 'draft') return t('batches.draft');
+    if (status === 'available') return t('batches.available') || 'Доступно';
+    if (status === 'committed') return t('batches.committed') || 'Подтверждено';
+    if (status === 'completed') return t('batches.completed') || 'Завершено';
+    // Legacy statuses for backward compatibility
     if (status === 'forecast') return t('batches.forecast');
     if (status === 'soft_committed') return t('batches.softCommitted');
     if (status === 'confirmed') return t('batches.confirmed');
     if (status === 'matched') return t('batches.matched');
     if (status === 'closed') return t('batches.closed');
-    return t('batches.confirmed');
+    return t('batches.draft');
   };
 
   const handleEscalateStatus = () => {
     if (!escalateBatch) return;
-    
-    // Handle draft → forecast transition
+
+    // Handle FSM v2 transitions: draft → available → committed
+    // Also support legacy statuses during migration
     let newStatus: BatchStatus;
-    if (escalateBatch.currentStatus === 'draft') {
-      newStatus = 'forecast';
-    } else if (escalateBatch.currentStatus === 'forecast') {
-      newStatus = 'soft_committed';
+    const currentStatus = escalateBatch.currentStatus;
+
+    if (currentStatus === 'draft') {
+      newStatus = 'available';
+    } else if (currentStatus === 'available' || currentStatus === 'forecast' || currentStatus === 'soft_committed') {
+      newStatus = 'committed';
     } else {
-      newStatus = 'confirmed';
+      // Already committed or completed, no further escalation
+      return;
     }
-    
+
     updateBatch.mutate(
       { id: escalateBatch.id, status: newStatus },
       {
         onSuccess: () => {
           toast({
             title: t('batches.statusUpdated'),
-            description: escalateBatch.currentStatus === 'draft' 
+            description: currentStatus === 'draft'
               ? (t('batches.batchPublished') || 'Партия опубликована и теперь видна в Market Overview')
               : t('batches.statusChangedTo', { status: getStatusLabel(newStatus) }),
           });
           setEscalateBatch(null);
           // Switch to active tab if published from draft
-          if (escalateBatch.currentStatus === 'draft') {
+          if (currentStatus === 'draft') {
             setBatchViewTab('active');
           }
         },
@@ -167,9 +175,13 @@ export default function LivestockBatches() {
   };
 
   const getNextStatus = (status: BatchStatus): string | null => {
-    if (status === 'draft') return t('batches.forecast');
-    if (status === 'forecast') return t('batches.softCommitted');
-    if (status === 'soft_committed') return t('batches.confirmed');
+    // FSM v2: draft → available → committed → completed
+    if (status === 'draft') return t('batches.available') || 'Доступно';
+    // Support legacy statuses during migration
+    if (status === 'available' || status === 'forecast' || status === 'soft_committed') {
+      return t('batches.committed') || 'Подтверждено';
+    }
+    // committed and completed have no next status for farmers
     return null;
   };
 
@@ -202,36 +214,22 @@ export default function LivestockBatches() {
         </div>
       )}
 
-      {/* Batch Stats Summary - compact inline */}
+      {/* Batch Stats Summary - compact inline (FSM v2) */}
       <div className="grid grid-cols-3 gap-3 mt-4 mb-4">
-        <Card className="border-muted">
+        <Card className="border-blue-500/20">
           <CardContent className="py-3 px-4">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-muted">
-                <FileText className="h-4 w-4 text-muted-foreground" />
+              <div className="p-1.5 rounded-md bg-blue-500/10">
+                <FileText className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-xl font-semibold">{stats.forecast}</p>
-                <p className="text-xs text-muted-foreground">{t('batches.forecast')}</p>
+                <p className="text-xl font-semibold">{stats.available}</p>
+                <p className="text-xs text-muted-foreground">{t('batches.available') || 'Доступно'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
-        <Card className="border-amber-500/20">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-amber-500/10">
-                <Clock className="h-4 w-4 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.softCommitted}</p>
-                <p className="text-xs text-muted-foreground">{t('batches.softCommitted')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
+
         <Card className="border-emerald-500/20">
           <CardContent className="py-3 px-4">
             <div className="flex items-center gap-2">
@@ -239,8 +237,22 @@ export default function LivestockBatches() {
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xl font-semibold">{stats.confirmed}</p>
-                <p className="text-xs text-muted-foreground">{t('batches.confirmed')}</p>
+                <p className="text-xl font-semibold">{stats.committed}</p>
+                <p className="text-xs text-muted-foreground">{t('batches.committed') || 'Подтверждено'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-500/20">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-slate-500/10">
+                <Lock className="h-4 w-4 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold">{stats.completed}</p>
+                <p className="text-xs text-muted-foreground">{t('batches.completed') || 'Завершено'}</p>
               </div>
             </div>
           </CardContent>

@@ -8,15 +8,13 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  CheckCircle2, 
-  Circle, 
-  ArrowRight, 
+import {
+  CheckCircle2,
+  Circle,
+  ArrowRight,
   Info,
   Eye,
-  TrendingUp,
   Shield,
-  Package,
   Lock,
   FileEdit
 } from 'lucide-react';
@@ -44,24 +42,20 @@ const getCurrentLang = (): 'en' | 'ru' => {
   return 'ru';
 };
 
-// Status icons mapping
+// Status icons mapping (FSM v2: 4 statuses)
 const STATUS_ICONS: Record<BatchLifecycleStatus, React.ComponentType<{ className?: string }>> = {
   draft: FileEdit,
-  forecast: Eye,
-  soft_committed: TrendingUp,
-  confirmed: Shield,
-  matched: Package,
-  closed: Lock,
+  available: Eye,
+  committed: Shield,
+  completed: Lock,
 };
 
-// Status colors
+// Status colors (FSM v2: 4 statuses)
 const STATUS_COLORS: Record<BatchLifecycleStatus, { bg: string; text: string; border: string }> = {
   draft: { bg: 'bg-gray-500/10', text: 'text-gray-600', border: 'border-gray-500/20' },
-  forecast: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20' },
-  soft_committed: { bg: 'bg-amber-500/10', text: 'text-amber-600', border: 'border-amber-500/20' },
-  confirmed: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20' },
-  matched: { bg: 'bg-purple-500/10', text: 'text-purple-600', border: 'border-purple-500/20' },
-  closed: { bg: 'bg-slate-500/10', text: 'text-slate-600', border: 'border-slate-500/20' },
+  available: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20' },
+  committed: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20' },
+  completed: { bg: 'bg-slate-500/10', text: 'text-slate-600', border: 'border-slate-500/20' },
 };
 
 export function BatchStatusExplanation({ currentStatus, className }: BatchStatusExplanationProps) {
@@ -127,47 +121,47 @@ export function BatchStatusExplanation({ currentStatus, className }: BatchStatus
                     {descriptions[status]}
                   </p>
                   
-                  {/* Additional context for each status */}
+                  {/* Additional context for each status (FSM v2) */}
                   {status === 'draft' && (
                     <Alert className="mt-2 border-blue-500/30 bg-blue-500/5">
                       <Info className="h-3 w-3 text-blue-600" />
                       <AlertDescription className="text-xs text-blue-700">
-                        {lang === 'ru' 
+                        {lang === 'ru'
                           ? 'Черновик не виден в Market Overview. Опубликуйте партию, чтобы она стала видимой.'
                           : 'Draft is not visible in Market Overview. Publish the batch to make it visible.'}
                       </AlertDescription>
                     </Alert>
                   )}
-                  
-                  {status === 'forecast' && (
+
+                  {status === 'available' && (
                     <Alert className="mt-2 border-blue-500/30 bg-blue-500/5">
                       <Eye className="h-3 w-3 text-blue-600" />
                       <AlertDescription className="text-xs text-blue-700">
-                        {lang === 'ru' 
-                          ? 'Партия видна в Market Overview, но имеет низкий приоритет сопоставления.'
-                          : 'Batch is visible in Market Overview but has low matching priority.'}
+                        {lang === 'ru'
+                          ? 'Партия видна в Market Overview и доступна для сопоставления.'
+                          : 'Batch is visible in Market Overview and available for matching.'}
                       </AlertDescription>
                     </Alert>
                   )}
-                  
-                  {status === 'soft_committed' && (
-                    <Alert className="mt-2 border-amber-500/30 bg-amber-500/5">
-                      <TrendingUp className="h-3 w-3 text-amber-600" />
-                      <AlertDescription className="text-xs text-amber-700">
-                        {lang === 'ru' 
-                          ? 'Предварительное обязательство. Партия имеет средний приоритет сопоставления.'
-                          : 'Preliminary commitment. Batch has medium matching priority.'}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {status === 'confirmed' && (
+
+                  {status === 'committed' && (
                     <Alert className="mt-2 border-emerald-500/30 bg-emerald-500/5">
                       <Shield className="h-3 w-3 text-emerald-600" />
                       <AlertDescription className="text-xs text-emerald-700">
-                        {lang === 'ru' 
-                          ? 'Твёрдое обязательство. Партия имеет высокий приоритет сопоставления и готова к matching.'
-                          : 'Firm commitment. Batch has high matching priority and is ready for matching.'}
+                        {lang === 'ru'
+                          ? 'Твёрдое обязательство. Данные партии заблокированы и готовы к сопоставлению.'
+                          : 'Firm commitment. Batch data is locked and ready for matching.'}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {status === 'completed' && (
+                    <Alert className="mt-2 border-slate-500/30 bg-slate-500/5">
+                      <Lock className="h-3 w-3 text-slate-600" />
+                      <AlertDescription className="text-xs text-slate-700">
+                        {lang === 'ru'
+                          ? 'Партия завершена (сопоставлена или закрыта).'
+                          : 'Batch is completed (matched or closed).'}
                       </AlertDescription>
                     </Alert>
                   )}
