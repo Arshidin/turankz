@@ -920,18 +920,26 @@
    =========================================== */
 
 /* FIX 1: Sidebar section headers — КРИТИЧНО */
-.sidebar-section-label,
-.sidebar [class*="section-header"],
-.sidebar [class*="group-label"],
-aside [class*="section-header"],
-aside [class*="group-label"],
-[data-sidebar] [class*="section-header"],
-[data-sidebar] [class*="group-label"] {
+/* Убираем любой оранжевый/акцентный цвет из заголовков секций сайдбара */
+.sidebar-section-label {
   color: rgba(255, 255, 255, 0.5) !important;
-  text-transform: uppercase;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+}
+
+/* Селекторы для nav group labels в aside */
+aside .uppercase.tracking-wide,
+aside button.uppercase,
+aside div.uppercase {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Hover состояние для collapsible группы */
+aside button.uppercase:hover {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Role section header в сайдбаре */
+aside span.uppercase.tracking-wide {
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
 /* FIX 2: Content section titles — КРИТИЧНО */
