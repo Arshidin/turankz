@@ -662,8 +662,8 @@ export default function Overview() {
                     <p className="text-xs text-muted-foreground mt-0.5">{stat.description}</p>
                   )}
                 </div>
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.highlight ? 'bg-amber-500/10' : 'bg-secondary'}`}>
-                  <stat.icon className={`w-5 h-5 ${stat.highlight ? 'text-amber-600' : 'text-primary'}`} />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.highlight ? 'bg-amber-500/10' : 'bg-[var(--bg-surface-hover)]'}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.highlight ? 'text-amber-600' : 'text-[var(--icon-color-default)]'}`} />
                 </div>
               </div>
             </CardContent>

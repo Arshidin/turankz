@@ -108,8 +108,8 @@ export function ObserverDashboard({ farmerName }: ObserverDashboardProps) {
       <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--bg-surface-hover)] flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-[var(--icon-color-default)]" />
             </div>
             <div>
               <CardTitle className="text-lg">

@@ -155,8 +155,8 @@ export function TopNav() {
               variant="ghost" 
               className="flex items-center gap-2 px-3 py-1.5 h-auto rounded-md bg-secondary/50 hover:bg-secondary/80 border border-transparent hover:border-border"
             >
-              <div className="w-7 h-7 bg-muted rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-muted-foreground" />
+              <div className="w-7 h-7 bg-[var(--bg-surface-hover)] rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-[var(--icon-color-default)]" />
               </div>
               <span className="text-sm text-foreground max-w-[100px] truncate">
                 {user?.email?.split('@')[0] || 'User'}

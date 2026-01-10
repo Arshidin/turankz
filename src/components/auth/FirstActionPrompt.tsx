@@ -115,8 +115,8 @@ export function FirstActionPrompt({ forceShow = false, onDismiss }: FirstActionP
         
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Package className="h-5 w-5 text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--bg-surface-hover)] flex items-center justify-center">
+              <Package className="h-5 w-5 text-[var(--icon-color-default)]" />
             </div>
             <div className="flex-1">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -180,8 +180,8 @@ export function FirstActionPrompt({ forceShow = false, onDismiss }: FirstActionP
         
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ClipboardList className="h-5 w-5 text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--bg-surface-hover)] flex items-center justify-center">
+              <ClipboardList className="h-5 w-5 text-[var(--icon-color-default)]" />
             </div>
             <div className="flex-1">
               <CardTitle className="text-lg flex items-center gap-2">
