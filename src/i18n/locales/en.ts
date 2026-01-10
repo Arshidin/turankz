@@ -891,23 +891,42 @@ export const en = {
     },
     hero: {
       brand: 'TURAN STANDARD POOL',
-      statement: 'Market coordination infrastructure for Kazakhstan\'s live cattle industry, ensuring commitment predictability and operational transparency.',
+      statement: 'Market coordination infrastructure for Kazakhstan\'s live cattle industry',
+      substatement: 'Ensuring commitment predictability and operational transparency for all market participants.',
+      boundaryLabel: 'Important to understand',
+      boundaryStatement: 'TSP does not set prices, execute trades, or guarantee outcomes.',
       cta: {
-        primary: 'Learn About Participation',
-        secondary: 'Sign In to Platform',
+        primary: 'Understand the System',
+        secondary: 'Documentation',
       },
     },
     systemDefinition: {
-      label: 'About',
-      title: 'What is TURAN Standard Pool',
+      label: 'System Definition',
+      title: 'What TSP Is',
+      largeStatement: 'TSP is coordination infrastructure, not a trading platform. The system provides a framework for declaring intentions, forming commitments, and planning deliveries.',
+      description: 'Kazakhstan\'s meat industry participants use TSP for coordination within unified standards and rules, while maintaining full autonomy in commercial decision-making.',
       notExchange: 'TSP is not an exchange, not a marketplace, and not a trading platform.',
-      description: 'TSP is a coordination infrastructure that enables meat industry participants to declare intentions, form commitments, and plan deliveries within unified standards and rules.',
       disclaimer: 'The system does not set prices, does not guarantee transactions, and does not act as a party to commercial relationships between participants.',
     },
+    principles: {
+      association: {
+        title: 'Association Governance',
+        description: 'Governed by the industry community with representation from all market participants.',
+      },
+      standards: {
+        title: 'Unified Standards',
+        description: 'Common rules for classification, quality, and procedures for all participants.',
+      },
+      transparency: {
+        title: 'Operational Transparency',
+        description: 'Open coordination rules without hidden conditions or preferences.',
+      },
+    },
     boundaries: {
-      label: 'Boundaries',
+      label: 'Explicit Boundaries',
       title: 'What TSP Does NOT Do',
-      subtitle: 'Explicit boundaries of the coordination system',
+      subtitle: 'Understanding system limitations is as important as understanding its capabilities.',
+      footer: 'TSP adheres to market neutrality principles and does not engage in activities that could be considered competition restriction or price coordination.',
       items: [
         'Is not an exchange or marketplace',
         'Does not set or guarantee prices',
@@ -916,6 +935,58 @@ export const en = {
         'Does not conduct trade intermediation',
         'Does not make decisions for participants',
       ],
+    },
+    boundaryCards: {
+      noExchange: {
+        title: 'Not an Exchange',
+        description: 'TSP is not a trading platform, exchange, or marketplace.',
+      },
+      noPricing: {
+        title: 'No Price Setting',
+        description: 'The system does not determine, fix, or guarantee transaction prices.',
+      },
+      noParty: {
+        title: 'Not a Transaction Party',
+        description: 'TSP does not act as buyer, seller, or intermediary in transactions.',
+      },
+      noGuarantees: {
+        title: 'No Financial Guarantees',
+        description: 'The system does not provide insurance, guarantees, or financial backing.',
+      },
+      noMediation: {
+        title: 'No Mediation',
+        description: 'Trade intermediation and brokerage services are not provided.',
+      },
+      noDecisions: {
+        title: 'No Decision Making',
+        description: 'All commercial decisions are made by participants independently.',
+      },
+    },
+    process: {
+      label: 'Process',
+      title: 'How Coordination Works',
+      subtitle: 'Five stages of participation in the coordination system',
+      cta: 'Learn More About the Process',
+      eligibility: {
+        title: 'Eligibility',
+        description: 'Participant verifies eligibility criteria',
+      },
+      declaration: {
+        title: 'Declaration',
+        description: 'Declaration of intentions and commitments',
+      },
+      coordination: {
+        title: 'Coordination',
+        description: 'Pool formation and matching',
+      },
+      commitment: {
+        title: 'Commitment',
+        description: 'Confirmation of pool participation',
+      },
+      execution: {
+        title: 'Execution',
+        description: 'Fulfillment of commitments by participants',
+      },
     },
     participants: {
       label: 'Participants',
@@ -965,15 +1036,19 @@ export const en = {
     governance: {
       label: 'Governance',
       title: 'Governance and Support',
+      associationLabel: 'Under governance of',
       association: 'Supported by the industry community',
-      description: 'TSP is governed by an association structure with representation from all market participants.',
+      description: 'TSP is governed by an association structure with representation from all market participants. Coordination rules are developed with industry community participation.',
       regulatory: 'Regulatory compliance',
       transparency: 'Transparency of rules and processes',
     },
     footer: {
+      tagline: 'Market coordination infrastructure for Kazakhstan\'s live cattle industry.',
+      resources: 'Resources',
       documentation: 'Documentation',
       standards: 'Standards',
       governance: 'Governance',
+      legal: 'Legal',
       terms: 'Terms of Use',
       privacy: 'Privacy Policy',
       contact: 'Contact',

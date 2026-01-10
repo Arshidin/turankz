@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -80,17 +81,21 @@ function getTargetWeekOptions() {
   return options;
 }
 
-const formSchema = z.object({
-  required_volume: z.coerce.number().min(1, 'At least 1 head required').max(10000, 'Maximum 10,000 heads'),
-  regions: z.array(z.string()).min(1, 'Select at least one region'),
-  target_week: z.string().min(1, 'Target week is required'),
-  age_range_min: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional().nullable(),
-  age_range_max: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional().nullable(),
-  weight_range_min: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional().nullable(),
-  weight_range_max: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional().nullable(),
-});
+function getFormSchema(t: (key: string) => string) {
+  return z.object({
+    required_volume: z.coerce.number()
+      .min(1, t('editRequestDialog.validation.volumeRequired'))
+      .max(10000, t('editRequestDialog.validation.volumeMax')),
+    regions: z.array(z.string()).min(1, t('editRequestDialog.validation.regionsRequired')),
+    target_week: z.string().min(1, t('editRequestDialog.validation.targetWeekRequired')),
+    age_range_min: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional().nullable(),
+    age_range_max: z.coerce.number().min(AGE_RANGE.min).max(AGE_RANGE.max).optional().nullable(),
+    weight_range_min: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional().nullable(),
+    weight_range_max: z.coerce.number().min(WEIGHT_RANGE.min).max(WEIGHT_RANGE.max).optional().nullable(),
+  });
+}
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof getFormSchema>>;
 
 interface EditRequestDialogProps {
   open: boolean;
@@ -134,13 +139,15 @@ function LockedFieldWrapper({ field, status, role, children }: LockedFieldWrappe
 }
 
 export function EditRequestDialog({ open, onOpenChange, request, userRole }: EditRequestDialogProps) {
+  const { t } = useTranslation();
+  const formSchema = useMemo(() => getFormSchema(t), [t]);
   const updateRequest = useUpdatePoolRequest();
   const weekOptions = getTargetWeekOptions();
-  
+
   const status = request.status as PoolRequestLifecycleStatus;
   const canEdit = canEditPoolRequest(status, userRole);
   const lockedTooltip = getPoolRequestLockedTooltip(status, userRole);
-  
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -191,14 +198,14 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <DialogTitle>Edit Request</DialogTitle>
+            <DialogTitle>{t('editRequestDialog.title')}</DialogTitle>
             <Badge variant="outline" className="text-xs">
               {POOL_REQUEST_STATUS_LABELS[status]}
             </Badge>
           </div>
           <DialogDescription>
-            {canEdit 
-              ? 'Modify request parameters. Some fields may be locked based on status.'
+            {canEdit
+              ? t('editRequestDialog.description.editable')
               : lockedTooltip
             }
           </DialogDescription>
@@ -208,7 +215,7 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg border">
             <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium">Request is locked</p>
+              <p className="text-sm font-medium">{t('editRequestDialog.alerts.locked')}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{lockedTooltip}</p>
             </div>
           </div>
@@ -223,12 +230,12 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                 name="required_volume"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Required Volume (heads)</FormLabel>
+                    <FormLabel>{t('editRequestDialog.fields.requiredVolume')}</FormLabel>
                     <LockedFieldWrapper field="required_volume" status={status} role={userRole}>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="e.g. 100" 
+                        <Input
+                          type="number"
+                          placeholder={t('editRequestDialog.fields.requiredVolumePlaceholder')}
                           disabled={!canEditField('required_volume', status, userRole)}
                           {...field}
                           onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : '')}
@@ -245,16 +252,16 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                 name="target_week"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Delivery Period</FormLabel>
+                    <FormLabel>{t('editRequestDialog.fields.deliveryPeriod')}</FormLabel>
                     <LockedFieldWrapper field="target_week" status={status} role={userRole}>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         value={field.value}
                         disabled={!canEditField('target_week', status, userRole)}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select target week" />
+                            <SelectValue placeholder={t('editRequestDialog.fields.targetWeekPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -278,7 +285,7 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
               name="regions"
               render={() => (
                 <FormItem>
-                  <FormLabel>Target Regions</FormLabel>
+                  <FormLabel>{t('editRequestDialog.fields.targetRegions')}</FormLabel>
                   <LockedFieldWrapper field="regions" status={status} role={userRole}>
                     <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
                       {REGIONS.map((region) => (
@@ -313,7 +320,7 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                   </LockedFieldWrapper>
                   {selectedRegions.length > 0 && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {selectedRegions.length} region(s) selected
+                      {t('editRequestDialog.fields.regionsSelected', { count: selectedRegions.length })}
                     </p>
                   )}
                   <FormMessage />
@@ -325,11 +332,11 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
 
             {/* Age & Weight Ranges */}
             <div>
-              <h4 className="text-sm font-medium mb-3">Acceptance Criteria</h4>
-              
+              <h4 className="text-sm font-medium mb-3">{t('editRequestDialog.fields.acceptanceCriteria')}</h4>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <FormLabel className="text-sm">Age Range (months)</FormLabel>
+                  <FormLabel className="text-sm">{t('editRequestDialog.fields.ageRange')}</FormLabel>
                   <div className="flex items-center gap-2">
                     <FormField
                       control={form.control}
@@ -338,9 +345,9 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                         <FormItem className="flex-1">
                           <LockedFieldWrapper field="age_range_min" status={status} role={userRole}>
                             <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="Min" 
+                              <Input
+                                type="number"
+                                placeholder={t('editRequestDialog.fields.minPlaceholder')}
                                 disabled={!canEditField('age_range_min', status, userRole)}
                                 {...field}
                                 value={field.value ?? ''}
@@ -359,9 +366,9 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                         <FormItem className="flex-1">
                           <LockedFieldWrapper field="age_range_max" status={status} role={userRole}>
                             <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="Max" 
+                              <Input
+                                type="number"
+                                placeholder={t('editRequestDialog.fields.maxPlaceholder')}
                                 disabled={!canEditField('age_range_max', status, userRole)}
                                 {...field}
                                 value={field.value ?? ''}
@@ -376,7 +383,7 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                 </div>
 
                 <div className="space-y-2">
-                  <FormLabel className="text-sm">Weight Range (kg)</FormLabel>
+                  <FormLabel className="text-sm">{t('editRequestDialog.fields.weightRange')}</FormLabel>
                   <div className="flex items-center gap-2">
                     <FormField
                       control={form.control}
@@ -385,9 +392,9 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                         <FormItem className="flex-1">
                           <LockedFieldWrapper field="weight_range_min" status={status} role={userRole}>
                             <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="Min" 
+                              <Input
+                                type="number"
+                                placeholder={t('editRequestDialog.fields.minPlaceholder')}
                                 disabled={!canEditField('weight_range_min', status, userRole)}
                                 {...field}
                                 value={field.value ?? ''}
@@ -406,9 +413,9 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
                         <FormItem className="flex-1">
                           <LockedFieldWrapper field="weight_range_max" status={status} role={userRole}>
                             <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="Max" 
+                              <Input
+                                type="number"
+                                placeholder={t('editRequestDialog.fields.maxPlaceholder')}
                                 disabled={!canEditField('weight_range_max', status, userRole)}
                                 {...field}
                                 value={field.value ?? ''}
@@ -425,19 +432,19 @@ export function EditRequestDialog({ open, onOpenChange, request, userRole }: Edi
             </div>
 
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                {t('editRequestDialog.buttons.cancel')}
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={!canEdit || updateRequest.isPending}
               >
                 {updateRequest.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Save Changes
+                {t('editRequestDialog.buttons.save')}
               </Button>
             </DialogFooter>
           </form>
