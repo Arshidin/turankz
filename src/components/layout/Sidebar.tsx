@@ -1,12 +1,21 @@
 /**
- * SIDEBAR COMPONENT
- * 
- * Renders navigation based on role AND account status.
- * Navigation is grouped by user intent:
- * - Overview (situational awareness)
- * - Market Participation (core actions)
- * - Execution (contracts & delivery)
- * - Governance (admin only)
+ * SIDEBAR COMPONENT - Design System Specification
+ *
+ * Width: 260px fixed (w-sidebar custom utility)
+ * Background: bg-base (#0D0D0D)
+ * Border-right: 1px solid border-subtle (#2A2A2A)
+ *
+ * Sidebar Item:
+ * - Height: 32-36px
+ * - Padding: 8px 12px
+ * - Border-radius: 6px
+ * - Icon: 16px, text-tertiary
+ * - Text: 13px, weight 500, text-secondary
+ * - Hover: bg-surface-hover
+ * - Active: bg-surface-active, text-primary
+ *
+ * Section Header:
+ * - 11px, weight 600, text-tertiary, uppercase
  */
 
 import { NavLink, useLocation } from 'react-router-dom';
@@ -14,10 +23,10 @@ import { useTranslation } from 'react-i18next';
 import { useRole } from '@/contexts/RoleContext';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { useHasExecutions } from '@/hooks/useHasExecutions';
-import { 
-  Home, 
-  User, 
-  Boxes, 
+import {
+  Home,
+  User,
+  Boxes,
   Calendar,
   BarChart3,
   BookmarkCheck,
@@ -36,7 +45,6 @@ import {
   ChevronRight,
   Beef,
   TrendingUp,
-  GraduationCap,
   BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -73,18 +81,7 @@ interface NavGroup {
 }
 
 // FARMER navigation - simplified structure (Sprint 2)
-//
-// 5 clear groups:
-// 1. Dashboard - main overview
-// 2. Operations - batches, calendar, executions (core actions)
-// 3. Planning - market intent (optional long-term planning)
-// 4. Reference - price grid, documentation
-// 5. Account - profile
-//
-// Removed: National Herd (admin-only), Market Workflow (unnecessary complexity)
-// OBSERVER ACCESS: Can see all, but batches limited to drafts until activation
 const farmerNavGroups: NavGroup[] = [
-  // DASHBOARD: Main entry point
   {
     key: 'dashboard',
     labelKey: 'nav.groups.dashboard',
@@ -92,8 +89,6 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.overview', path: '/overview', icon: Home, requiredStatus: ['observer', 'active'] },
     ],
   },
-  // OPERATIONS: Core business actions - batches, calendar, executions
-  // Observers can access batches to create drafts (but cannot publish until activated)
   {
     key: 'operations',
     labelKey: 'nav.groups.operations',
@@ -103,7 +98,6 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.executions', path: '/farmer/executions', icon: ClipboardList, requiredStatus: ['active'], requiresExecutions: true },
     ],
   },
-  // PLANNING: Long-term market planning (optional)
   {
     key: 'planning',
     labelKey: 'nav.groups.planning',
@@ -111,7 +105,6 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.marketIntent', path: '/farmer/intent', icon: TrendingUp, requiredStatus: ['active'] },
     ],
   },
-  // REFERENCE: Information resources
   {
     key: 'reference',
     labelKey: 'nav.groups.reference',
@@ -120,7 +113,6 @@ const farmerNavGroups: NavGroup[] = [
       { labelKey: 'nav.documentation', path: '/docs', icon: BookOpen, requiredStatus: ['observer', 'active'], readOnly: true },
     ],
   },
-  // ACCOUNT: User settings
   {
     key: 'account',
     labelKey: 'nav.groups.account',
@@ -130,7 +122,7 @@ const farmerNavGroups: NavGroup[] = [
   },
 ];
 
-// MPK navigation - grouped by intent
+// MPK navigation
 const mpkNavGroups: NavGroup[] = [
   {
     key: 'overview',
@@ -165,8 +157,7 @@ const mpkNavGroups: NavGroup[] = [
   },
 ];
 
-// ADMIN navigation - grouped by orchestration function
-// Emphasizes market coordination and rules-based execution, not manual control
+// ADMIN navigation
 const adminNavGroups: NavGroup[] = [
   {
     key: 'overview',
@@ -216,17 +207,16 @@ export function Sidebar() {
   const { data: hasExecutions = false } = useHasExecutions();
   const location = useLocation();
   const { user } = useAuthContext();
-  
+
   // Fetch data for indicators
   const { data: batches = [] } = useBatches();
   const { data: poolRequests = [] } = usePoolRequests();
   const { data: currentMpk } = useCurrentMpk();
-  
+
   // Calculate indicators
   const getNavItemIndicator = (path: string): number | null => {
     if (role === 'farmer' && user?.id) {
       if (path === '/farmer/batches') {
-        // Count batches requiring action
         const requiringAction = batches.filter(
           b => b.user_id === user.id && b.requires_action
         ).length;
@@ -235,7 +225,6 @@ export function Sidebar() {
     }
     if (role === 'mpk' && currentMpk?.mpk_id) {
       if (path === '/mpk/requests') {
-        // Count draft requests for current MPK only
         const draftRequests = poolRequests.filter(
           r => r.mpk_id === currentMpk.mpk_id && r.status === 'draft'
         ).length;
@@ -244,7 +233,7 @@ export function Sidebar() {
     }
     return null;
   };
-  
+
   // Get tooltip text for nav items
   const getNavItemTooltip = (item: NavItem): string => {
     const tooltips: Record<string, string> = {
@@ -258,7 +247,7 @@ export function Sidebar() {
     };
     return tooltips[item.path] || t(item.labelKey);
   };
-  
+
   // Track collapsed state for collapsible groups
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
@@ -291,7 +280,7 @@ export function Sidebar() {
   // Filter items within each group
   const filterItems = (items: NavItem[]): NavItem[] => {
     if (role === 'admin') return items;
-    
+
     return items.filter(item => {
       if (item.requiredStatus && !item.requiredStatus.includes(accountStatus)) {
         return false;
@@ -332,14 +321,14 @@ export function Sidebar() {
   // Show loading skeleton
   if (isLoading) {
     return (
-      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 h-full overflow-y-auto">
-        <div className="px-4 pt-5 pb-3">
+      <aside className="w-[260px] bg-[var(--bg-base)] border-r border-[var(--border-subtle)] flex flex-col shrink-0 h-full overflow-y-auto">
+        <div className="px-[16px] pt-[20px] pb-[12px]">
           <Skeleton className="h-3 w-20" />
         </div>
-        <nav className="flex-1 px-2">
-          <div className="space-y-1">
+        <nav className="flex-1 px-[8px]">
+          <div className="space-y-[4px]">
             {[1, 2, 3, 4, 5].map(i => (
-              <Skeleton key={i} className="h-10 w-full" />
+              <Skeleton key={i} className="h-[32px] w-full rounded-[6px]" />
             ))}
           </div>
         </nav>
@@ -348,20 +337,20 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 h-full overflow-y-auto">
+    <aside className="w-[260px] bg-[var(--bg-base)] border-r border-[var(--border-subtle)] flex flex-col shrink-0 h-full overflow-y-auto">
       {/* Role Section Header */}
-      <div className="px-4 pt-5 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-sidebar-muted">
+      <div className="px-[16px] pt-[20px] pb-[12px]">
+        <div className="flex items-center gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
             {roleLabel}
           </span>
           {role !== 'admin' && (
-            <Badge 
+            <Badge
               variant={isObserver ? 'secondary' : isSuspended ? 'destructive' : 'outline'}
-              className="text-[9px] px-1.5 py-0"
+              className="text-[9px] px-[6px] py-0 h-[16px]"
             >
-              {isObserver && <Eye className="w-2.5 h-2.5 mr-0.5" />}
-              {isSuspended && <Lock className="w-2.5 h-2.5 mr-0.5" />}
+              {isObserver && <Eye className="w-[10px] h-[10px] mr-[2px]" />}
+              {isSuspended && <Lock className="w-[10px] h-[10px] mr-[2px]" />}
               {isObserver ? (t('accountStatus.pending', 'Pending') || 'Pending') : isSuspended ? 'Suspended' : ''}
             </Badge>
           )}
@@ -370,10 +359,10 @@ export function Sidebar() {
 
       {/* Suspended Mode Banner */}
       {isSuspended && (
-        <div className="mx-2 mb-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/20">
-          <div className="flex items-center gap-2">
-            <Lock className="w-3.5 h-3.5 text-destructive" />
-            <span className="text-xs text-destructive">
+        <div className="mx-[8px] mb-[8px] px-[12px] py-[8px] rounded-[6px] bg-[var(--color-error)]/10 border border-[var(--color-error)]/20">
+          <div className="flex items-center gap-[8px]">
+            <Lock className="w-[14px] h-[14px] text-[var(--color-error)]" />
+            <span className="text-[12px] text-[var(--color-error)]">
               {t('nav.suspendedMode') || 'Account suspended'}
             </span>
           </div>
@@ -381,42 +370,40 @@ export function Sidebar() {
       )}
 
       {/* Navigation Groups */}
-      <nav className="flex-1 px-2 pb-4">
+      <nav className="flex-1 px-[8px] pb-[16px]">
         {navGroups.map((group, groupIndex) => {
           const isCollapsed = group.collapsible && collapsedGroups.has(group.key);
-          const isDefaultCollapsed = group.collapsible && group.defaultOpen === false && !collapsedGroups.has(group.key);
           const shouldShow = !group.collapsible || !isCollapsed;
 
           return (
-            <div key={group.key} className={cn(groupIndex > 0 && 'mt-4')}>
+            <div key={group.key} className={cn(groupIndex > 0 && 'mt-[16px]')}>
               {/* Group Label */}
               {group.collapsible ? (
                 <button
                   onClick={() => toggleGroup(group.key)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+                  className="w-full flex items-center justify-between px-[12px] py-[6px] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors duration-[100ms]"
                 >
                   <span>{t(group.labelKey)}</span>
                   {isCollapsed ? (
-                    <ChevronRight className="w-3 h-3" />
+                    <ChevronRight className="w-[12px] h-[12px]" />
                   ) : (
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-[12px] h-[12px]" />
                   )}
                 </button>
               ) : (
-                <div className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-sidebar-muted">
+                <div className="px-[12px] py-[6px] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
                   {t(group.labelKey)}
                 </div>
               )}
 
               {/* Group Items */}
               {shouldShow && (
-                <ul className="space-y-0.5 mt-1">
+                <ul className="space-y-[2px] mt-[4px]">
                   {group.items.map((item) => {
                     const indicator = getNavItemIndicator(item.path);
                     const tooltipText = getNavItemTooltip(item);
-                    // Check if this is an external link (starts with http or is documentation)
                     const isExternalLink = item.path.startsWith('http') || item.path.startsWith('https');
-                    
+
                     return (
                       <li key={item.path}>
                         <TooltipProvider>
@@ -428,15 +415,16 @@ export function Sidebar() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className={cn(
-                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative",
-                                    "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                                    "flex items-center gap-[8px] px-[12px] py-[8px] rounded-[6px] text-[13px] font-medium transition-colors duration-[100ms] relative",
+                                    "h-[32px]",
+                                    "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
                                   )}
                                 >
-                                  <item.icon className="w-4 h-4 text-sidebar-muted" />
+                                  <item.icon className="w-[16px] h-[16px] text-[var(--text-tertiary)]" />
                                   <span className="flex-1 truncate">{t(item.labelKey)}</span>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <div className="flex items-center gap-[6px] flex-shrink-0">
                                     {item.readOnly && (
-                                      <Eye className="w-3 h-3 text-muted-foreground" />
+                                      <Eye className="w-[12px] h-[12px] text-[var(--text-muted)]" />
                                     )}
                                   </div>
                                 </a>
@@ -444,43 +432,44 @@ export function Sidebar() {
                                 <NavLink
                                   to={item.path}
                                   className={cn(
-                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative",
+                                    "flex items-center gap-[8px] px-[12px] py-[8px] rounded-[6px] text-[13px] font-medium transition-colors duration-[100ms] relative",
+                                    "h-[32px]",
                                     isActive(item.path)
-                                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                                      ? "bg-[var(--bg-surface-active)] text-[var(--text-primary)]"
+                                      : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
                                   )}
                                 >
                                   <item.icon className={cn(
-                                    "w-4 h-4",
-                                    isActive(item.path) 
-                                      ? "text-primary" 
-                                      : "text-sidebar-muted"
+                                    "w-[16px] h-[16px]",
+                                    isActive(item.path)
+                                      ? "text-[var(--accent-primary)]"
+                                      : "text-[var(--text-tertiary)]"
                                   )} />
                                   <span className="flex-1 truncate">{t(item.labelKey)}</span>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <div className="flex items-center gap-[6px] flex-shrink-0">
                                     {indicator !== null && indicator > 0 && (
-                                      <Badge 
-                                        variant="destructive" 
-                                        className="h-5 min-w-5 px-1.5 text-[10px] font-semibold flex items-center justify-center"
+                                      <Badge
+                                        variant="destructive"
+                                        className="h-[20px] min-w-[20px] px-[6px] text-[10px] font-semibold flex items-center justify-center"
                                       >
                                         {indicator > 99 ? '99+' : indicator}
                                       </Badge>
                                     )}
                                     {item.readOnly && (
-                                      <Eye className="w-3 h-3 text-muted-foreground" />
+                                      <Eye className="w-[12px] h-[12px] text-[var(--text-muted)]" />
                                     )}
                                   </div>
                                 </NavLink>
                               )}
                             </TooltipTrigger>
                             <TooltipContent side="right" className="max-w-[200px]">
-                              <p className="font-medium">{t(item.labelKey)}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="font-medium text-[13px]">{t(item.labelKey)}</p>
+                              <p className="text-[12px] text-[var(--text-secondary)] mt-[4px]">
                                 {tooltipText}
                               </p>
                               {indicator !== null && indicator > 0 && (
-                                <p className="text-xs text-destructive mt-1 font-medium">
-                                  {indicator} {indicator === 1 
+                                <p className="text-[12px] text-[var(--color-error)] mt-[4px] font-medium">
+                                  {indicator} {indicator === 1
                                     ? t('nav.requiresAttention', 'requires attention')
                                     : t('nav.requireAttention', 'require attention')}
                                 </p>
@@ -499,8 +488,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border mt-auto">
-        <p className="text-xs text-sidebar-muted">Turan Standard Pool v1.0</p>
+      <div className="p-[16px] border-t border-[var(--border-subtle)] mt-auto">
+        <p className="text-[12px] text-[var(--text-muted)]">Turan Standard Pool v1.0</p>
       </div>
     </aside>
   );

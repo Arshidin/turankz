@@ -1,6 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
@@ -9,354 +7,300 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
+    /* ===========================================
+       DESIGN SYSTEM FOUNDATION
+       Dark theme - Attio-derived specification
+       =========================================== */
+
+    /* Background Hierarchy */
+    --bg-base: #0D0D0D;
+    --bg-surface: #1A1A1A;
+    --bg-surface-elevated: #242424;
+    --bg-surface-hover: #2A2A2A;
+    --bg-surface-active: #333333;
+    --bg-input: #1A1A1A;
+
+    /* Border Colors */
+    --border-subtle: #2A2A2A;
+    --border-default: #3A3A3A;
+    --border-strong: #4A4A4A;
+    --border-accent: #3B82F6;
+
+    /* Text Colors */
+    --text-primary: rgba(255, 255, 255, 1);
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-tertiary: rgba(255, 255, 255, 0.5);
+    --text-muted: rgba(255, 255, 255, 0.3);
+    --text-link: #3B82F6;
+    --text-on-accent: #FFFFFF;
+
+    /* Accent Colors */
+    --accent-primary: #3B82F6;
+    --accent-primary-hover: #2563EB;
+    --accent-primary-muted: rgba(59, 130, 246, 0.15);
+
+    /* Semantic Colors */
+    --color-success: #22C55E;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+
+    /* Semantic Object Colors (Record Types) */
+    --color-companies: #8B5CF6;
+    --color-people: #22C55E;
+    --color-deals: #F59E0B;
+    --color-users: #3B82F6;
+    --color-workspaces: #EC4899;
+
+    /* Spacing Scale (4px base) */
+    --space-0: 0px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    --font-family-mono: 'JetBrains Mono', monospace;
+    --font-size-xs: 11px;
+    --font-size-sm: 12px;
+    --font-size-base: 13px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 24px;
+
+    /* Line Heights */
+    --line-height-tight: 1.3;
+    --line-height-normal: 1.4;
+    --line-height-relaxed: 1.5;
+
+    /* Transitions */
+    --transition-fast: 100ms ease;
+    --transition-base: 150ms ease;
+    --transition-slow: 300ms ease;
 
     /* ===========================================
-       LANDING PAGE - MCKINSEY INSTITUTIONAL THEME
+       SHADCN/UI TOKEN MAPPING
+       Maps design system to shadcn variables
        =========================================== */
-    --landing-background: 215 45% 13%;
-    --landing-foreground: 0 0% 100%;
-    --landing-muted: 210 20% 80%;
-    --landing-subtle: 210 15% 60%;
-    --landing-accent: 210 60% 55%;
-    --landing-border: 210 30% 30%;
-    --landing-card: 215 40% 18%;
-    --landing-card-hover: 215 45% 22%;
+    --background: var(--bg-base);
+    --foreground: var(--text-primary);
 
-    /* ===========================================
-       LANDING V2 - INSTITUTIONAL INFRASTRUCTURE
-       Blackstone/BRS inspired design system
-       =========================================== */
-    --landing-v2-bg-inverse: 0 0% 4%;
-    --landing-v2-text-inverse: 0 0% 100%;
-    --landing-v2-brand: 217 91% 60%;
-    --landing-v2-brand-hover: 217 91% 55%;
-    --landing-v2-brand-active: 217 91% 50%;
-    --landing-v2-bg-light: 210 20% 98%;
-    --landing-v2-bg-muted: 210 20% 96%;
-    --landing-v2-text-primary: 0 0% 9%;
-    --landing-v2-text-secondary: 0 0% 45%;
-    --landing-v2-text-muted: 0 0% 55%;
-    --landing-v2-border-default: 0 0% 90%;
-    --landing-v2-border-subtle: 0 0% 94%;
+    --card: var(--bg-surface);
+    --card-foreground: var(--text-primary);
 
-    --foreground: 215 25% 15%;
+    --popover: var(--bg-surface-elevated);
+    --popover-foreground: var(--text-primary);
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --primary: var(--accent-primary);
+    --primary-foreground: var(--text-on-accent);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --secondary: var(--bg-surface);
+    --secondary-foreground: var(--text-secondary);
 
-    --primary: 200 45% 30%;
-    --primary-foreground: 0 0% 100%;
+    --muted: var(--bg-surface-hover);
+    --muted-foreground: var(--text-tertiary);
 
-    --secondary: 210 15% 93%;
-    --secondary-foreground: 215 25% 25%;
+    --accent: var(--bg-surface-hover);
+    --accent-foreground: var(--text-primary);
 
-    --muted: 210 15% 96%;
-    --muted-foreground: 215 15% 50%;
+    --destructive: var(--color-error);
+    --destructive-foreground: var(--text-on-accent);
 
-    --accent: 175 40% 40%;
-    --accent-foreground: 0 0% 100%;
+    --border: var(--border-default);
+    --input: var(--border-default);
+    --ring: var(--accent-primary);
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 210 20% 88%;
-    --input: 210 20% 88%;
-    --ring: 200 45% 30%;
-
-    --radius: 0.375rem;
+    --radius: var(--radius-md);
 
     /* ===========================================
        BATCH LIFECYCLE STATUS COLORS
-       Consistent visual treatment across platform
+       Dark theme optimized
        =========================================== */
-    
+
     /* Draft - Subtle/Dotted (not yet active) */
-    --status-draft: 215 15% 55%;
-    --status-draft-bg: 215 15% 97%;
-    
+    --status-draft: rgba(255, 255, 255, 0.5);
+    --status-draft-bg: rgba(255, 255, 255, 0.05);
+
     /* Forecast - Neutral/Light Gray (not urgent) */
-    --status-forecast: 215 15% 45%;
-    --status-forecast-bg: 215 15% 95%;
-    
+    --status-forecast: rgba(255, 255, 255, 0.6);
+    --status-forecast-bg: rgba(255, 255, 255, 0.08);
+
     /* Soft Committed - Attention/Amber (pending action) */
-    --status-soft: 38 85% 50%;
-    --status-soft-bg: 38 85% 95%;
-    
+    --status-soft: #F59E0B;
+    --status-soft-bg: rgba(245, 158, 11, 0.15);
+
     /* Confirmed - Stable/Green (complete) */
-    --status-confirmed: 150 50% 38%;
-    --status-confirmed-bg: 150 50% 95%;
+    --status-confirmed: #22C55E;
+    --status-confirmed-bg: rgba(34, 197, 94, 0.15);
 
     /* Matched - Blue (in pool) */
-    --status-matched: 200 65% 45%;
-    --status-matched-bg: 200 65% 95%;
+    --status-matched: #3B82F6;
+    --status-matched-bg: rgba(59, 130, 246, 0.15);
 
     /* Closed - Muted/Gray (final state) */
-    --status-closed: 175 35% 40%;
-    --status-closed-bg: 175 35% 94%;
+    --status-closed: rgba(255, 255, 255, 0.5);
+    --status-closed-bg: rgba(255, 255, 255, 0.08);
 
     /* Delivered - Legacy alias for closed */
-    --status-delivered: 175 35% 40%;
-    --status-delivered-bg: 175 35% 94%;
+    --status-delivered: #14B8A6;
+    --status-delivered-bg: rgba(20, 184, 166, 0.15);
 
     /* ===========================================
        FARMER GRADING COLORS
-       Visually secondary to readiness statuses
        =========================================== */
-    
+
     /* Observer - Neutral/Gray */
-    --grading-observer: 215 15% 50%;
-    --grading-observer-bg: 215 15% 96%;
-    
+    --grading-observer: rgba(255, 255, 255, 0.5);
+    --grading-observer-bg: rgba(255, 255, 255, 0.08);
+
     /* Declared Supplier - Teal accent */
-    --grading-declared: 180 40% 40%;
-    --grading-declared-bg: 180 40% 95%;
-    
-    /* Standard Supplier - Primary (trusted) */
-    --grading-standard: 200 45% 35%;
-    --grading-standard-bg: 200 45% 95%;
+    --grading-declared: #14B8A6;
+    --grading-declared-bg: rgba(20, 184, 166, 0.15);
+
+    /* Standard Supplier - Primary Blue (trusted) */
+    --grading-standard: #3B82F6;
+    --grading-standard-bg: rgba(59, 130, 246, 0.15);
 
     /* ===========================================
        MPK STATUS COLORS
-       Muted, not alerting
        =========================================== */
-    
+
     /* Active - Subtle green */
-    --mpk-active: 150 40% 42%;
-    --mpk-active-bg: 150 40% 95%;
-    
+    --mpk-active: #22C55E;
+    --mpk-active-bg: rgba(34, 197, 94, 0.15);
+
     /* Restricted - Muted amber (warning, not error) */
-    --mpk-restricted: 35 60% 50%;
-    --mpk-restricted-bg: 35 60% 95%;
-    
+    --mpk-restricted: #F59E0B;
+    --mpk-restricted-bg: rgba(245, 158, 11, 0.15);
+
     /* Inactive - Gray */
-    --mpk-inactive: 215 10% 55%;
-    --mpk-inactive-bg: 215 10% 95%;
+    --mpk-inactive: rgba(255, 255, 255, 0.5);
+    --mpk-inactive-bg: rgba(255, 255, 255, 0.08);
 
     /* ===========================================
        ADMIN SIGNALS (Risk flags only)
-       Red reserved for admin risk indicators
        =========================================== */
-    
+
     /* At Risk - For admin alerts only */
-    --signal-risk: 0 65% 50%;
-    --signal-risk-bg: 0 65% 96%;
-    
+    --signal-risk: #EF4444;
+    --signal-risk-bg: rgba(239, 68, 68, 0.15);
+
     /* Warning - Amber signal */
-    --signal-warning: 38 90% 50%;
-    --signal-warning-bg: 38 90% 96%;
-    
+    --signal-warning: #F59E0B;
+    --signal-warning-bg: rgba(245, 158, 11, 0.15);
+
     /* On Track - Positive signal */
-    --signal-positive: 150 50% 40%;
-    --signal-positive-bg: 150 50% 95%;
+    --signal-positive: #22C55E;
+    --signal-positive-bg: rgba(34, 197, 94, 0.15);
 
     /* ===========================================
        POOL REQUEST STATUS
-       7 lifecycle statuses: draft → submitted → matching → partial → fulfilled → closed → cancelled
        =========================================== */
 
     /* Draft - Not yet submitted (muted gray) */
-    --pool-draft: 215 15% 55%;
-    --pool-draft-bg: 215 15% 97%;
+    --pool-draft: rgba(255, 255, 255, 0.5);
+    --pool-draft-bg: rgba(255, 255, 255, 0.05);
 
     /* Submitted - Awaiting admin review (blue) */
-    --pool-submitted: 200 65% 50%;
-    --pool-submitted-bg: 200 65% 95%;
+    --pool-submitted: #3B82F6;
+    --pool-submitted-bg: rgba(59, 130, 246, 0.15);
 
     /* Matching - Admin actively matching (violet) */
-    --pool-matching: 280 50% 50%;
-    --pool-matching-bg: 280 50% 95%;
+    --pool-matching: #8B5CF6;
+    --pool-matching-bg: rgba(139, 92, 246, 0.15);
 
     /* Partial - Some matches made (amber) */
-    --pool-partial: 38 80% 50%;
-    --pool-partial-bg: 38 80% 95%;
+    --pool-partial: #F59E0B;
+    --pool-partial-bg: rgba(245, 158, 11, 0.15);
 
     /* Fulfilled - Fully matched (emerald) */
-    --pool-fulfilled: 150 50% 40%;
-    --pool-fulfilled-bg: 150 50% 95%;
+    --pool-fulfilled: #22C55E;
+    --pool-fulfilled-bg: rgba(34, 197, 94, 0.15);
 
     /* Closed - Completed (gray) */
-    --pool-closed: 215 15% 50%;
-    --pool-closed-bg: 215 15% 95%;
+    --pool-closed: rgba(255, 255, 255, 0.5);
+    --pool-closed-bg: rgba(255, 255, 255, 0.08);
 
     /* Cancelled - Cancelled (destructive) */
-    --pool-cancelled: 0 60% 50%;
-    --pool-cancelled-bg: 0 60% 95%;
+    --pool-cancelled: #EF4444;
+    --pool-cancelled-bg: rgba(239, 68, 68, 0.15);
 
     /* ===========================================
        EXECUTION LIFECYCLE STATUS
-       Contracts & Settlement flow statuses
        =========================================== */
-    
+
     /* Matched - Initial state after pool matching */
-    --exec-matched: 200 65% 45%;
-    --exec-matched-bg: 200 65% 95%;
-    
+    --exec-matched: #3B82F6;
+    --exec-matched-bg: rgba(59, 130, 246, 0.15);
+
     /* Scheduled - Delivery dates set */
-    --exec-scheduled: 38 80% 50%;
-    --exec-scheduled-bg: 38 80% 95%;
-    
+    --exec-scheduled: #F59E0B;
+    --exec-scheduled-bg: rgba(245, 158, 11, 0.15);
+
     /* Delivered - MPK confirmed receipt */
-    --exec-delivered: 280 50% 50%;
-    --exec-delivered-bg: 280 50% 95%;
-    
+    --exec-delivered: #8B5CF6;
+    --exec-delivered-bg: rgba(139, 92, 246, 0.15);
+
     /* Confirmed - Admin compliance verified */
-    --exec-confirmed: 150 50% 40%;
-    --exec-confirmed-bg: 150 50% 95%;
-    
+    --exec-confirmed: #22C55E;
+    --exec-confirmed-bg: rgba(34, 197, 94, 0.15);
+
     /* Settled - Settlement calculated */
-    --exec-settled: 175 45% 42%;
-    --exec-settled-bg: 175 45% 94%;
-    
+    --exec-settled: #14B8A6;
+    --exec-settled-bg: rgba(20, 184, 166, 0.15);
+
     /* Closed - Fully completed */
-    --exec-closed: 215 15% 50%;
-    --exec-closed-bg: 215 15% 95%;
+    --exec-closed: rgba(255, 255, 255, 0.5);
+    --exec-closed-bg: rgba(255, 255, 255, 0.08);
 
-    /* Sidebar */
-    --sidebar-background: 215 25% 18%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 175 40% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 25%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 215 25% 25%;
-    --sidebar-ring: 175 40% 50%;
-    --sidebar-muted: 215 20% 40%;
-  }
+    /* ===========================================
+       SIDEBAR
+       =========================================== */
+    --sidebar-background: var(--bg-base);
+    --sidebar-foreground: var(--text-secondary);
+    --sidebar-primary: var(--accent-primary);
+    --sidebar-primary-foreground: var(--text-on-accent);
+    --sidebar-accent: var(--bg-surface-active);
+    --sidebar-accent-foreground: var(--text-primary);
+    --sidebar-border: var(--border-subtle);
+    --sidebar-ring: var(--accent-primary);
+    --sidebar-muted: var(--text-tertiary);
 
-  .dark {
-    --background: 215 25% 10%;
-    --foreground: 210 20% 95%;
+    /* ===========================================
+       LANDING PAGE TOKENS (preserved)
+       =========================================== */
+    --landing-background: #1a2332;
+    --landing-foreground: #FFFFFF;
+    --landing-muted: #9CA3AF;
+    --landing-subtle: #6B7280;
+    --landing-accent: #3B82F6;
+    --landing-border: #374151;
+    --landing-card: #243044;
+    --landing-card-hover: #2d3b50;
 
-    --card: 215 25% 13%;
-    --card-foreground: 210 20% 95%;
-
-    --popover: 215 25% 13%;
-    --popover-foreground: 210 20% 95%;
-
-    --primary: 175 40% 50%;
-    --primary-foreground: 215 25% 10%;
-
-    --secondary: 215 25% 20%;
-    --secondary-foreground: 210 20% 90%;
-
-    --muted: 215 25% 18%;
-    --muted-foreground: 215 15% 60%;
-
-    --accent: 175 40% 45%;
-    --accent-foreground: 215 25% 10%;
-
-    --destructive: 0 60% 45%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 215 25% 22%;
-    --input: 215 25% 22%;
-    --ring: 175 40% 50%;
-
-    /* Dark mode status colors */
-    --status-draft: 215 15% 65%;
-    --status-draft-bg: 215 15% 18%;
-    
-    --status-forecast: 215 15% 60%;
-    --status-forecast-bg: 215 15% 20%;
-    
-    --status-soft: 38 75% 55%;
-    --status-soft-bg: 38 75% 15%;
-    
-    --status-confirmed: 150 45% 50%;
-    --status-confirmed-bg: 150 45% 15%;
-
-    --status-matched: 200 60% 55%;
-    --status-matched-bg: 200 60% 15%;
-
-    --status-closed: 175 35% 50%;
-    --status-closed-bg: 175 35% 15%;
-
-    --status-delivered: 175 35% 50%;
-    --status-delivered-bg: 175 35% 15%;
-
-    /* Dark mode grading colors */
-    --grading-observer: 215 15% 60%;
-    --grading-observer-bg: 215 15% 18%;
-    
-    --grading-declared: 180 35% 50%;
-    --grading-declared-bg: 180 35% 15%;
-    
-    --grading-standard: 200 40% 55%;
-    --grading-standard-bg: 200 40% 15%;
-
-    /* Dark mode MPK status */
-    --mpk-active: 150 35% 50%;
-    --mpk-active-bg: 150 35% 15%;
-    
-    --mpk-restricted: 35 55% 55%;
-    --mpk-restricted-bg: 35 55% 15%;
-    
-    --mpk-inactive: 215 10% 60%;
-    --mpk-inactive-bg: 215 10% 18%;
-
-    /* Dark mode signals */
-    --signal-risk: 0 60% 55%;
-    --signal-risk-bg: 0 60% 15%;
-    
-    --signal-warning: 38 80% 55%;
-    --signal-warning-bg: 38 80% 15%;
-    
-    --signal-positive: 150 45% 50%;
-    --signal-positive-bg: 150 45% 15%;
-
-    /* Dark mode pool status */
-    --pool-draft: 215 15% 60%;
-    --pool-draft-bg: 215 15% 18%;
-
-    --pool-submitted: 200 60% 55%;
-    --pool-submitted-bg: 200 60% 15%;
-
-    --pool-matching: 280 45% 55%;
-    --pool-matching-bg: 280 45% 15%;
-
-    --pool-partial: 38 70% 55%;
-    --pool-partial-bg: 38 70% 15%;
-
-    --pool-fulfilled: 150 45% 50%;
-    --pool-fulfilled-bg: 150 45% 15%;
-
-    --pool-closed: 215 15% 60%;
-    --pool-closed-bg: 215 15% 18%;
-
-    --pool-cancelled: 0 55% 55%;
-    --pool-cancelled-bg: 0 55% 15%;
-
-    /* Dark mode execution status */
-    --exec-matched: 200 60% 55%;
-    --exec-matched-bg: 200 60% 15%;
-    
-    --exec-scheduled: 38 70% 55%;
-    --exec-scheduled-bg: 38 70% 15%;
-    
-    --exec-delivered: 280 45% 55%;
-    --exec-delivered-bg: 280 45% 15%;
-    
-    --exec-confirmed: 150 45% 50%;
-    --exec-confirmed-bg: 150 45% 15%;
-    
-    --exec-settled: 175 40% 50%;
-    --exec-settled-bg: 175 40% 15%;
-    
-    --exec-closed: 215 15% 60%;
-    --exec-closed-bg: 215 15% 18%;
-
-    --sidebar-background: 215 28% 8%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 175 40% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 15%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 215 25% 15%;
-    --sidebar-ring: 175 40% 50%;
+    --landing-v2-bg-inverse: #0a0a0a;
+    --landing-v2-text-inverse: #FFFFFF;
+    --landing-v2-brand: #3B82F6;
+    --landing-v2-brand-hover: #2563EB;
+    --landing-v2-brand-active: #1D4ED8;
+    --landing-v2-bg-light: #F8FAFC;
+    --landing-v2-bg-muted: #F1F5F9;
+    --landing-v2-text-primary: #171717;
+    --landing-v2-text-secondary: #737373;
+    --landing-v2-text-muted: #8C8C8C;
+    --landing-v2-border-default: #E5E5E5;
+    --landing-v2-border-subtle: #F0F0F0;
   }
 }
 
@@ -366,291 +310,606 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-relaxed);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography Hierarchy Classes */
+  .text-page-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    line-height: var(--line-height-tight);
+    color: var(--text-primary);
+  }
+
+  .text-section-header {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    line-height: var(--line-height-normal);
+    color: var(--text-primary);
+  }
+
+  .text-body {
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+
+  .text-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    line-height: var(--line-height-normal);
+    color: var(--text-secondary);
+  }
+
+  .text-caption {
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    line-height: var(--line-height-normal);
+    color: var(--text-tertiary);
+  }
+
+  .text-small {
+    font-size: 10px;
+    font-weight: 500;
+    line-height: var(--line-height-tight);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 }
 
 @layer components {
   /* ===========================================
      READINESS STATUS BADGES
-     Use: <span className="status-badge status-forecast">
      =========================================== */
-  
+
   .status-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    border-radius: var(--radius-sm);
   }
 
   .status-draft {
-    background-color: hsl(var(--status-draft-bg));
-    color: hsl(var(--status-draft));
-    border: 1px dashed hsl(var(--status-draft) / 0.4);
+    background-color: var(--status-draft-bg);
+    color: var(--status-draft);
+    border: 1px dashed var(--status-draft);
   }
 
   .status-forecast {
-    background-color: hsl(var(--status-forecast-bg));
-    color: hsl(var(--status-forecast));
-    border: 1px solid hsl(var(--status-forecast) / 0.2);
+    background-color: var(--status-forecast-bg);
+    color: var(--status-forecast);
+    border: 1px solid var(--border-subtle);
   }
-  
+
   .status-soft {
-    background-color: hsl(var(--status-soft-bg));
-    color: hsl(var(--status-soft));
-    border: 1px solid hsl(var(--status-soft) / 0.25);
+    background-color: var(--status-soft-bg);
+    color: var(--status-soft);
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
-  
+
   .status-confirmed {
-    background-color: hsl(var(--status-confirmed-bg));
-    color: hsl(var(--status-confirmed));
-    border: 1px solid hsl(var(--status-confirmed) / 0.25);
+    background-color: var(--status-confirmed-bg);
+    color: var(--status-confirmed);
+    border: 1px solid rgba(34, 197, 94, 0.3);
   }
 
   .status-matched {
-    background-color: hsl(var(--status-matched-bg));
-    color: hsl(var(--status-matched));
-    border: 1px solid hsl(var(--status-matched) / 0.25);
+    background-color: var(--status-matched-bg);
+    color: var(--status-matched);
+    border: 1px solid rgba(59, 130, 246, 0.3);
   }
 
   .status-closed {
-    background-color: hsl(var(--status-closed-bg));
-    color: hsl(var(--status-closed));
-    border: 1px solid hsl(var(--status-closed) / 0.2);
+    background-color: var(--status-closed-bg);
+    color: var(--status-closed);
+    border: 1px solid var(--border-subtle);
   }
 
   .status-delivered {
-    background-color: hsl(var(--status-delivered-bg));
-    color: hsl(var(--status-delivered));
-    border: 1px solid hsl(var(--status-delivered) / 0.2);
+    background-color: var(--status-delivered-bg);
+    color: var(--status-delivered);
+    border: 1px solid rgba(20, 184, 166, 0.3);
   }
 
   /* ===========================================
      FARMER GRADING BADGES
-     Visually secondary, compact
      =========================================== */
-  
+
   .grading-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    border-radius: var(--radius-sm);
   }
 
   .grading-observer {
-    background-color: hsl(var(--grading-observer-bg));
-    color: hsl(var(--grading-observer));
-    border: 1px solid hsl(var(--grading-observer) / 0.15);
+    background-color: var(--grading-observer-bg);
+    color: var(--grading-observer);
+    border: 1px solid var(--border-subtle);
   }
 
   .grading-declared {
-    background-color: hsl(var(--grading-declared-bg));
-    color: hsl(var(--grading-declared));
-    border: 1px solid hsl(var(--grading-declared) / 0.2);
+    background-color: var(--grading-declared-bg);
+    color: var(--grading-declared);
+    border: 1px solid rgba(20, 184, 166, 0.3);
   }
 
   .grading-standard {
-    background-color: hsl(var(--grading-standard-bg));
-    color: hsl(var(--grading-standard));
-    border: 1px solid hsl(var(--grading-standard) / 0.2);
+    background-color: var(--grading-standard-bg);
+    color: var(--grading-standard);
+    border: 1px solid rgba(59, 130, 246, 0.3);
   }
 
   /* ===========================================
      MPK STATUS BADGES
-     Muted, not alerting
      =========================================== */
-  
+
   .mpk-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    border-radius: var(--radius-sm);
   }
 
   .mpk-active {
-    background-color: hsl(var(--mpk-active-bg));
-    color: hsl(var(--mpk-active));
-    border: 1px solid hsl(var(--mpk-active) / 0.2);
+    background-color: var(--mpk-active-bg);
+    color: var(--mpk-active);
+    border: 1px solid rgba(34, 197, 94, 0.3);
   }
 
   .mpk-restricted {
-    background-color: hsl(var(--mpk-restricted-bg));
-    color: hsl(var(--mpk-restricted));
-    border: 1px solid hsl(var(--mpk-restricted) / 0.25);
+    background-color: var(--mpk-restricted-bg);
+    color: var(--mpk-restricted);
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   .mpk-inactive {
-    background-color: hsl(var(--mpk-inactive-bg));
-    color: hsl(var(--mpk-inactive));
-    border: 1px solid hsl(var(--mpk-inactive) / 0.15);
+    background-color: var(--mpk-inactive-bg);
+    color: var(--mpk-inactive);
+    border: 1px solid var(--border-subtle);
   }
 
   /* ===========================================
      ADMIN SIGNAL BADGES
-     Risk flags - red reserved for these only
      =========================================== */
-  
+
   .signal-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    border-radius: var(--radius-sm);
   }
 
   .signal-risk {
-    background-color: hsl(var(--signal-risk-bg));
-    color: hsl(var(--signal-risk));
-    border: 1px solid hsl(var(--signal-risk) / 0.3);
+    background-color: var(--signal-risk-bg);
+    color: var(--signal-risk);
+    border: 1px solid rgba(239, 68, 68, 0.3);
   }
 
   .signal-warning {
-    background-color: hsl(var(--signal-warning-bg));
-    color: hsl(var(--signal-warning));
-    border: 1px solid hsl(var(--signal-warning) / 0.3);
+    background-color: var(--signal-warning-bg);
+    color: var(--signal-warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   .signal-positive {
-    background-color: hsl(var(--signal-positive-bg));
-    color: hsl(var(--signal-positive));
-    border: 1px solid hsl(var(--signal-positive) / 0.25);
+    background-color: var(--signal-positive-bg);
+    color: var(--signal-positive);
+    border: 1px solid rgba(34, 197, 94, 0.3);
   }
 
   /* ===========================================
      POOL REQUEST STATUS BADGES
-     7 lifecycle statuses: draft → submitted → matching → partial → fulfilled → closed → cancelled
      =========================================== */
 
   .pool-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    border-radius: var(--radius-sm);
   }
 
   .pool-draft {
-    background-color: hsl(var(--pool-draft-bg));
-    color: hsl(var(--pool-draft));
-    border: 1px dashed hsl(var(--pool-draft) / 0.4);
+    background-color: var(--pool-draft-bg);
+    color: var(--pool-draft);
+    border: 1px dashed var(--pool-draft);
   }
 
   .pool-submitted {
-    background-color: hsl(var(--pool-submitted-bg));
-    color: hsl(var(--pool-submitted));
-    border: 1px solid hsl(var(--pool-submitted) / 0.25);
+    background-color: var(--pool-submitted-bg);
+    color: var(--pool-submitted);
+    border: 1px solid rgba(59, 130, 246, 0.3);
   }
 
   .pool-matching {
-    background-color: hsl(var(--pool-matching-bg));
-    color: hsl(var(--pool-matching));
-    border: 1px solid hsl(var(--pool-matching) / 0.25);
+    background-color: var(--pool-matching-bg);
+    color: var(--pool-matching);
+    border: 1px solid rgba(139, 92, 246, 0.3);
   }
 
   .pool-partial {
-    background-color: hsl(var(--pool-partial-bg));
-    color: hsl(var(--pool-partial));
-    border: 1px solid hsl(var(--pool-partial) / 0.25);
+    background-color: var(--pool-partial-bg);
+    color: var(--pool-partial);
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   .pool-fulfilled {
-    background-color: hsl(var(--pool-fulfilled-bg));
-    color: hsl(var(--pool-fulfilled));
-    border: 1px solid hsl(var(--pool-fulfilled) / 0.25);
+    background-color: var(--pool-fulfilled-bg);
+    color: var(--pool-fulfilled);
+    border: 1px solid rgba(34, 197, 94, 0.3);
   }
 
   .pool-closed {
-    background-color: hsl(var(--pool-closed-bg));
-    color: hsl(var(--pool-closed));
-    border: 1px solid hsl(var(--pool-closed) / 0.15);
+    background-color: var(--pool-closed-bg);
+    color: var(--pool-closed);
+    border: 1px solid var(--border-subtle);
   }
 
   .pool-cancelled {
-    background-color: hsl(var(--pool-cancelled-bg));
-    color: hsl(var(--pool-cancelled));
-    border: 1px solid hsl(var(--pool-cancelled) / 0.3);
+    background-color: var(--pool-cancelled-bg);
+    color: var(--pool-cancelled);
+    border: 1px solid rgba(239, 68, 68, 0.3);
   }
 
   /* ===========================================
      EXECUTION STATUS BADGES
-     Contracts & Settlement lifecycle
      =========================================== */
-  
+
   .exec-badge {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium;
+    border-radius: var(--radius-sm);
   }
 
   .exec-matched {
-    background-color: hsl(var(--exec-matched-bg));
-    color: hsl(var(--exec-matched));
-    border: 1px solid hsl(var(--exec-matched) / 0.25);
+    background-color: var(--exec-matched-bg);
+    color: var(--exec-matched);
+    border: 1px solid rgba(59, 130, 246, 0.3);
   }
 
   .exec-scheduled {
-    background-color: hsl(var(--exec-scheduled-bg));
-    color: hsl(var(--exec-scheduled));
-    border: 1px solid hsl(var(--exec-scheduled) / 0.25);
+    background-color: var(--exec-scheduled-bg);
+    color: var(--exec-scheduled);
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   .exec-delivered {
-    background-color: hsl(var(--exec-delivered-bg));
-    color: hsl(var(--exec-delivered));
-    border: 1px solid hsl(var(--exec-delivered) / 0.25);
+    background-color: var(--exec-delivered-bg);
+    color: var(--exec-delivered);
+    border: 1px solid rgba(139, 92, 246, 0.3);
   }
 
   .exec-confirmed {
-    background-color: hsl(var(--exec-confirmed-bg));
-    color: hsl(var(--exec-confirmed));
-    border: 1px solid hsl(var(--exec-confirmed) / 0.25);
+    background-color: var(--exec-confirmed-bg);
+    color: var(--exec-confirmed);
+    border: 1px solid rgba(34, 197, 94, 0.3);
   }
 
   .exec-settled {
-    background-color: hsl(var(--exec-settled-bg));
-    color: hsl(var(--exec-settled));
-    border: 1px solid hsl(var(--exec-settled) / 0.2);
+    background-color: var(--exec-settled-bg);
+    color: var(--exec-settled);
+    border: 1px solid rgba(20, 184, 166, 0.3);
   }
 
   .exec-closed {
-    background-color: hsl(var(--exec-closed-bg));
-    color: hsl(var(--exec-closed));
-    border: 1px solid hsl(var(--exec-closed) / 0.15);
+    background-color: var(--exec-closed-bg);
+    color: var(--exec-closed);
+    border: 1px solid var(--border-subtle);
   }
 
   /* ===========================================
      DATA TABLE UTILITIES
-     Consistent alignment and spacing
+     Per design system specification
      =========================================== */
-  
+
   .data-table {
-    @apply w-full text-sm;
+    @apply w-full;
+    font-size: var(--font-size-base);
   }
 
   .data-table th {
-    @apply text-left text-xs font-medium text-muted-foreground uppercase tracking-wide py-3 px-4 border-b;
+    text-align: left;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    padding: var(--space-2) var(--space-3);
+    height: 36px;
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .data-table td {
-    @apply py-3 px-4 border-b border-border/50;
+    padding: var(--space-2) var(--space-3);
+    height: 40px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+  }
+
+  .data-table tbody tr {
+    transition: background-color var(--transition-fast);
+  }
+
+  .data-table tbody tr:hover {
+    background-color: var(--bg-surface-hover);
+  }
+
+  .data-table tbody tr.selected {
+    background-color: var(--accent-primary-muted);
+    border-left: 2px solid var(--accent-primary);
   }
 
   .data-table tr:last-child td {
-    @apply border-b-0;
+    border-bottom: none;
   }
 
   .data-table .col-number {
-    @apply text-right tabular-nums;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   .data-table .col-date {
-    @apply text-muted-foreground tabular-nums;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
   }
 
   .data-table .col-status {
-    @apply text-center;
+    text-align: center;
+  }
+
+  /* Table Footer */
+  .data-table tfoot td {
+    background-color: var(--bg-surface);
+    font-size: var(--font-size-sm);
+    color: var(--text-tertiary);
   }
 
   /* ===========================================
      CARD VARIANTS
-     Summary cards vs data cards
+     Per design system specification
      =========================================== */
-  
+
   .summary-card {
-    @apply bg-card rounded-lg border p-4;
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    padding: var(--space-4);
   }
 
   .summary-card-label {
-    @apply text-xs font-medium text-muted-foreground uppercase tracking-wide;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
   }
 
   .summary-card-value {
-    @apply text-2xl font-semibold text-foreground mt-1;
+    font-size: var(--font-size-lg);
+    font-weight: 400;
+    color: var(--text-primary);
+    margin-top: var(--space-1);
   }
 
   .summary-card-meta {
-    @apply text-xs text-muted-foreground mt-1;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--space-1);
   }
+
+  .summary-card-empty {
+    color: var(--text-tertiary);
+  }
+
+  /* ===========================================
+     EMPTY STATES
+     Per design system specification
+     =========================================== */
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-10) var(--space-6);
+  }
+
+  .empty-state-heading {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: var(--space-4);
+  }
+
+  .empty-state-description {
+    font-size: var(--font-size-md);
+    color: var(--text-secondary);
+    max-width: 320px;
+    margin-top: var(--space-2);
+  }
+
+  .empty-state-cta {
+    margin-top: var(--space-4);
+  }
+
+  /* ===========================================
+     LOADING STATES
+     Per design system specification
+     =========================================== */
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bg-surface-hover) 0%,
+      var(--bg-surface-active) 50%,
+      var(--bg-surface-hover) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--radius-md);
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* ===========================================
+     FOCUS STATES
+     Per design system specification
+     =========================================== */
+
+  .focus-ring {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent-primary);
+  }
+
+  .focus-ring-muted {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent-primary-muted);
+  }
+
+  /* ===========================================
+     SELECTION CHIPS
+     Per design system specification
+     =========================================== */
+
+  .selection-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    background-color: transparent;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .selection-chip:hover {
+    background-color: var(--bg-surface-hover);
+  }
+
+  .selection-chip.selected {
+    border-color: var(--accent-primary);
+    background-color: var(--accent-primary-muted);
+    color: var(--text-primary);
+  }
+
+  .selection-chip-pill {
+    border-radius: 16px;
+  }
+
+  /* ===========================================
+     STATUS BADGES (Pill variant)
+     Per design system specification
+     =========================================== */
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 var(--space-2);
+    border-radius: 9999px;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+  }
+
+  .status-pill-success {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: var(--color-success);
+  }
+
+  .status-pill-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--color-warning);
+  }
+
+  .status-pill-error {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--color-error);
+  }
+}
+
+/* ===========================================
+   UTILITY CLASSES
+   Spacing based on 4px scale
+   =========================================== */
+
+@layer utilities {
+  /* Gap utilities */
+  .gap-space-1 { gap: var(--space-1); }
+  .gap-space-2 { gap: var(--space-2); }
+  .gap-space-3 { gap: var(--space-3); }
+  .gap-space-4 { gap: var(--space-4); }
+  .gap-space-5 { gap: var(--space-5); }
+  .gap-space-6 { gap: var(--space-6); }
+  .gap-space-8 { gap: var(--space-8); }
+
+  /* Padding utilities */
+  .p-space-1 { padding: var(--space-1); }
+  .p-space-2 { padding: var(--space-2); }
+  .p-space-3 { padding: var(--space-3); }
+  .p-space-4 { padding: var(--space-4); }
+  .p-space-5 { padding: var(--space-5); }
+  .p-space-6 { padding: var(--space-6); }
+  .p-space-8 { padding: var(--space-8); }
+  .p-space-10 { padding: var(--space-10); }
+
+  .px-space-3 { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .px-space-4 { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .px-space-6 { padding-left: var(--space-6); padding-right: var(--space-6); }
+
+  .py-space-2 { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+  .py-space-3 { padding-top: var(--space-3); padding-bottom: var(--space-3); }
+  .py-space-4 { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+
+  /* Margin utilities */
+  .m-space-1 { margin: var(--space-1); }
+  .m-space-2 { margin: var(--space-2); }
+  .m-space-3 { margin: var(--space-3); }
+  .m-space-4 { margin: var(--space-4); }
+  .m-space-6 { margin: var(--space-6); }
+  .m-space-8 { margin: var(--space-8); }
+
+  .mt-space-2 { margin-top: var(--space-2); }
+  .mt-space-4 { margin-top: var(--space-4); }
+  .mt-space-6 { margin-top: var(--space-6); }
+  .mt-space-8 { margin-top: var(--space-8); }
+
+  .mb-space-2 { margin-bottom: var(--space-2); }
+  .mb-space-4 { margin-bottom: var(--space-4); }
+  .mb-space-6 { margin-bottom: var(--space-6); }
+  .mb-space-8 { margin-bottom: var(--space-8); }
+
+  /* Border radius utilities */
+  .rounded-sm { border-radius: var(--radius-sm); }
+  .rounded-md { border-radius: var(--radius-md); }
+  .rounded-lg { border-radius: var(--radius-lg); }
+  .rounded-xl { border-radius: var(--radius-xl); }
+
+  /* Text color utilities */
+  .text-ds-primary { color: var(--text-primary); }
+  .text-ds-secondary { color: var(--text-secondary); }
+  .text-ds-tertiary { color: var(--text-tertiary); }
+  .text-ds-muted { color: var(--text-muted); }
+  .text-ds-link { color: var(--text-link); }
+
+  /* Background utilities */
+  .bg-ds-base { background-color: var(--bg-base); }
+  .bg-ds-surface { background-color: var(--bg-surface); }
+  .bg-ds-elevated { background-color: var(--bg-surface-elevated); }
+  .bg-ds-hover { background-color: var(--bg-surface-hover); }
+  .bg-ds-active { background-color: var(--bg-surface-active); }
+
+  /* Border utilities */
+  .border-ds-subtle { border-color: var(--border-subtle); }
+  .border-ds-default { border-color: var(--border-default); }
+  .border-ds-strong { border-color: var(--border-strong); }
+  .border-ds-accent { border-color: var(--border-accent); }
+
+  /* Transition utilities */
+  .transition-fast { transition: all var(--transition-fast); }
+  .transition-base { transition: all var(--transition-base); }
+  .transition-slow { transition: all var(--transition-slow); }
 }

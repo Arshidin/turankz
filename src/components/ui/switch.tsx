@@ -3,13 +3,40 @@ import * as SwitchPrimitives from "@radix-ui/react-switch";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Switch/Toggle Component - Design System Specification
+ *
+ * Track size: 36px x 20px
+ * Track off: bg-surface with border
+ * Track on: accent-primary (#3B82F6)
+ * Thumb size: 16px circle
+ * Border-radius: Fully rounded (pill)
+ */
 const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
 >(({ className, ...props }, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+      // Base styles
+      "peer inline-flex shrink-0 cursor-pointer items-center",
+      "h-[20px] w-[36px]",
+      "rounded-full",
+      // Unchecked state
+      "border border-[var(--border-default)]",
+      "bg-[var(--bg-surface)]",
+      "data-[state=unchecked]:bg-[var(--bg-surface)]",
+      // Checked state
+      "data-[state=checked]:bg-[var(--accent-primary)]",
+      "data-[state=checked]:border-[var(--accent-primary)]",
+      // Focus state
+      "focus-visible:outline-none",
+      "focus-visible:ring-2 focus-visible:ring-[var(--accent-primary-muted)]",
+      "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]",
+      // Disabled state
+      "disabled:cursor-not-allowed disabled:opacity-50",
+      // Transition
+      "transition-colors duration-[100ms]",
       className,
     )}
     {...props}
@@ -17,7 +44,16 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
+        // Base styles
+        "pointer-events-none block rounded-full shadow-sm",
+        "h-[16px] w-[16px]",
+        // Colors
+        "bg-white",
+        // Position
+        "data-[state=unchecked]:translate-x-[1px]",
+        "data-[state=checked]:translate-x-[17px]",
+        // Transition
+        "transition-transform duration-[100ms]",
       )}
     />
   </SwitchPrimitives.Root>

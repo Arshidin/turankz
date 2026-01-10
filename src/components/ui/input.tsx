@@ -2,13 +2,41 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Input Component - Design System Specification
+ *
+ * Height: 36px
+ * Background: bg-input (#1A1A1A) or bg-surface
+ * Border: 1px solid border-default (#3A3A3A)
+ * Border-radius: 6px
+ * Padding: 8px 12px
+ * Text: 14px, text-primary
+ * Placeholder: text-tertiary
+ * Focus: Border color accent-primary, optional subtle box-shadow
+ */
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
     return (
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          // Base styles
+          "flex w-full",
+          "h-[36px] px-[12px] py-[8px]",
+          "rounded-[6px]",
+          // Colors
+          "bg-[var(--bg-input)] border border-[var(--border-default)]",
+          "text-[14px] text-[var(--text-primary)]",
+          "placeholder:text-[var(--text-tertiary)]",
+          // File input
+          "file:border-0 file:bg-transparent file:text-[13px] file:font-medium file:text-[var(--text-primary)]",
+          // Focus state
+          "focus-visible:outline-none focus-visible:border-[var(--accent-primary)]",
+          "focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)]",
+          // Disabled state
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          // Transition
+          "transition-colors duration-[100ms]",
           className,
         )}
         ref={ref}
