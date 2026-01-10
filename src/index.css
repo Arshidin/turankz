@@ -939,3 +939,88 @@ h3[class*="section"] {
 .card-icon {
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* ===========================================
+   ICON SYSTEM
+   Streamline/Untitled UI compatible
+   =========================================== */
+
+/* Icon specifications */
+:root {
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --icon-size-lg: 24px;
+  --icon-stroke: 1.5px;
+  --icon-color-default: rgba(255, 255, 255, 0.5);
+  --icon-color-hover: rgba(255, 255, 255, 0.7);
+  --icon-color-active: rgba(255, 255, 255, 1);
+}
+
+/* Base icon styles */
+.icon {
+  flex-shrink: 0;
+  color: var(--icon-color-default);
+  transition: color var(--transition-fast);
+}
+
+/* Size variants */
+.icon-sm {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+.icon-md {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+}
+
+.icon-lg {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+}
+
+/* Context: Sidebar icons */
+.icon-sidebar {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  color: var(--icon-color-default);
+}
+
+.sidebar-item:hover .icon-sidebar,
+.sidebar-item.active .icon-sidebar {
+  color: var(--icon-color-active);
+}
+
+/* Context: Card icons */
+.icon-card {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+  color: var(--icon-color-default);
+}
+
+/* Context: Header icons */
+.icon-header {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+  color: var(--icon-color-default);
+}
+
+/* Semantic status icons ONLY */
+.icon-status-success { color: var(--color-success); }
+.icon-status-warning { color: var(--color-warning); }
+.icon-status-error { color: var(--color-error); }
+
+/* Interactive icon states */
+.icon-interactive {
+  cursor: pointer;
+  color: var(--icon-color-default);
+  transition: color var(--transition-fast);
+}
+
+.icon-interactive:hover {
+  color: var(--icon-color-hover);
+}
+
+.icon-interactive:active {
+  color: var(--icon-color-active);
+}
