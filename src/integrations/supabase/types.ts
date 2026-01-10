@@ -1546,7 +1546,7 @@ export type Database = {
         | "invitation_accepted"
         | "invitation_declined"
       app_role: "admin" | "farmer" | "mpk"
-      batch_status: "draft" | "available" | "committed" | "completed"
+      batch_status: "draft" | "forecast" | "soft_committed" | "confirmed" | "matched" | "closed" | "delivered" | "available" | "committed" | "completed"
       data_confidence_level: "self_declared" | "reviewed" | "verified"
       delivery_period: "short_term" | "mid_term" | "long_term"
       execution_status:
