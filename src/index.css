@@ -913,3 +913,29 @@
   .transition-base { transition: all var(--transition-base); }
   .transition-slow { transition: all var(--transition-slow); }
 }
+
+/* ===========================================
+   DESIGN SYSTEM FIXES
+   Additional styling overrides
+   =========================================== */
+
+/* FIX 1: Sidebar section headers */
+.sidebar-section-label,
+[class*="section-header"] {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* FIX 2: Content section titles */
+.section-title,
+h3[class*="section"] {
+  text-transform: none !important;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* FIX 3: Neutral icons */
+.metric-card svg,
+.card-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
