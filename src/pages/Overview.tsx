@@ -491,7 +491,7 @@ export default function Overview() {
 
         {/* System Health Summary */}
         <div className="mb-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">{t('admin.systemHealth')}</h2>
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">{t('admin.systemHealth')}</h2>
           <SystemHealthSummary
             activeFarmers={activeFarmers}
             activeMpks={activeMpks}
@@ -502,7 +502,7 @@ export default function Overview() {
 
         {/* Supply vs Demand Snapshot */}
         <div className="mb-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">{t('admin.supplyVsDemand')}</h2>
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">{t('admin.supplyVsDemand')}</h2>
           <SupplyDemandSnapshot
             supplyTotals={supplyTotals}
             demandTotals={demandTotals}
@@ -513,7 +513,7 @@ export default function Overview() {
 
         {/* Attention Required */}
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">{t('admin.attentionRequired')}</h2>
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">{t('admin.attentionRequired')}</h2>
           <AttentionRequired items={attentionItems} />
         </div>
       </MainLayout>

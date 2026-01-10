@@ -919,22 +919,42 @@
    Additional styling overrides
    =========================================== */
 
-/* FIX 1: Sidebar section headers */
+/* FIX 1: Sidebar section headers — КРИТИЧНО */
 .sidebar-section-label,
-[class*="section-header"] {
+.sidebar [class*="section-header"],
+.sidebar [class*="group-label"],
+aside [class*="section-header"],
+aside [class*="group-label"],
+[data-sidebar] [class*="section-header"],
+[data-sidebar] [class*="group-label"] {
   color: rgba(255, 255, 255, 0.5) !important;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
-/* FIX 2: Content section titles */
+/* FIX 2: Content section titles — КРИТИЧНО */
 .section-title,
-h3[class*="section"] {
+h2[class*="section"],
+h3[class*="section"],
+h2.uppercase,
+h3.uppercase,
+.text-sm.font-medium.uppercase {
   text-transform: none !important;
   font-size: 14px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* FIX 3: Neutral icons */
+/* FIX 3: Badge с правильным фоном */
+.badge-warning,
+.status-badge-warning {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #F59E0B;
+}
+
+/* FIX 4: Neutral icons */
 .metric-card svg,
 .card-icon {
   color: rgba(255, 255, 255, 0.5);
