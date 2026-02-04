@@ -6,38 +6,44 @@
 @tailwind utilities;
 
 @layer base {
+  /* ═══════════════════════════════════════════
+     TSP Design System v2.1
+     Unified Orange Accent · Dual Theme
+     :root = Light · .dark = Dark
+     ═══════════════════════════════════════════ */
+
   :root {
     /* ===========================================
-       DESIGN SYSTEM FOUNDATION
-       Dark theme - Attio-derived specification
+       LIGHT THEME (default)
        =========================================== */
 
     /* Background Hierarchy */
-    --bg-base: #0D0D0D;
-    --bg-surface: #1A1A1A;
-    --bg-surface-elevated: #242424;
-    --bg-surface-hover: #2A2A2A;
-    --bg-surface-active: #333333;
-    --bg-input: #1A1A1A;
+    --bg-base: #FAFAFA;
+    --bg-surface: #FFFFFF;
+    --bg-surface-elevated: #FFFFFF;
+    --bg-surface-hover: #F3F4F6;
+    --bg-surface-active: #FFF7ED;
+    --bg-input: #FFFFFF;
 
     /* Border Colors */
-    --border-subtle: #2A2A2A;
-    --border-default: #3A3A3A;
-    --border-strong: #4A4A4A;
-    --border-accent: #3B82F6;
+    --border-subtle: #F3F4F6;
+    --border-default: #E5E7EB;
+    --border-strong: #D1D5DB;
+    --border-accent: #F7931E;
 
     /* Text Colors */
-    --text-primary: rgba(255, 255, 255, 1);
-    --text-secondary: rgba(255, 255, 255, 0.7);
-    --text-tertiary: rgba(255, 255, 255, 0.5);
-    --text-muted: rgba(255, 255, 255, 0.3);
-    --text-link: #3B82F6;
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --text-tertiary: #9CA3AF;
+    --text-muted: #D1D5DB;
+    --text-link: #C2590A;
     --text-on-accent: #FFFFFF;
 
-    /* Accent Colors */
-    --accent-primary: #3B82F6;
-    --accent-primary-hover: #2563EB;
-    --accent-primary-muted: rgba(59, 130, 246, 0.15);
+    /* Accent Colors - ORANGE */
+    --accent-primary: #F7931E;
+    --accent-primary-hover: #EA580C;
+    --accent-primary-muted: #FFF7ED;
+    --accent-info: #3B82F6;
 
     /* Semantic Colors */
     --color-success: #22C55E;
@@ -48,7 +54,7 @@
     --color-companies: #8B5CF6;
     --color-people: #22C55E;
     --color-deals: #F59E0B;
-    --color-users: #3B82F6;
+    --color-users: #F7931E;
     --color-workspaces: #EC4899;
 
     /* Spacing Scale (4px base) */
@@ -124,149 +130,78 @@
     --radius: var(--radius-md);
 
     /* ===========================================
-       BATCH LIFECYCLE STATUS COLORS
-       Dark theme optimized
+       BATCH LIFECYCLE STATUS COLORS (Light)
        =========================================== */
+    --status-draft: #6B7280;
+    --status-draft-bg: #F3F4F6;
+    --status-forecast: #6B7280;
+    --status-forecast-bg: #F3F4F6;
+    --status-soft: #D97706;
+    --status-soft-bg: #FEF3C7;
+    --status-confirmed: #16A34A;
+    --status-confirmed-bg: #DCFCE7;
+    --status-matched: #2563EB;
+    --status-matched-bg: #DBEAFE;
+    --status-closed: #6B7280;
+    --status-closed-bg: #F3F4F6;
+    --status-delivered: #0D9488;
+    --status-delivered-bg: #CCFBF1;
 
-    /* Draft - Subtle/Dotted (not yet active) */
-    --status-draft: rgba(255, 255, 255, 0.5);
-    --status-draft-bg: rgba(255, 255, 255, 0.05);
+    /* FARMER GRADING COLORS (Light) */
+    --grading-observer: #6B7280;
+    --grading-observer-bg: #F3F4F6;
+    --grading-declared: #0D9488;
+    --grading-declared-bg: #CCFBF1;
+    --grading-standard: #2563EB;
+    --grading-standard-bg: #DBEAFE;
 
-    /* Forecast - Neutral/Light Gray (not urgent) */
-    --status-forecast: rgba(255, 255, 255, 0.6);
-    --status-forecast-bg: rgba(255, 255, 255, 0.08);
+    /* MPK STATUS COLORS (Light) */
+    --mpk-active: #16A34A;
+    --mpk-active-bg: #DCFCE7;
+    --mpk-restricted: #D97706;
+    --mpk-restricted-bg: #FEF3C7;
+    --mpk-inactive: #6B7280;
+    --mpk-inactive-bg: #F3F4F6;
 
-    /* Soft Committed - Attention/Amber (pending action) */
-    --status-soft: #F59E0B;
-    --status-soft-bg: rgba(245, 158, 11, 0.15);
+    /* ADMIN SIGNALS (Light) */
+    --signal-risk: #DC2626;
+    --signal-risk-bg: #FEE2E2;
+    --signal-warning: #D97706;
+    --signal-warning-bg: #FEF3C7;
+    --signal-positive: #16A34A;
+    --signal-positive-bg: #DCFCE7;
 
-    /* Confirmed - Stable/Green (complete) */
-    --status-confirmed: #22C55E;
-    --status-confirmed-bg: rgba(34, 197, 94, 0.15);
+    /* POOL REQUEST STATUS (Light) */
+    --pool-draft: #6B7280;
+    --pool-draft-bg: #F3F4F6;
+    --pool-submitted: #2563EB;
+    --pool-submitted-bg: #DBEAFE;
+    --pool-matching: #7C3AED;
+    --pool-matching-bg: #EDE9FE;
+    --pool-partial: #D97706;
+    --pool-partial-bg: #FEF3C7;
+    --pool-fulfilled: #16A34A;
+    --pool-fulfilled-bg: #DCFCE7;
+    --pool-closed: #6B7280;
+    --pool-closed-bg: #F3F4F6;
+    --pool-cancelled: #DC2626;
+    --pool-cancelled-bg: #FEE2E2;
 
-    /* Matched - Blue (in pool) */
-    --status-matched: #3B82F6;
-    --status-matched-bg: rgba(59, 130, 246, 0.15);
+    /* EXECUTION LIFECYCLE STATUS (Light) */
+    --exec-matched: #2563EB;
+    --exec-matched-bg: #DBEAFE;
+    --exec-scheduled: #D97706;
+    --exec-scheduled-bg: #FEF3C7;
+    --exec-delivered: #7C3AED;
+    --exec-delivered-bg: #EDE9FE;
+    --exec-confirmed: #16A34A;
+    --exec-confirmed-bg: #DCFCE7;
+    --exec-settled: #0D9488;
+    --exec-settled-bg: #CCFBF1;
+    --exec-closed: #6B7280;
+    --exec-closed-bg: #F3F4F6;
 
-    /* Closed - Muted/Gray (final state) */
-    --status-closed: rgba(255, 255, 255, 0.5);
-    --status-closed-bg: rgba(255, 255, 255, 0.08);
-
-    /* Delivered - Legacy alias for closed */
-    --status-delivered: #14B8A6;
-    --status-delivered-bg: rgba(20, 184, 166, 0.15);
-
-    /* ===========================================
-       FARMER GRADING COLORS
-       =========================================== */
-
-    /* Observer - Neutral/Gray */
-    --grading-observer: rgba(255, 255, 255, 0.5);
-    --grading-observer-bg: rgba(255, 255, 255, 0.08);
-
-    /* Declared Supplier - Teal accent */
-    --grading-declared: #14B8A6;
-    --grading-declared-bg: rgba(20, 184, 166, 0.15);
-
-    /* Standard Supplier - Primary Blue (trusted) */
-    --grading-standard: #3B82F6;
-    --grading-standard-bg: rgba(59, 130, 246, 0.15);
-
-    /* ===========================================
-       MPK STATUS COLORS
-       =========================================== */
-
-    /* Active - Subtle green */
-    --mpk-active: #22C55E;
-    --mpk-active-bg: rgba(34, 197, 94, 0.15);
-
-    /* Restricted - Muted amber (warning, not error) */
-    --mpk-restricted: #F59E0B;
-    --mpk-restricted-bg: rgba(245, 158, 11, 0.15);
-
-    /* Inactive - Gray */
-    --mpk-inactive: rgba(255, 255, 255, 0.5);
-    --mpk-inactive-bg: rgba(255, 255, 255, 0.08);
-
-    /* ===========================================
-       ADMIN SIGNALS (Risk flags only)
-       =========================================== */
-
-    /* At Risk - For admin alerts only */
-    --signal-risk: #EF4444;
-    --signal-risk-bg: rgba(239, 68, 68, 0.15);
-
-    /* Warning - Amber signal */
-    --signal-warning: #F59E0B;
-    --signal-warning-bg: rgba(245, 158, 11, 0.15);
-
-    /* On Track - Positive signal */
-    --signal-positive: #22C55E;
-    --signal-positive-bg: rgba(34, 197, 94, 0.15);
-
-    /* ===========================================
-       POOL REQUEST STATUS
-       =========================================== */
-
-    /* Draft - Not yet submitted (muted gray) */
-    --pool-draft: rgba(255, 255, 255, 0.5);
-    --pool-draft-bg: rgba(255, 255, 255, 0.05);
-
-    /* Submitted - Awaiting admin review (blue) */
-    --pool-submitted: #3B82F6;
-    --pool-submitted-bg: rgba(59, 130, 246, 0.15);
-
-    /* Matching - Admin actively matching (violet) */
-    --pool-matching: #8B5CF6;
-    --pool-matching-bg: rgba(139, 92, 246, 0.15);
-
-    /* Partial - Some matches made (amber) */
-    --pool-partial: #F59E0B;
-    --pool-partial-bg: rgba(245, 158, 11, 0.15);
-
-    /* Fulfilled - Fully matched (emerald) */
-    --pool-fulfilled: #22C55E;
-    --pool-fulfilled-bg: rgba(34, 197, 94, 0.15);
-
-    /* Closed - Completed (gray) */
-    --pool-closed: rgba(255, 255, 255, 0.5);
-    --pool-closed-bg: rgba(255, 255, 255, 0.08);
-
-    /* Cancelled - Cancelled (destructive) */
-    --pool-cancelled: #EF4444;
-    --pool-cancelled-bg: rgba(239, 68, 68, 0.15);
-
-    /* ===========================================
-       EXECUTION LIFECYCLE STATUS
-       =========================================== */
-
-    /* Matched - Initial state after pool matching */
-    --exec-matched: #3B82F6;
-    --exec-matched-bg: rgba(59, 130, 246, 0.15);
-
-    /* Scheduled - Delivery dates set */
-    --exec-scheduled: #F59E0B;
-    --exec-scheduled-bg: rgba(245, 158, 11, 0.15);
-
-    /* Delivered - MPK confirmed receipt */
-    --exec-delivered: #8B5CF6;
-    --exec-delivered-bg: rgba(139, 92, 246, 0.15);
-
-    /* Confirmed - Admin compliance verified */
-    --exec-confirmed: #22C55E;
-    --exec-confirmed-bg: rgba(34, 197, 94, 0.15);
-
-    /* Settled - Settlement calculated */
-    --exec-settled: #14B8A6;
-    --exec-settled-bg: rgba(20, 184, 166, 0.15);
-
-    /* Closed - Fully completed */
-    --exec-closed: rgba(255, 255, 255, 0.5);
-    --exec-closed-bg: rgba(255, 255, 255, 0.08);
-
-    /* ===========================================
-       SIDEBAR
-       =========================================== */
+    /* SIDEBAR (uses CSS vars, works both themes) */
     --sidebar-background: var(--bg-base);
     --sidebar-foreground: var(--text-secondary);
     --sidebar-primary: var(--accent-primary);
@@ -277,9 +212,7 @@
     --sidebar-ring: var(--accent-primary);
     --sidebar-muted: var(--text-tertiary);
 
-    /* ===========================================
-       LANDING PAGE TOKENS (preserved)
-       =========================================== */
+    /* LANDING PAGE TOKENS (preserved - not theme-aware) */
     --landing-background: #1a2332;
     --landing-foreground: #FFFFFF;
     --landing-muted: #9CA3AF;
@@ -301,6 +234,124 @@
     --landing-v2-text-muted: #8C8C8C;
     --landing-v2-border-default: #E5E5E5;
     --landing-v2-border-subtle: #F0F0F0;
+  }
+
+  .dark {
+    /* ===========================================
+       DARK THEME
+       =========================================== */
+
+    /* Background Hierarchy */
+    --bg-base: #0D0D0D;
+    --bg-surface: #1A1A1A;
+    --bg-surface-elevated: #242424;
+    --bg-surface-hover: #2A2A2A;
+    --bg-surface-active: #333333;
+    --bg-input: #1A1A1A;
+
+    /* Border Colors */
+    --border-subtle: #2A2A2A;
+    --border-default: #3A3A3A;
+    --border-strong: #4A4A4A;
+    --border-accent: #F7931E;
+
+    /* Text Colors */
+    --text-primary: rgba(255, 255, 255, 1);
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-tertiary: rgba(255, 255, 255, 0.5);
+    --text-muted: rgba(255, 255, 255, 0.3);
+    --text-link: #F7931E;
+    --text-on-accent: #FFFFFF;
+
+    /* Accent Colors - ORANGE */
+    --accent-primary: #F7931E;
+    --accent-primary-hover: #EA580C;
+    --accent-primary-muted: rgba(247, 147, 30, 0.12);
+    --accent-info: #3B82F6;
+
+    /* Semantic Colors */
+    --color-success: #22C55E;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+
+    /* Semantic Object Colors (Record Types) */
+    --color-companies: #8B5CF6;
+    --color-people: #22C55E;
+    --color-deals: #F59E0B;
+    --color-users: #F7931E;
+    --color-workspaces: #EC4899;
+
+    /* ===========================================
+       BATCH LIFECYCLE STATUS COLORS (Dark)
+       =========================================== */
+    --status-draft: rgba(255, 255, 255, 0.5);
+    --status-draft-bg: rgba(255, 255, 255, 0.05);
+    --status-forecast: rgba(255, 255, 255, 0.6);
+    --status-forecast-bg: rgba(255, 255, 255, 0.08);
+    --status-soft: #F59E0B;
+    --status-soft-bg: rgba(245, 158, 11, 0.15);
+    --status-confirmed: #22C55E;
+    --status-confirmed-bg: rgba(34, 197, 94, 0.15);
+    --status-matched: #3B82F6;
+    --status-matched-bg: rgba(59, 130, 246, 0.15);
+    --status-closed: rgba(255, 255, 255, 0.5);
+    --status-closed-bg: rgba(255, 255, 255, 0.08);
+    --status-delivered: #14B8A6;
+    --status-delivered-bg: rgba(20, 184, 166, 0.15);
+
+    /* FARMER GRADING COLORS (Dark) */
+    --grading-observer: rgba(255, 255, 255, 0.5);
+    --grading-observer-bg: rgba(255, 255, 255, 0.08);
+    --grading-declared: #14B8A6;
+    --grading-declared-bg: rgba(20, 184, 166, 0.15);
+    --grading-standard: #3B82F6;
+    --grading-standard-bg: rgba(59, 130, 246, 0.15);
+
+    /* MPK STATUS COLORS (Dark) */
+    --mpk-active: #22C55E;
+    --mpk-active-bg: rgba(34, 197, 94, 0.15);
+    --mpk-restricted: #F59E0B;
+    --mpk-restricted-bg: rgba(245, 158, 11, 0.15);
+    --mpk-inactive: rgba(255, 255, 255, 0.5);
+    --mpk-inactive-bg: rgba(255, 255, 255, 0.08);
+
+    /* ADMIN SIGNALS (Dark) */
+    --signal-risk: #EF4444;
+    --signal-risk-bg: rgba(239, 68, 68, 0.15);
+    --signal-warning: #F59E0B;
+    --signal-warning-bg: rgba(245, 158, 11, 0.15);
+    --signal-positive: #22C55E;
+    --signal-positive-bg: rgba(34, 197, 94, 0.15);
+
+    /* POOL REQUEST STATUS (Dark) */
+    --pool-draft: rgba(255, 255, 255, 0.5);
+    --pool-draft-bg: rgba(255, 255, 255, 0.05);
+    --pool-submitted: #3B82F6;
+    --pool-submitted-bg: rgba(59, 130, 246, 0.15);
+    --pool-matching: #8B5CF6;
+    --pool-matching-bg: rgba(139, 92, 246, 0.15);
+    --pool-partial: #F59E0B;
+    --pool-partial-bg: rgba(245, 158, 11, 0.15);
+    --pool-fulfilled: #22C55E;
+    --pool-fulfilled-bg: rgba(34, 197, 94, 0.15);
+    --pool-closed: rgba(255, 255, 255, 0.5);
+    --pool-closed-bg: rgba(255, 255, 255, 0.08);
+    --pool-cancelled: #EF4444;
+    --pool-cancelled-bg: rgba(239, 68, 68, 0.15);
+
+    /* EXECUTION LIFECYCLE STATUS (Dark) */
+    --exec-matched: #3B82F6;
+    --exec-matched-bg: rgba(59, 130, 246, 0.15);
+    --exec-scheduled: #F59E0B;
+    --exec-scheduled-bg: rgba(245, 158, 11, 0.15);
+    --exec-delivered: #8B5CF6;
+    --exec-delivered-bg: rgba(139, 92, 246, 0.15);
+    --exec-confirmed: #22C55E;
+    --exec-confirmed-bg: rgba(34, 197, 94, 0.15);
+    --exec-settled: #14B8A6;
+    --exec-settled-bg: rgba(20, 184, 166, 0.15);
+    --exec-closed: rgba(255, 255, 255, 0.5);
+    --exec-closed-bg: rgba(255, 255, 255, 0.08);
   }
 }
 

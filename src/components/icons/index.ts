@@ -1,0 +1,1 @@
+export { TuranIcon } from './TuranIcon';

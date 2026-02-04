@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
@@ -133,8 +134,9 @@ const App = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AuthProvider>
-            <RoleProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <RoleProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -341,7 +343,8 @@ const App = () => {
                 </Suspense>
               </BrowserRouter>
             </RoleProvider>
-          </AuthProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

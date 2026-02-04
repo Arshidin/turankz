@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useRole, UserRole } from '@/contexts/RoleContext';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -22,10 +23,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, ChevronDown, LogOut, Settings, Shield, Eye } from 'lucide-react';
+import { User, ChevronDown, LogOut, Settings, Shield, Eye, Sun, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/notifications';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { TuranIcon } from '@/components/icons/TuranIcon';
 import { toast } from '@/hooks/use-toast';
 
 const roleConfig: Record<UserRole, { label: string; labelRu: string; badgeClass: string }> = {
@@ -52,6 +54,7 @@ export function TopNav() {
   const { role, setRole } = useRole();
   const { user, signOut } = useAuthContext();
   const { accountStatus, isObserver, getStatusLabel } = useAccountStatus();
+  const { theme, toggleTheme } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   const config = roleConfig[role];
@@ -85,9 +88,7 @@ export function TopNav() {
       {/* Left: Platform Identity */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">TS</span>
-          </div>
+          <TuranIcon size={28} />
           <span className="font-semibold text-foreground">Turan Standard Pool</span>
         </div>
         
@@ -113,6 +114,21 @@ export function TopNav() {
 
       {/* Right: Notifications, Role Selector (Admin only) & User Menu */}
       <div className="flex items-center gap-3">
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-8 w-8"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <Moon className="h-4 w-4 text-muted-foreground" />
+          )}
+        </Button>
+
         {/* Language Switcher */}
         <LanguageSwitcher />
         

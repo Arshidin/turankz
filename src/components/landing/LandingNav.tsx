@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TuranIcon } from '@/components/icons/TuranIcon';
 
 interface LandingNavProps {
   variant?: 'dark' | 'light';
@@ -52,7 +53,7 @@ export function LandingNav({ variant = 'dark' }: LandingNavProps) {
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-0.5 h-8 bg-current opacity-30" />
+              <TuranIcon size={36} />
               <div>
                 <div className={`font-landing-heading text-lg lg:text-xl font-medium tracking-tight ${textClass}`}>
                   TURAN

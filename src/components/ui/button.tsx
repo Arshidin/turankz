@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 /**
  * Button Component - Design System Specification
  *
- * Primary: Blue background (#3B82F6), white text, 6px radius
+ * Primary: Orange accent (#F7931E), white text, 6px radius
  * Secondary: Transparent background, border, muted text
  * Ghost: No border, transparent, hover background
  * Icon: 28-32px square, icon only
@@ -26,18 +26,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary Button: Blue background, white text
+        // Primary Button: Orange accent, white text
         default: [
           "bg-[var(--accent-primary)] text-white",
           "hover:bg-[var(--accent-primary-hover)]",
-          "active:bg-[#1D4ED8]",
+          "active:bg-[var(--accent-primary-hover)] active:brightness-90",
         ].join(" "),
 
         // Destructive: Red background for dangerous actions
         destructive: [
           "bg-[var(--color-error)] text-white",
-          "hover:bg-[#DC2626]",
-          "active:bg-[#B91C1C]",
+          "hover:brightness-110",
+          "active:brightness-90",
         ].join(" "),
 
         // Secondary/Outline: Transparent with border
