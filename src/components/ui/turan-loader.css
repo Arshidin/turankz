@@ -1,0 +1,102 @@
+/* ══ Layout ══ */
+.turan-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.turan-loader--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: hsl(var(--background));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ══ Icon ══ */
+.turan-loader__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.turan-lp {
+  fill: #F7931E;
+}
+
+/* ══ Variant A: Pulse ══ */
+.turan-loader--pulse .turan-loader__icon svg {
+  animation: turan-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes turan-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.92); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
+
+/* ══ Variant B: Rotate ══ */
+.turan-loader--rotate .turan-loader__icon svg {
+  animation: turan-rotate 1.8s linear infinite;
+}
+
+@keyframes turan-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* ══ Variant C: Sequential ══ */
+.turan-loader--sequential .turan-lp {
+  opacity: 0.15;
+}
+
+.turan-loader--sequential .turan-lp:nth-child(1) {
+  animation: turan-seq 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite 0s;
+}
+.turan-loader--sequential .turan-lp:nth-child(2) {
+  animation: turan-seq 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.15s;
+}
+.turan-loader--sequential .turan-lp:nth-child(3) {
+  animation: turan-seq 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.3s;
+}
+.turan-loader--sequential .turan-lp:nth-child(4) {
+  animation: turan-seq 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.45s;
+}
+
+@keyframes turan-seq {
+  0%   { opacity: 0.15; }
+  25%  { opacity: 1; }
+  50%  { opacity: 0.15; }
+  100% { opacity: 0.15; }
+}
+
+/* ══ Progress Bar ══ */
+.turan-loader__bar {
+  width: 120px;
+  height: 2px;
+  background: hsl(var(--muted) / 0.15);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.turan-loader__bar-inner {
+  width: 40%;
+  height: 100%;
+  background: #F7931E;
+  border-radius: 1px;
+  animation: turan-bar 1.4s ease-in-out infinite;
+}
+
+@keyframes turan-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* ══ Label ══ */
+.turan-loader__label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.5;
+}

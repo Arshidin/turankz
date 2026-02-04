@@ -81,9 +81,9 @@ export function MembershipApplicationDialog({
       district: '',
       settlement: '',
       livestock_types: [],
-      herd_size_cattle: 0,
-      herd_size_sheep: 0,
-      herd_size_horses: 0,
+      herd_size_cattle: undefined,
+      herd_size_sheep: undefined,
+      herd_size_horses: undefined,
       experience_years: undefined,
       how_did_you_hear: undefined,
       comments: '',
@@ -460,10 +460,15 @@ export function MembershipApplicationDialog({
                               <FormControl>
                                 <Input
                                   type="number"
-                                  min={0}
+                                  min={1}
+                                  placeholder="0"
                                   className="h-10"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  value={field.value ?? ''}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    field.onChange(val === '' ? undefined : parseInt(val) || undefined);
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -482,10 +487,15 @@ export function MembershipApplicationDialog({
                               <FormControl>
                                 <Input
                                   type="number"
-                                  min={0}
+                                  min={1}
+                                  placeholder="0"
                                   className="h-10"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  value={field.value ?? ''}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    field.onChange(val === '' ? undefined : parseInt(val) || undefined);
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -504,10 +514,15 @@ export function MembershipApplicationDialog({
                               <FormControl>
                                 <Input
                                   type="number"
-                                  min={0}
+                                  min={1}
+                                  placeholder="0"
                                   className="h-10"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  value={field.value ?? ''}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    field.onChange(val === '' ? undefined : parseInt(val) || undefined);
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />

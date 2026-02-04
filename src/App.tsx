@@ -21,7 +21,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Loader2 } from "lucide-react";
+import { TuranLoader } from "@/components/ui/turan-loader";
 
 // ============================================================================
 // LOADING FALLBACK
@@ -29,12 +29,12 @@ import { Loader2 } from "lucide-react";
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Загрузка...</p>
-      </div>
-    </div>
+    <TuranLoader
+      variant="sequential"
+      size="lg"
+      fullscreen
+      showBar
+    />
   );
 }
 
