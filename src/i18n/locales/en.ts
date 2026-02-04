@@ -1304,6 +1304,18 @@ export const en = {
     form: {
       title: 'Membership Application',
       description: 'Fill out the form and we will contact you',
+      steps: {
+        personal: 'About You',
+        location: 'Location',
+        livestock: 'Your Livestock',
+        confirm: 'Confirmation',
+        '1_description': 'Tell us a bit about yourself',
+        '2_description': 'Where is your farm located?',
+        '3_description': 'What livestock do you raise?',
+        '4_description': 'Review your information and submit',
+      },
+      back: 'Back',
+      next: 'Next',
       sections: {
         personal: 'Personal Information',
         farm: 'Farm Details',
