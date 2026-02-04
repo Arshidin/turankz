@@ -852,7 +852,7 @@ export const kk = {
         data_processing_accepted: 'Жеке деректерді өңдеуге келісім беремін',
       },
       placeholders: {
-        full_name: 'Иванов Иван Иванович',
+        full_name: 'Манатов Арман Абаевич',
         farm_name: 'Таң нұры ШҚ',
         region: 'Облысты таңдаңыз',
         district: 'Ауданды енгізіңіз',

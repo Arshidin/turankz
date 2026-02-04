@@ -1667,7 +1667,7 @@ export const ru = {
         data_processing_accepted: 'Я даю согласие на обработку персональных данных',
       },
       placeholders: {
-        full_name: 'Иванов Иван Иванович',
+        full_name: 'Манатов Арман Абаевич',
         farm_name: 'КХ "Рассвет"',
         region: 'Выберите область',
         district: 'Введите район',
