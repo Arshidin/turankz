@@ -103,6 +103,13 @@ const Docs = lazy(() => import("./pages/Docs"));
 const DocPage = lazy(() => import("./pages/DocPage"));
 
 // ============================================================================
+// LAZY LOADED PAGES - MEMBERSHIP (Code Split)
+// ============================================================================
+
+const MembershipLanding = lazy(() => import("./pages/membership/MembershipLanding"));
+const MembershipSuccess = lazy(() => import("./pages/membership/MembershipSuccess"));
+
+// ============================================================================
 // QUERY CLIENT
 // ============================================================================
 
@@ -146,6 +153,10 @@ const App = () => {
                     <Route path="/auth/register/mpk" element={<MpkRegistration />} />
                     <Route path="/pending" element={<PendingActivation />} />
                     <Route path="/access-restricted" element={<AccessRestricted />} />
+
+                    {/* Join/Membership Routes - Public */}
+                    <Route path="/join" element={<MembershipLanding />} />
+                    <Route path="/join/success" element={<MembershipSuccess />} />
 
                     {/* Protected Routes */}
                     <Route path="/overview" element={
